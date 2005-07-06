@@ -38,8 +38,7 @@ SLOTS - a list of slot forms:
              (when predicate
                (error "Can't specify the :PREDICATE argument more than once."))
              (setf predicate (if (eql t (first args))
-                                 (intern (strcat class-name :-p)
-                                         class-name)
+                                 (intern (strcat class-name :-p) *package*)
                                  (first args))))))
     (setf slots
           (mapcar
