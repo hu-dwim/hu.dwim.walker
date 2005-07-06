@@ -8,3 +8,7 @@
 \.x86f$
 \.fas$
 \.lib$
+^docs/html($|/)
+^docs/pdf($|/)
+^{arch}$
+(^|/).arch-ids($|/)
