@@ -24,13 +24,6 @@
    #:with-collector
    #:with-collectors
 
-   #:abort/cc
-   #:lambda/cc
-   #:funcall/cc
-   #:apply/cc 
-   #:call/cc$
-   #:let/cc$
-
    #:to-cps
    #:with-call/cc
    #:call/cc

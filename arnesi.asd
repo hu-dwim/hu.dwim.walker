@@ -16,7 +16,7 @@
                              (:file "asdf" :depends-on ("packages" "io"))
                              (:file "csv" :depends-on ("packages" "string"))
                              (:file "compat" :depends-on ("packages"))
-                             (:file "cps" :depends-on ("packages" "flow-control" "list" "string"))
+                             (:file "cps" :depends-on ("packages" "walk" "flow-control" "list" "string" "defclass-struct"))
 			     (:file "debug" :depends-on ("accumulation"))
                              (:file "decimal-arithmetic" :depends-on ("packages"))
                              (:file "defclass-struct" :depends-on ("packages" "list"))
@@ -37,13 +37,15 @@
                              (:file "sharpl-reader" :depends-on ("packages" "flow-control"))
                              (:file "specials" :depends-on ("packages" "hash"))
                              (:file "string" :depends-on ("packages" "list"))
-                             (:file "vector" :depends-on ("packages" "flow-control")))))
+                             (:file "vector" :depends-on ("packages" "flow-control"))
+                             (:file "walk" :depends-on ("packages" "list" "mopp")))))
   :properties ((version "1.4.0" "1.4.1")))
 
 (defsystem :arnesi.test
   :components ((:module :t
 		:components ((:file "accumulation" :depends-on ("suite"))
                              (:file "cps" :depends-on ("suite"))
+                             (:file "log" :depends-on ("suite"))
                              (:file "matcher" :depends-on ("suite"))
                              (:file "numbers" :depends-on ("suite"))
                              (:file "string"  :depends-on ("suite"))
