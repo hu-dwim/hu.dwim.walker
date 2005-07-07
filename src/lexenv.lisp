@@ -10,7 +10,7 @@
 (defun environment-p (environment)
   (subtypep (class-of environment) 'ccl::lexical-environment))
 
-#+openmc
+#+openmcl
 (defun lexical-variables (environment)
   (loop
      for env = environment then (ccl::lexenv.parent-env env)
