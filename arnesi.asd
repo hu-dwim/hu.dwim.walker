@@ -39,7 +39,7 @@
                              (:file "specials" :depends-on ("packages" "hash"))
                              (:file "string" :depends-on ("packages" "list"))
                              (:file "vector" :depends-on ("packages" "flow-control"))
-                             (:file "walk" :depends-on ("packages" "list" "mopp")))))
+                             (:file "walk" :depends-on ("packages" "list" "mopp" "lexenv")))))
   :properties ((version "1.4.0" "1.4.1")))
 
 (defsystem :arnesi.test
