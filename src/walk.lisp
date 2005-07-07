@@ -6,9 +6,16 @@
 
 ;;;; ** Public Entry Point
 
-(defun walk-form (form parent env)
+(defun walk-form (form &optional (parent nil) (env (make-walk-env)))
   "Walk FORM and return a FORM object."
   (funcall (find-walker-handler form) form parent env))
+
+(defun make-walk-env (&optional lexical-env)
+  (let ((walk-env '()))
+    (when lexical-env
+      (dolist (var (lexical-variables lexical-env))
+        (setf walk-env (register walk-env :lexical-let var t))))
+    walk-env))
 
 ;;;; This takes a Common Lisp form and transforms it into a tree of
 ;;;; FORM objects.
@@ -198,6 +205,11 @@
 (defclass local-variable-reference (variable-reference)
   ())
 
+(defclass local-lexical-variable-reference (local-variable-reference)
+  ()
+  (:documentation "A reference to a local variable defined in the
+  lexical envorinment outside of the form passed to walk-form."))
+
 (defclass free-variable-reference (variable-reference)
   ())
 
@@ -209,6 +221,9 @@
                     :parent parent :source form))
     ((lookup env :let form)
      (make-instance 'local-variable-reference :name form
+                    :parent parent :source form))
+    ((lookup env :lexical-let form)
+     (make-instance 'local-lexical-variable-reference :name form
                     :parent parent :source form))
     ((lookup env :symbol-macrolet form)
      (walk-form (lookup env :symbol-macrolet form) parent env))
