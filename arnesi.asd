@@ -25,6 +25,7 @@
                              (:file "http" :depends-on ("packages" "vector"))
                              (:file "io" :depends-on ("packages" "flow-control"))
                              (:file "lambda" :depends-on ("packages"))
+                             (:file "lexenv" :depends-on ("packages"))
                              (:file "list" :depends-on ("packages" "one-liners" "accumulation" "flow-control"))
                              (:file "log" :depends-on ("packages" "numbers" "hash" "io"))
                              (:file "matcher" :depends-on ("packages" "hash" "list" "flow-control" "one-liners"))
