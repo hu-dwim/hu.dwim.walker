@@ -18,7 +18,7 @@
 
 (defvar *call/cc-returns* nil)
 
-(defmacro with-call/cc (initial-environment &body body)
+(defmacro with-call/cc (&environment e &body body)
   "Execute BODY with delimited partial continuations.
 
   Within the code of BODY almest all common lisp forms maintain
@@ -29,19 +29,23 @@
   passed a continutaion. This object may then be passed to the
   function KALL which will cause execution to resume around the
   call/cc form. "
-  (let ((walk-env nil)
+  (let ((walk-env (make-walk-env e))
         (evaluate-env nil))
-    (assert (every (lambda (binding)
-                     (and (consp binding)
-                          (= 2 (length binding))))
-                   initial-environment)
-            (initial-environment)
-            "Sorry, INITIAL-ENVIRONMENT must be a list of two element lists, not: ~S"
-            initial-environment)
-    (loop
-       for (name value) in initial-environment
-       do (setf walk-env (register walk-env :let name value)
-                evaluate-env `(register ,evaluate-env :let ',name ,value)))
+    (dolist* ((type name &rest data) walk-env)
+      (declare (ignore data))
+      (when (eql :lexical-let type)
+        (push (list 'list
+                    :lexical-let
+                    `(quote ,name)
+                    ;; NB: this makes the environment, and therefore
+                    ;; contiunations, unserializable. we would need to
+                    ;; change this to a regular :let and not allow the
+                    ;; setting of lexical variables.
+                    `(lambda () ,name)
+                    (with-unique-names (v)
+                      `(lambda (,v) (setf ,name ,v))))
+              evaluate-env)))
+    (setf evaluate-env `(list ,@(nreverse evaluate-env)))
     `(drive-cps (evaluate/cps ,(walk-form (if (rest body)
                                               `(progn ,@body)
                                               (first body))
@@ -113,7 +117,10 @@ semantics."
 ;;;; Variable References
 
 (defmethod evaluate/cps ((var local-variable-reference) env k)
-  (kontinue k (lookup env :let (name var))))
+  (kontinue k (lookup env :let (name var) :error-p t)))
+
+(defmethod evaluate/cps ((var local-lexical-variable-reference) env k)
+  (kontinue k (funcall (first (lookup env :lexical-let (name var) :error-p t)))))
 
 (defmethod evaluate/cps ((var free-variable-reference) env k)
   (declare (ignore env))
@@ -413,12 +420,22 @@ semantics."
   (setf (symbol-value var) value)
   (kontinue k value))
 
+(defk k-for-local-lexical-setq (var env k)
+    (value)
+  (funcall (second (lookup env :lexical-let var :error-p t)) value)
+  (kontinue k value))
+
 (defmethod evaluate/cps ((setq setq-form) env k)
-  (if (lookup env :let (var setq))
-      (evaluate/cps (value setq)
-                    env `(k-for-local-setq ,(var setq) ,env ,k))
-      (evaluate/cps (value setq)
-                    env `(k-for-free-setq ,(var setq) ,env ,k))))
+  (cond
+    ((lookup env :let (var setq))
+     (evaluate/cps (value setq)
+                   env `(k-for-local-setq ,(var setq) ,env ,k)))
+    ((lookup env :lexical-let (var setq))
+     (evaluate/cps (value setq)
+                   env `(k-for-local-lexical-setq ,(var setq) ,env ,k)))
+    (t
+     (evaluate/cps (value setq)
+                   env `(k-for-free-setq ,(var setq) ,env ,k)))))
 
 ;;;; SYMBOL-MACROLET
 
