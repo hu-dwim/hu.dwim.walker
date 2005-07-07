@@ -21,13 +21,14 @@
 (defmacro with-call/cc (initial-environment &body body)
   "Execute BODY with delimited partial continuations.
 
-Within the code of BODY almest all common lisp forms maintain
-their normal semantics. The following special forms are allowed:
+  Within the code of BODY almest all common lisp forms maintain
+  their normal semantics. The following special forms are
+  allowed:
 
- (call/cc LAMBDA) - LAMBDA, a one orgument function, will be
- passed a continutaion. This object may then be passed to the
- function KALL which will cause execution to resume around the
- call/cc form. "
+  (call/cc LAMBDA) - LAMBDA, a one orgument function, will be
+  passed a continutaion. This object may then be passed to the
+  function KALL which will cause execution to resume around the
+  call/cc form. "
   (let ((walk-env nil)
         (evaluate-env nil))
     (assert (every (lambda (binding)
