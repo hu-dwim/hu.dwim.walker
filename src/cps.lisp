@@ -40,7 +40,7 @@
                     ;; NB: this makes the environment, and therefore
                     ;; contiunations, unserializable. we would need to
                     ;; change this to a regular :let and not allow the
-                    ;; setting of lexical variables.
+                    ;; setting of lexical variables. 
                     `(lambda () ,name)
                     (with-unique-names (v)
                       `(lambda (,v) (setf ,name ,v))))
@@ -142,9 +142,6 @@ semantics."
    (env :accessor env :initarg :env)))
 
 (defmethod evaluate/cps ((lambda lambda-function-form) env k)
-  (assert (every #'required-function-argument-form-p (arguments lambda))
-           (lambda)
-           "Sorry, only required arguments for now.")
   (kontinue k (make-instance 'cps-closure :code lambda :env env)))
 
 (defk k-for-call/cc (k)
@@ -225,6 +222,11 @@ semantics."
     (loop
        for argument in (arguments (code operator))
        for arg-value in effective-arguments
+       do (assert (typecase argument
+                    ((or required-function-argument-form) t)
+                    (t nil))
+                  (argument)
+                  "Only required arguments for now.")
        do (setf env (register env :let (name argument) arg-value)))
     (evaluate/cps-progn (body (code operator)) env k)))
 
