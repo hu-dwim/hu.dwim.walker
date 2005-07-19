@@ -478,3 +478,7 @@ semantics."
        (make-instance 'cps-closure
                       :code (walk-form '(lambda ,arguments ,@body) nil nil)
                       :env nil))))
+
+(defmacro defgeneric/cc (name args &rest options)
+  "Trivial wrapper around defgeneric designed to alert readers that these methods are cc methods."
+  `(defgeneric ,name ,args ,@options))
