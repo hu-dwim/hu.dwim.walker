@@ -13,15 +13,16 @@
 #+openmcl
 (defun lexical-variables (environment)
   (loop
-     for env = environment then (ccl::lexenv.parent-env env)
-     while env
+     for env = environment
+          then (ccl::lexenv.parent-env env)
+     while (and env
+                (not (ccl::istruct-typep env 'ccl::definition-environment)))
      for vars = (ccl::lexenv.variables env)
      when (listp vars)
      append (mapcar (lambda (var)
                       ;; ccl::var-name is a macro, se we can't do #'ccl::var-name directly
                       (ccl::var-name var))
                     vars)))  
-  
 
 ;;;; ** SBCL
  
