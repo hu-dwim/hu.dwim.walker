@@ -518,7 +518,7 @@ semantics."
                                                  :code (walk-form '(lambda ,arguments ,@body) nil nil)
                                                  :env nil))
      (defun ,name ,arguments
-       (error "Sorry, DEFUN/CC function are, atm, only callable from within call/cc."))))
+       (with-call/cc ,@body))))
 
 (defmacro defmethod/cc (name arguments &body body)
   `(progn
