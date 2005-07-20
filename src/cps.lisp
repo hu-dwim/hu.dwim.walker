@@ -512,21 +512,42 @@ semantics."
 
 ;;;; DEFUN/CC and DEFMETHOD/CC
 
+(defun argument-names (arguments)
+  (remove-if #'null
+             (mapcar (lambda (arg)
+                       (if (consp arg)
+                           (if (consp (first arg))
+                               (second (first arg))
+                               (first arg))
+                           (unless (member arg '(&optional &key &rest &allow-other-keys))
+                             arg)))
+                     arguments)))
+
 (defmacro defun/cc (name arguments &body body)
   `(progn
      (setf (get ',name 'defun/cc) (make-instance 'cps-closure
                                                  :code (walk-form '(lambda ,arguments ,@body) nil nil)
                                                  :env nil))
      (defun ,name ,arguments
-       (with-call/cc ,@body))))
+       (declare (ignorable ,@(argument-names arguments)))
+       (error "Sorry, /CC function are not callable outside of with-call/cc."))))
 
 (defmacro defmethod/cc (name arguments &body body)
-  `(progn
-     (setf (get ',name 'defmethod/cc) t)
-     (defmethod ,name ,arguments
-       (make-instance 'cps-closure
-                      :code (walk-form '(lambda ,arguments ,@body) nil nil)
-                      :env nil))))
+  (multiple-value-bind (specifiers other-arguments)
+      (loop
+         for arg on arguments
+         until (member (car arg) '(&optional &key &rest &allow-other-keys))
+         collect (if (consp (car arg))
+                     (first (car arg))
+                     (car arg)) into specifiers
+         finally (return (values specifiers (argument-names arg))))
+    `(progn
+       (setf (get ',name 'defmethod/cc) t)
+       (defmethod ,name ,arguments
+         (declare (ignorable ,@specifiers ,@other-arguments))
+         (make-instance 'cps-closure
+                        :code (walk-form '(lambda ,arguments ,@body) nil nil)
+                        :env nil)))))
 
 (defmacro defgeneric/cc (name args &rest options)
   "Trivial wrapper around defgeneric designed to alert readers that these methods are cc methods."
