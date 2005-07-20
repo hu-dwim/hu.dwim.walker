@@ -166,6 +166,24 @@
                (foo () 'inner-foo))
         (is (eql 'inner-foo (bar)))))))
 
+(test cps-lambda-requried-arguments
+  (with-call/cc
+    (is (eql t (funcall (lambda () t))))
+    (is (eql t (funcall (lambda (x) x) t))))
+  (signals error
+    (with-call/cc
+      (funcall (lambda (x) x)))))
+
+(test cps-lambda-optional-arguments
+  (with-call/cc
+    (is (eql t (funcall (lambda (&optional a) a) t)))
+    (is (eql t (funcall (lambda (&optional (a t)) a)))))
+
+  (let ((cont (with-call/cc
+                (funcall (lambda (&optional (a (let/cc k k)))
+                           (+ a 1))))))
+    (is (= 1 (kall cont 0)))))
+
 (defun/cc test-defun/cc1 ()
   (let/cc k k))
 

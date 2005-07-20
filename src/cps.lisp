@@ -218,17 +218,66 @@ semantics."
                       env k))
 
 (defmethod apply-cps-lambda ((operator cps-closure) effective-arguments k)
-  (let ((env (env operator)))
-    (loop
-       for argument in (arguments (code operator))
-       for arg-value in effective-arguments
-       do (assert (typecase argument
-                    ((or required-function-argument-form) t)
-                    (t nil))
-                  (argument)
-                  "Only required arguments for now.")
-       do (setf env (register env :let (name argument) arg-value)))
+  (let ((env (env operator))
+        (remaining-arguments effective-arguments)
+        (remaining-parameters (arguments (code operator))))
+    ;; in this code ARGUMENT refers to the values passed to the
+    ;; function. PARAMETER refers to the lambda of the closure
+    ;; object. we walk down the parameters and put the arguments in
+    ;; the environment under the proper names.
+
+    ;; first the required arguments
+    (block required-parameters
+      (dolist (parameter remaining-parameters)
+        (typecase parameter
+          (required-function-argument-form
+           (if remaining-arguments
+               (setf env (register env :let (name parameter) (pop remaining-arguments)))
+               (error "Missing required arguments, expected ~S, got ~S."
+                      (arguments (code operator)) effective-arguments)))
+          (t (return-from required-parameters t)))))
+    
+    ;; now the optional arguments (nb: both remaining-arguments and
+    ;; remaining-parameters have been modified)
+    (dolist (parameter remaining-parameters)
+      (typecase parameter
+        (optional-function-argument
+         (if remaining-arguments
+             (progn
+               (setf env (register env :let (name parameter) (pop remaining-arguments)))
+               (when (supplied-p-parameter parameter)
+                 (setf env (register env :let (supplied-p-parameter parameter) t))))
+             (return-from apply-cps-lambda
+               ;; we need to evaluate a default-value, since this may
+               ;; contain call/cc we need to setup the continuation
+               ;; and let things go from there (hence the return-from)
+               (evaluate/cps (default-value parameter) env
+                             `(k-for-apply-cps/optional-argument-default-value
+                               ;; remaining-arguments is, by
+                               ;; definition, NIL so we needn't pass
+                               ;; it here.
+                               ,operator ,remaining-parameters ,env ,k)))))))
+    
     (evaluate/cps-progn (body (code operator)) env k)))
+
+(defk k-for-apply-cps/optional-argument-default-value
+    (operator remaining-parameters env k)
+    (value)
+  (apply-cps-lambda/optional-default-value
+   operator (cdr remaining-parameters)
+   (register env :let (name (first remaining-parameters)) value) k))
+
+(defun apply-cps-lambda/optional-default-value (operator remaining-parameters env k)
+  (if remaining-parameters
+      (dolist (parameter remaining-parameters)
+        (typecase parameter
+          (optional-function-argument
+           (return-from apply-cps-lambda/optional-default-value
+             (evaluate/cps (default-value parameter) env
+                           `(k-for-apply-cps/optional-argument-default-value
+                             ,operator ,(cdr remaining-parameters) ,env ,k))))
+          (t (error "Sorry, only required and optional arguments for now."))))
+      (evaluate/cps-progn (body (code operator)) env k)))
 
 (defmethod apply-cps-lambda ((operator function) effective-arguments k)
   (apply #'kontinue k (multiple-value-list (apply operator effective-arguments))))
