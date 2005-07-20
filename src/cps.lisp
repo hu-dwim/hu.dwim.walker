@@ -546,7 +546,7 @@ semantics."
        (defmethod ,name ,arguments
          (declare (ignorable ,@specifiers ,@other-arguments))
          (make-instance 'cps-closure
-                        :code (walk-form '(lambda ,arguments ,@body) nil nil)
+                        :code (walk-form '(lambda (,@specifiers ,@other-arguments) ,@body) nil nil)
                         :env nil)))))
 
 (defmacro defgeneric/cc (name args &rest options)
