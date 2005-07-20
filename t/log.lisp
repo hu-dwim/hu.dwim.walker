@@ -6,6 +6,7 @@
 
 (in-suite :it.bese.arnesi.log)
 
+#|
 (defparameter a-handler (make-instance 'collecting-log-handler))
 
 (deflogger log-a ()
@@ -34,6 +35,4 @@
   (is (enabled-p (get-logger 'log-a) +warn+))
   (is (not (enabled-p (get-logger 'log-a) +dribble+))))
 
-
-
-
+|#
