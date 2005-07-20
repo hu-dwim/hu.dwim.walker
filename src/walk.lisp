@@ -356,21 +356,21 @@
                  :name form
                  :parent parent :source form))
 
-(defclass optional-function-argument (function-argument-form)
+(defclass optional-function-argument-form (function-argument-form)
   ((default-value :accessor default-value :initarg :default-value)
    (supplied-p-parameter :accessor supplied-p-parameter :initarg :supplied-p-parameter)))
 
 (defun walk-optional-argument (form parent env)
   (destructuring-bind (name &optional default-value supplied-p-parameter)
       (ensure-list form)
-    (with-form-object (arg optional-function-argument
+    (with-form-object (arg optional-function-argument-form
                            :parent parent
                            :source form
                            :name name
                            :supplied-p-parameter supplied-p-parameter)
       (setf (default-value arg) (walk-form default-value arg env)))))
 
-(defclass keyword-function-argument (optional-function-argument)
+(defclass keyword-function-argument-form (optional-function-argument-form)
   ((keyword-name :accessor keyword-name :initarg :keyword-name)))
 
 (defun walk-keyword-argument (form parent env)
@@ -382,7 +382,7 @@
           (keyword (if (consp name)
                        (first name)
                        (intern (string name) :keyword))))
-      (with-form-object (arg keyword-function-argument
+      (with-form-object (arg keyword-function-argument-form
                              :parent parent
                              :source form
                              :name name
@@ -390,15 +390,15 @@
                              :supplied-p-parameter supplied-p-parameter)
         (setf (default-value arg) (walk-form default-value arg env))))))
 
-(defclass allow-other-keys-function-argument (function-argument-form)
+(defclass allow-other-keys-function-argument-form (function-argument-form)
   ())
 
-(defclass rest-function-argument (optional-function-argument)
+(defclass rest-function-argument-form (optional-function-argument-form)
   ())
 
 (defun walk-rest-argument (form parent env)
   (declare (ignore env))
-  (make-instance 'rest-function-argument :name form
+  (make-instance 'rest-function-argument-form :name form
                  :parent parent :source form))
 
 ;;;; Block/Return From

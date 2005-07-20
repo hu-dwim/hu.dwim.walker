@@ -241,7 +241,7 @@ semantics."
     ;; remaining-parameters have been modified)
     (dolist (parameter remaining-parameters)
       (typecase parameter
-        (optional-function-argument
+        (optional-function-argument-form
          (if remaining-arguments
              (progn
                (setf env (register env :let (name parameter) (pop remaining-arguments)))
@@ -271,7 +271,7 @@ semantics."
   (if remaining-parameters
       (dolist (parameter remaining-parameters)
         (typecase parameter
-          (optional-function-argument
+          (optional-function-argument-form
            (return-from apply-cps-lambda/optional-default-value
              (evaluate/cps (default-value parameter) env
                            `(k-for-apply-cps/optional-argument-default-value
