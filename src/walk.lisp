@@ -82,15 +82,16 @@
             (list* type name datum))
         environment))
 
-(defun lookup (environment type name &key (error-p nil))
+(defun lookup (environment type name &key (error-p nil) (default-value nil))
   (loop
      for (.type .name . data) in environment
      when (and (eql .type type) (eql .name name))
-       return data
+       return (values data t)
      finally
-       (when error-p
-         (error "Sorry, No value for ~S of type ~S in environment ~S found."
-                name type environment))))
+       (if error-p
+           (error "Sorry, No value for ~S of type ~S in environment ~S found."
+                  name type environment)
+           (values default-value nil))))
 
 (defun (setf lookup) (value environment type name &key (error-p nil))
   (loop

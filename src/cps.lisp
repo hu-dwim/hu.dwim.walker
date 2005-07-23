@@ -477,16 +477,20 @@ semantics."
   (kontinue k value))
 
 (defmethod evaluate/cps ((setq setq-form) env k)
-  (cond
-    ((lookup env :let (var setq))
-     (evaluate/cps (value setq)
-                   env `(k-for-local-setq ,(var setq) ,env ,k)))
-    ((lookup env :lexical-let (var setq))
-     (evaluate/cps (value setq)
-                   env `(k-for-local-lexical-setq ,(var setq) ,env ,k)))
-    (t
-     (evaluate/cps (value setq)
-                   env `(k-for-free-setq ,(var setq) ,env ,k)))))
+  (multiple-value-bind (value foundp)
+      (lookup env :let (var setq))
+    (declare (ignore value))
+    (if foundp
+        (evaluate/cps (value setq)
+                      env `(k-for-local-setq ,(var setq) ,env ,k))
+        (multiple-value-bind (value foundp)
+            (lookup env :lexical-let (var setq))
+          (declare (ignore value))
+          (if foundp
+              (evaluate/cps (value setq)
+                            env `(k-for-local-lexical-setq ,(var setq) ,env ,k))
+              (evaluate/cps (value setq)
+                            env `(k-for-free-setq ,(var setq) ,env ,k)))))))
 
 ;;;; SYMBOL-MACROLET
 
