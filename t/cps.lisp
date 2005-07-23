@@ -32,15 +32,11 @@
   (is (= 1 (with-call/cc
 	    (let ((a 1)) a))))
   (is (= 1 (with-call/cc
-             (let ((a 4)
-                   (b a))
-               (declare (ignore a))
-               b))))
-  (is (= 4 (with-call/cc
-             (let ((a 4)
-                   (b a))
-               (declare (ignore b))
-               a))))
+             (let ((a 1))
+               (let ((a nil)
+                     (b a))
+                 (declare (ignore a))
+                 b)))))
   (with-call/cc
     (let ((a 1))
       (let ((a 2))
@@ -173,6 +169,7 @@
     (setf value new-value)))
 
 (test cps-setf-funcall
+  (setf (test-funcall.0) 0)
   (is (= 0 (with-call/cc (test-funcall.0))))
   (is (= 1 (with-call/cc (setf (test-funcall.0) 1))))
   (is (= 2 (with-call/cc (funcall #'(setf test-funcall.0) 2)))))
@@ -210,3 +207,25 @@
     (setf cont (with-call/cc (test-defun/cc2 'foo)))
     (is (eql 'foo (kall cont)))
     (is (eql 'foo (kall cont nil)))))
+
+(test cps-loop
+  (let ((cont (with-call/cc
+                (loop
+                   repeat 2
+                   sum (let/cc k k) into total
+                   finally (return (values total total))))))
+    (multiple-value-bind (a b)
+        (kall (kall cont 1) 2)
+      (is (= 3 a))
+      (is (= 3 b))))
+
+  (let ((cont (with-call/cc
+                (block done
+                  (loop
+                     for how-many = (let/cc k k)
+                     do (loop
+                           repeat how-many
+                           sum (let/cc k k) into total
+                           finally (return-from done total)))))))
+    (is (= 26 (kall (kall (kall cont 2) 13) 13)))))
+
