@@ -26,6 +26,7 @@
 
    #:to-cps
    #:with-call/cc
+   #:kall
    #:call/cc
    #:let/cc
    #:*call/cc-returns*
