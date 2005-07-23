@@ -294,15 +294,16 @@
   ())
 
 (defwalker-handler function (form parent env)
-  (if (symbolp (second form))
+  (if (and (listp (second form))
+           (eql 'cl:lambda (first (second form))))
+      ;; (function (lambda ...))
+      (walk-lambda (second form) parent env)
       ;; (function foo)
       (make-instance (if (lookup env :flet (second form))
                          'local-function-object-form
                          'free-function-object-form)
                      :name (second form)
-                     :parent parent :source form)
-      ;; (function (lambda ...))
-      (walk-lambda (second form) parent env)))
+                     :parent parent :source form)))
 
 (defun walk-lambda (form parent env)
   (with-form-object (func lambda-function-form

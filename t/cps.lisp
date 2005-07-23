@@ -166,6 +166,17 @@
                (foo () 'inner-foo))
         (is (eql 'inner-foo (bar)))))))
 
+(let ((value 0))
+  (defun test-funcall.0 ()
+    value)
+  (defun (setf test-funcall.0) (new-value)
+    (setf value new-value)))
+
+(test cps-setf-funcall
+  (is (= 0 (with-call/cc (test-funcall.0))))
+  (is (= 1 (with-call/cc (setf (test-funcall.0) 1))))
+  (is (= 2 (with-call/cc (funcall #'(setf test-funcall.0) 2)))))
+
 (test cps-lambda-requried-arguments
   (with-call/cc
     (is (eql t (funcall (lambda () t))))
