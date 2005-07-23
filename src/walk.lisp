@@ -216,7 +216,7 @@
 (defwalker-handler atom (form parent env)
   (declare (special *macroexpand*))
   (cond
-    ((constantp form)
+    ((not (or (symbolp form) (consp form)))
      (make-instance 'constant-form :value form
                     :parent parent :source form))
     ((lookup env :let form)
