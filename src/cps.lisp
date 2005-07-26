@@ -528,7 +528,7 @@ semantics."
               (progn
                 (setf state argument)
                 (when keep-lambda-keywords
-                  (push argument lambda-list)))
+                  (push argument argument-names)))
               (ecase state
                 (:required
                  (push (if allow-specializers
