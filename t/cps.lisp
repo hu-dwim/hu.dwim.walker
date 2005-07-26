@@ -209,7 +209,26 @@
 
     (setf cont (with-call/cc (test-defun/cc2 'foo)))
     (is (eql 'foo (kall cont)))
-    (is (eql 'foo (kall cont nil)))))
+    (is (eql 'foo (kall cont nil)))
+
+    (with-call/cc
+      (is (= 1 (test-defun/cc3 0)))
+      (is (= 2 (test-defun/cc3 1))))))
+
+(defgeneric/cc test-generic/cc (a &optional v))
+
+(defmethod/cc test-generic/cc ((a symbol) &optional (v 3))
+  v)
+
+(defmethod/cc test-generic/cc ((a string) &optional (v 5))
+  v)
+
+(test cps-defgeneric/cc
+  (with-call/cc
+    (is (= 3 (test-generic/cc 'a)))
+    (is (= 0 (test-generic/cc 'a 0)))
+    (is (= 5 (test-generic/cc "a")))
+    (is (= 0 (test-generic/cc "a" 0)))))
 
 (test cps-loop
   (let ((cont (with-call/cc

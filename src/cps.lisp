@@ -519,16 +519,39 @@ semantics."
 
 ;;;; DEFUN/CC and DEFMETHOD/CC
 
-(defun argument-names (arguments)
-  (remove-if #'null
-             (mapcar (lambda (arg)
-                       (if (consp arg)
-                           (if (consp (first arg))
-                               (second (first arg))
-                               (first arg))
-                           (unless (member arg '(&optional &key &rest &allow-other-keys))
-                             arg)))
-                     arguments)))
+(defun extract-argument-names (lambda-list &key allow-specializers keep-lambda-keywords)
+  (let ((state :required)
+        (argument-names '()))
+    (loop
+       for argument in lambda-list
+       do (if (member argument '(&optional &key &rest &allow-other-keys))
+              (progn
+                (setf state argument)
+                (when keep-lambda-keywords
+                  (push argument lambda-list)))
+              (ecase state
+                (:required
+                 (push (if allow-specializers
+                           (if (consp argument)
+                               (first argument)
+                               argument)
+                           argument)
+                       argument-names))
+                (&optional (push (if (consp argument)
+                                     (first argument)
+                                     argument)
+                                 argument-names))
+                (&key (push (if (consp argument)
+                                (if (consp (first argument))
+                                    (second (first argument))
+                                    (first argument))
+                                argument)
+                            argument-names))
+                (&allow-other-keys
+                 (when keep-lambda-keywords
+                   (push argument argument-names)))
+                (&rest (push argument argument-names)))))
+    (nreverse argument-names)))
 
 (defmacro defun/cc (name arguments &body body)
   `(progn
@@ -536,25 +559,20 @@ semantics."
                                                  :code (walk-form '(lambda ,arguments ,@body) nil nil)
                                                  :env nil))
      (defun ,name ,arguments
-       (declare (ignorable ,@(argument-names arguments)))
+       (declare (ignorable ,@(extract-argument-names arguments :allow-specializers nil)))
        (error "Sorry, /CC function are not callable outside of with-call/cc."))))
 
 (defmacro defmethod/cc (name arguments &body body)
-  (multiple-value-bind (specifiers other-arguments)
-      (loop
-         for arg on arguments
-         until (member (car arg) '(&optional &key &rest &allow-other-keys))
-         collect (if (consp (car arg))
-                     (first (car arg))
-                     (car arg)) into specifiers
-         finally (return (values specifiers (argument-names arg))))
-    `(progn
-       (setf (get ',name 'defmethod/cc) t)
-       (defmethod ,name ,arguments
-         (declare (ignorable ,@specifiers ,@other-arguments))
-         (make-instance 'cps-closure
-                        :code (walk-form '(lambda (,@specifiers ,@other-arguments) ,@body) nil nil)
-                        :env nil)))))
+  `(progn
+     (setf (get ',name 'defmethod/cc) t)
+     (defmethod ,name ,arguments
+       (declare (ignore ,@(extract-argument-names arguments :allow-specializers t)))
+       (make-instance 'cps-closure
+                      :code (walk-form '(lambda ,(extract-argument-names arguments :allow-specializers t
+                                                                         :keep-lambda-keywords t)
+                                         ,@body)
+                                       nil nil)
+                      :env nil))))
 
 (defmacro defgeneric/cc (name args &rest options)
   "Trivial wrapper around defgeneric designed to alert readers that these methods are cc methods."
