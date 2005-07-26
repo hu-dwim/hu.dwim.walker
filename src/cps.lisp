@@ -566,7 +566,7 @@ semantics."
   `(progn
      (setf (get ',name 'defmethod/cc) t)
      (defmethod ,name ,arguments
-       (declare (ignore ,@(extract-argument-names arguments :allow-specializers t)))
+       (declare (ignorable ,@(extract-argument-names arguments :allow-specializers t)))
        (make-instance 'cps-closure
                       :code (walk-form '(lambda ,(extract-argument-names arguments :allow-specializers t
                                                                          :keep-lambda-keywords t)
