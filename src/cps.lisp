@@ -228,14 +228,17 @@ semantics."
 
     ;; first the required arguments
     (block required-parameters
-      (dolist (parameter remaining-parameters)
-        (typecase parameter
-          (required-function-argument-form
-           (if remaining-arguments
-               (setf env (register env :let (name parameter) (pop remaining-arguments)))
-               (error "Missing required arguments, expected ~S, got ~S."
-                      (arguments (code operator)) effective-arguments)))
-          (t (return-from required-parameters t)))))
+      (loop
+         while remaining-parameters
+         for parameter = (first remaining-parameters)
+         do (typecase parameter
+              (required-function-argument-form
+               (if remaining-arguments
+                   (setf env (register env :let (name parameter) (pop remaining-arguments)))
+                   (error "Missing required arguments, expected ~S, got ~S."
+                          (arguments (code operator)) effective-arguments))
+               (pop remaining-parameters))
+              (t (return-from required-parameters t)))))
     
     ;; now the optional arguments (nb: both remaining-arguments and
     ;; remaining-parameters have been modified)

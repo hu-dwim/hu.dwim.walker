@@ -199,6 +199,9 @@
   (let/cc k k)
   arg1)
 
+(defun/cc test-defun/cc3 (a &optional (b 1))
+  (+ a b))
+
 (test cps-defun/cc
   (let ((cont nil))
     (setf cont (with-call/cc (test-defun/cc1)))
