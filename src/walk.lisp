@@ -328,7 +328,7 @@
                  (extend-env (car arguments)))
                 (&key
                  (if (eql argument '&allow-other-keys)
-                     (push (make-instance 'allow-other-keys-function-argument
+                     (push (make-instance 'allow-other-keys-function-argument-form
                                           :parent func :source argument)
                            arguments)
                      (push (walk-keyword-argument argument func env) arguments))
