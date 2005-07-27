@@ -316,7 +316,8 @@
       (setf state :required)
       (dolist (argument (second form))
         (flet ((extend-env (argument)
-                 (setf env (register env :let (name argument) argument))))
+		 (unless (typep argument 'allow-other-keys-function-argument-form)
+		   (setf env (register env :let (name argument) argument)))))
           (if (member argument '(&optional &key &rest))
               (setf state argument)
               (case state
