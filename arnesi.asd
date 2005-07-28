@@ -40,7 +40,7 @@
                              (:file "string" :depends-on ("packages" "list"))
                              (:file "vector" :depends-on ("packages" "flow-control"))
                              (:file "walk" :depends-on ("packages" "list" "mopp" "lexenv")))))
-  :properties ((version "1.4.0" "1.4.1")))
+  :properties ((features "v1.4.0" "v1.4.1" "cps-interpreter")))
 
 (defsystem :arnesi.test
   :components ((:module :t
