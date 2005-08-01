@@ -114,13 +114,28 @@
 (defclass implicit-progn-mixin ()
   ((body :accessor body :initarg :body)))
 
+(defclass implicit-progn-with-declare-mixin (implicit-progn-mixin)
+  ((declares :accessor declares :initarg :declares)))
+
 (defclass binding-form-mixin ()
   ((binds :accessor binds :initarg :binds)))
 
+(defmacro multiple-value-setf (places form)
+  (let ((names (loop for place in places collect (gensym))))
+    `(multiple-value-bind ,names ,form
+       ,@(loop for name in names for place in places if (null place) collect `(declare (ignore ,name)))
+	 (setf ,@(loop
+		    for name in names
+		    for place in places
+		    if place collect place
+		    if place collect name)))))
+
 (defun split-body (body env &key (docstring t) (declare t))
-  (let ((documentation nil))
+  (let ((documentation nil) 
+	(decl nil)
+	(decls nil))
     (flet ((done ()
-             (return-from split-body (values body env documentation))))
+             (return-from split-body (values body env documentation decls))))
       (loop
          for form = (car body)
          while body
@@ -129,7 +144,9 @@
                         ;; declare form
                         (let ((declarations (rest form)))
                           (dolist* (dec declarations)
-                            (setf env (parse-declaration dec env))))
+                            (multiple-value-setf (env decl) (parse-declaration dec env))
+			    (when decl
+			      (push decl decls))))
                         ;; source code, all done
                         (done)))
               (string (if docstring
@@ -149,6 +166,9 @@
                (done)))
          do (pop body)
          finally (done)))))
+
+(defclass declaration-form (form)
+  ())
 
 (defun parse-declaration (declaration environment)
   (macrolet ((extend-env ((var list) &rest datum)
@@ -181,15 +201,16 @@
          (extend-env (var (rest arguments)) var `(type ,(first arguments))))
         (t
          (extend-env (var arguments) var `(type ,type))))))
-  environment)
+  (values environment declaration))
 
 (defun walk-implict-progn (parent forms env &key docstring declare)
-  (multiple-value-bind (body env docstring)
+  (multiple-value-bind (body env docstring declarations)
       (split-body forms env :docstring docstring :declare declare)
     (values (mapcar (lambda (form)
                       (walk-form form parent env))
                     body)
-            docstring)))
+            docstring
+	    declarations)))
 
 ;;;; Atoms
 
@@ -282,7 +303,7 @@
 (defclass function-form (form)
   ())
 
-(defclass lambda-function-form (function-form implicit-progn-mixin)
+(defclass lambda-function-form (function-form implicit-progn-with-declare-mixin)
   ((arguments :accessor arguments :initarg :arguments)))
 
 (defclass function-object-form (form)
@@ -339,7 +360,7 @@
                  (extend-env (car arguments)))))))
       (setf (arguments func) (nreverse arguments))
       ;; 2) parse the body
-      (setf (body func) (walk-implict-progn func (cddr form) env :declare t))
+      (multiple-value-setf ((body func) nil (declares func)) (walk-implict-progn func (cddr form) env :declare t))
       ;; all done
       func)))
 
@@ -479,7 +500,7 @@
 
 ;;;; FLET/LABELS
 
-(defclass function-binding-form (form binding-form-mixin implicit-progn-mixin)
+(defclass function-binding-form (form binding-form-mixin implicit-progn-with-declare-mixin)
   ())
 
 (defclass flet-form (function-binding-form)
@@ -498,14 +519,15 @@
          collect (cons name (walk-form `(lambda ,args ,@body) flet env)) into bindings
          finally (setf (binds flet) bindings))
       ;;;; walk the body in the new env
-      (setf (body flet) (walk-implict-progn flet
-                                            body
-                                            (loop
-                                               with env = env
-                                               for (name . lambda) in (binds flet)
-                                               do (setf env (register env :flet name lambda))
-                                               finally (return env))
-                                            :declare t)))))
+      (multiple-value-setf ((body flet) nil (declares flet))
+			   (walk-implict-progn flet
+					       body
+					       (loop
+						  with env = env
+						  for (name . lambda) in (binds flet)
+						  do (setf env (register env :flet name lambda))
+						  finally (return env))
+					       :declare t)))))
 
 (defwalker-handler labels (form parent env)
   (destructuring-bind (binds &body body)
@@ -537,7 +559,7 @@
 
 ;;;; LET/LET*
 
-(defclass variable-binding-form (form binding-form-mixin implicit-progn-mixin)
+(defclass variable-binding-form (form binding-form-mixin implicit-progn-with-declare-mixin)
   ())
 
 (defclass let-form (variable-binding-form)
@@ -553,7 +575,7 @@
     (dolist* ((var . value) (binds let))
       (declare (ignore value))
       (setf env (register env :let var :dummy)))
-    (setf (body let) (walk-implict-progn let (cddr form) env :declare t))))
+    (multiple-value-setf ((body let) nil (declares let)) (walk-implict-progn let (cddr form) env :declare t))))
 
 (defclass let*-form (variable-binding-form)
   ())
@@ -563,21 +585,21 @@
     (dolist* ((var &optional initial-value) (mapcar #'ensure-list (second form)))
       (push (cons var (walk-form initial-value let* env)) (binds let*))
       (setf env (register env :let var :dummy)))
-    (setf (binds let*) (nreverse (binds let*))
-          (body let*) (walk-implict-progn let* (cddr form) env :declare t))))
+    (setf (binds let*) (nreverse (binds let*)))
+    (multiple-value-setf ((body let*) nil (declares let*)) (walk-implict-progn let* (cddr form) env :declare t))))
 
 ;;;; LOCALLY
 
-(defclass locally-form (form implicit-progn-mixin)
+(defclass locally-form (form implicit-progn-with-declare-mixin)
   ())
 
 (defwalker-handler locally (form parent env)
   (with-form-object (locally locally-form :parent parent :source form)
-    (setf (body locally) (walk-implict-progn locally (cdr form) env :declare t))))
+    (multiple-value-setf ((body locally) nil (declares locally)) (walk-implict-progn locally (cdr form) env :declare t))))
 
 ;;;; MACROLET
 
-(defclass macrolet-form (form binding-form-mixin implicit-progn-mixin)
+(defclass macrolet-form (form binding-form-mixin implicit-progn-with-declare-mixin)
   ())
 
 (defwalker-handler macrolet (form parent env)
@@ -587,8 +609,8 @@
       (let ((handler (eval `(lambda ,args ,@body))))
         (setf env (register env :macrolet name handler))
         (push (cons name handler) (binds macrolet))))
-    (setf (binds macrolet) (nreverse (binds macrolet))
-          (body macrolet) (walk-implict-progn macrolet (cddr form) env :declare t))))
+    (setf (binds macrolet) (nreverse (binds macrolet)))
+    (multiple-value-setf ((body macrolet) nil (declares macrolet)) (walk-implict-progn macrolet (cddr form) env :declare t))))
 
 ;;;; MULTIPLE-VALUE-CALL
 
@@ -660,7 +682,7 @@
 
 ;;;; SYMBOL-MACROLET
 
-(defclass symbol-macrolet-form (form binding-form-mixin implicit-progn-mixin)
+(defclass symbol-macrolet-form (form binding-form-mixin implicit-progn-with-declare-mixin)
   ())
 
 (defwalker-handler symbol-macrolet (form parent env)
