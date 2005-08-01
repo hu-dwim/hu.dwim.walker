@@ -554,7 +554,8 @@
          for lambda = (cdr binding)
          for tmp-lambda = (walk-lambda `(lambda ,arguments ,@body) labels env)
          do (setf (body lambda) (body tmp-lambda)
-                  (arguments lambda) (arguments tmp-lambda)))
+                  (arguments lambda) (arguments tmp-lambda)
+		  (declares lambda) (declares tmp-lambda)))
       (setf (body labels) (walk-implict-progn labels body env)))))
 
 ;;;; LET/LET*
