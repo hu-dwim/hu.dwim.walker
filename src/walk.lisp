@@ -201,7 +201,7 @@
          (extend-env (var (rest arguments)) var `(type ,(first arguments))))
         (t
          (extend-env (var arguments) var `(type ,type))))))
-  (values environment declaration))
+  (values environment (make-instance 'declaration-form :source declaration)))
 
 (defun walk-implict-progn (parent forms env &key docstring declare)
   (multiple-value-bind (body env docstring declarations)
