@@ -556,7 +556,7 @@
          do (setf (body lambda) (body tmp-lambda)
                   (arguments lambda) (arguments tmp-lambda)
 		  (declares lambda) (declares tmp-lambda)))
-      (setf (body labels) (walk-implict-progn labels body env)))))
+      (multiple-value-setf ((body labels) nil (declares labels)) (walk-implict-progn labels body env :declare t)))))
 
 ;;;; LET/LET*
 
