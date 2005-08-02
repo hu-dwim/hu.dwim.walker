@@ -28,16 +28,16 @@
   FORM."
   (if (atom form)
       (gethash 'atom *walker-handlers*)
-      (case (car form)
-        ((block declare flet function go if labels let let*
-          macrolet progn quote return-from setq symbol-macrolet
-          tagbody unwind-protect catch multiple-value-call
-          multiple-value-prog1 throw load-time-value the
-          eval-when locally progv)
-         (or
-          (gethash (car form) *walker-handlers*)
-          (error "Sorry, No walker for the special operater ~S defined." (car form))))
-        (t (gethash 'application *walker-handlers*)))))
+      (aif (gethash (car form) *walker-handlers*)
+	   it
+	   (case (car form)
+	     ((block declare flet function go if labels let let*
+		     macrolet progn quote return-from setq symbol-macrolet
+		     tagbody unwind-protect catch multiple-value-call
+		     multiple-value-prog1 throw load-time-value the
+		     eval-when locally progv)
+	      (error "Sorry, No walker for the special operater ~S defined." (car form)))
+	     (t (gethash 'application *walker-handlers*))))))
 
 (defmacro defwalker-handler (name (form parent lexical-env)
                              &body body)
