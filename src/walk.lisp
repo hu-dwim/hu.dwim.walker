@@ -740,3 +740,19 @@
                  :name (second form)
                  :target-progn (lookup env :tag (second form))
                  :enclosing-tagbody (lookup env :tagbody 'enclosing-tagbody)))
+
+;;;; PROGV 
+
+(defclass progv-form (form implicit-progn-mixin)
+  ((vars-form :accessor vars-form :initarg :vars-form)
+   (values-form :accessor values-form :initarg :values-form)))
+
+(defwalker-handler progv (form parent env)
+  (with-form-object (progv progv-form :parent parent :source form)
+    (setf (vars-form progv)   (walk-form (cadr form) progv env))
+    (setf (values-form progv) (walk-form (caddr form) progv env))
+    (setf (body progv) (walk-implict-progn progv (cdddr form) env))
+    progv))
+    
+
+    
