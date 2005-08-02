@@ -749,10 +749,7 @@
 
 (defwalker-handler progv (form parent env)
   (with-form-object (progv progv-form :parent parent :source form)
-    (setf (vars-form progv)   (walk-form (cadr form) progv env))
+    (setf (vars-form progv) (walk-form (cadr form) progv env))    
     (setf (values-form progv) (walk-form (caddr form) progv env))
     (setf (body progv) (walk-implict-progn progv (cdddr form) env))
     progv))
-    
-
-    
