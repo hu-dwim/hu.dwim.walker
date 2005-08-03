@@ -24,6 +24,12 @@
                       (ccl::var-name var))
                     vars)))  
 
+;fixme 
+#+openmcl
+(defun lexical-functions (environment)
+  (declare (ignore environment))
+  nil)
+
 ;;;; ** SBCL
  
 #+sbcl
@@ -34,6 +40,11 @@
 (defun lexical-variables (environment)
   (mapcar #'first (sb-c::lexenv-vars environment)))
 
+#+sbcl
+(defun lexical-functions (environment)
+  (mapcar #'first (sb-c::lexenv-funs environment)))
+
+
 ;;;; ** CMUCL
 
 #+cmu
@@ -43,4 +54,11 @@
 #+cmu
 (defun lexical-variables (environment)
   (mapcar #'first (c::lexenv-variables environment)))
+
+;fixme 
+#+cmu
+(defun lexical-functions (environment)
+  (declare (ignore environment))
+  nil)
+
 

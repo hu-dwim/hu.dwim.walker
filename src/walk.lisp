@@ -14,7 +14,9 @@
   (let ((walk-env '()))
     (when lexical-env
       (dolist (var (lexical-variables lexical-env))
-        (setf walk-env (register walk-env :lexical-let var t))))
+        (setf walk-env (register walk-env :lexical-let var t)))
+      (dolist (fun (lexical-functions lexical-env))
+	(setf walk-env (register walk-env :lexical-flet fun t))))
     walk-env))
 
 ;;;; This takes a Common Lisp form and transforms it into a tree of
@@ -266,6 +268,9 @@
 (defclass local-application-form (application-form)
   ((code :accessor code :initarg :code)))
 
+(defclass lexical-application-form (application-form)
+  ())
+
 (defclass free-application-form (application-form)
   ())
 
@@ -287,13 +292,15 @@
       (when (lookup env :macrolet op)
         (return (walk-form (apply (lookup env :macrolet op) args) parent env)))
       (when (macro-function op)
-         (multiple-value-bind (expansion expanded)
-             (macroexpand-1 form nil)
-           (when expanded
-             (return (walk-form expansion parent env)))))
+	(multiple-value-bind (expansion expanded)
+	    (macroexpand-1 form nil)
+	  (when expanded
+	    (return (walk-form expansion parent env)))))
       (let ((app (if (lookup env :flet op)
                      (make-instance 'local-application-form :code (lookup env :flet op))
-                     (make-instance 'free-application-form))))
+                     (if (lookup env :lexical-flet op)
+			 (make-instance 'lexical-application-form)
+			 (make-instance 'free-application-form)))))
         (setf (operator app) op
               (parent app) parent
               (source app) form
@@ -319,6 +326,9 @@
 (defclass free-function-object-form (function-object-form)
   ())
 
+(defclass lexical-function-object-form (function-object-form)
+  ())
+
 (defwalker-handler function (form parent env)
   (if (and (listp (second form))
            (eql 'cl:lambda (first (second form))))
@@ -327,7 +337,9 @@
       ;; (function foo)
       (make-instance (if (lookup env :flet (second form))
                          'local-function-object-form
-                         'free-function-object-form)
+                         (if (lookup env :lexical-flet (second form))
+			     'lexical-function-object-form
+			     'free-function-object-form))
                      :name (second form)
                      :parent parent :source form)))
 
