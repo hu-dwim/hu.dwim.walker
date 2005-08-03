@@ -121,14 +121,18 @@
   ((binds :accessor binds :initarg :binds)))
 
 (defmacro multiple-value-setf (places form)
-  (let ((names (loop for place in places collect (gensym))))
-    `(multiple-value-bind ,names ,form
-       ,@(loop for name in names for place in places if (null place) collect `(declare (ignore ,name)))
-	 (setf ,@(loop
-		    for name in names
-		    for place in places
-		    if place collect place
-		    if place collect name)))))
+  (loop
+       for place in places
+       for name = (gensym)
+       collect name into bindings
+       if (eql 'nil place)
+         collect `(declare (ignore ,name)) into ignores
+       else
+         collect `(setf ,place ,name) into body
+       finally (return
+                 `(multiple-value-bind ,bindings ,form
+                    ,@ignores
+                    ,@body))))
 
 (defun split-body (body env &key (docstring t) (declare t))
   (let ((documentation nil) 
