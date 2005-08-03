@@ -425,7 +425,7 @@
   (make-instance 'rest-function-argument-form :name form
                  :parent parent :source form))
 
-;;;; Block/Return From
+;;;; BLOCK/RETURN-FROM
 
 (defclass block-form (form implicit-progn-mixin)
   ((name :accessor name :initarg :name)))
