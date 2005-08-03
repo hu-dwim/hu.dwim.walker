@@ -753,3 +753,14 @@
     (setf (values-form progv) (walk-form (caddr form) progv env))
     (setf (body progv) (walk-implict-progn progv (cdddr form) env))
     progv))
+
+;;;; THE
+
+(defclass the-form (form)
+  ((type-form :accessor type-form :initarg :type-form)
+   (value :accessor value :initarg :value)))
+
+(defwalker-handler the (form parent env)
+  (with-form-object (the the-form :parent parent :source form
+                                  :type-form (second form))
+    (setf (value the) (walk-form (third form) the env))))
