@@ -517,6 +517,11 @@ semantics."
   (declare (ignore k))
   (evaluate/cps-progn (target-progn go) env (lookup env :tag (enclosing-tagbody go) :error-p t)))
 
+;;;; THE
+
+(defmethod evaluate/cps ((the the-form) env k)
+  (evaluate/cps (value the) env k))
+
 ;;;; DEFUN/CC and DEFMETHOD/CC
 
 (defun extract-argument-names (lambda-list &key allow-specializers keep-lambda-keywords)
