@@ -124,6 +124,33 @@
        do (error "Sorry, don't know how to handle the lexcial function spec ~S."
                  func-spec)))
 
+;;;; ** CLISP
 
+#+clisp
+(defmethod environment-p ((environment vector))
+  (= 2 (length environment)))
 
-
+#+clisp
+(defmethod lexical-variables ((environment vector))
+  (when (null environment)
+    (return-from lexical-variables '()))
+  (let ((vars '()))
+    ;; variables-array is basically a tree of vectors
+    (labels ((walk-var-array (variables)
+               (loop
+                  for index upfrom 0 by 2
+                  for tree-top = (aref variables index)
+                  if (null tree-top)
+                    do (return-from walk-var-array
+                         nil)
+                  else if (vectorp tree-top)
+                    do (return-from walk-var-array
+                         (walk-var-array tree-top))
+                  else
+                    do (handle-variable (aref variables index)
+                                        (aref variables (1+ index)))))
+             (handle-variable (var-name var-spec)
+               (unless (system::symbol-macro-p var-spec)
+                 (push var-name vars))))
+      (walk-var-array (aref environment 0))
+      (nreverse vars))))
