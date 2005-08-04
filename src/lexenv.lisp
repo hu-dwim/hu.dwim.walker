@@ -4,14 +4,29 @@
 
 ;;;; * Portable lexical environment access
 
+(defgeneric environment-p (environment)
+  (:documentation "Returns T if ENVIRONMENT is a lexical
+  environment object (something suitable for passing to
+  macroexpand-1 or similar)"))
+
+(defgeneric lexical-variables (environment)
+  (:documentation "Return the names of all the local variables
+  in ENVIRONMENT. Does not return neither symbol-macrolets nor
+  ignared variables."))
+
+(defgeneric lexical-functions (environment)
+  (:documentation "Returns the names of all the local functions
+  in ENVIRONMENT. Names may be symbols of lists of the form (setf
+  name)."))
+
 ;;;; ** OpenMCL
 
 #+openmcl
-(defun environment-p (environment)
-  (subtypep (class-of environment) 'ccl::lexical-environment))
+(defmethod environment-p ((e ccl::lexical-environment))
+  t)
 
 #+openmcl
-(defun lexical-variables (environment)
+(defmethod lexical-variables ((environment ccl::lexical-environment))
   (loop
      for env = environment
           then (ccl::lexenv.parent-env env)
@@ -32,11 +47,11 @@
                                             (and (ccl::var-ea var-spec)
                                                  (consp (ccl::var-ea var-spec))
                                                  (eql :symbol-macro (car (ccl::var-ea var-spec)))))
-                                          vars)))))  
+                                          vars)))))
 
 #+openmcl
-(defun lexical-functions (environment)
-    (loop
+(defmethod lexical-functions ((environment ccl::lexical-environment))
+  (loop
      for env = environment
           then (ccl::lexenv.parent-env env)
      while (and env
@@ -51,19 +66,19 @@
                                  (find-package :SETF))
                             (list 'cl:setf (read-from-string (symbol-name name)))
                             name)))
-                      (remove-if (lambda (func-spec)
-                                   ;; weed out all the macrolets
-                                   (eql 'ccl::macro (second func-spec)))
-                                 funs))))
+                    (remove-if (lambda (func-spec)
+                                 ;; weed out all the macrolets
+                                 (eql 'ccl::macro (second func-spec)))
+                               funs))))
 
 ;;;; ** SBCL
  
 #+sbcl
-(defun environment-p (environment)
-  (subtypep (class-of environment) (find-class 'sb-kernel:lexenv)))
+(defmethod environment-p ((environment sb-kernel:lexenv))
+  t)
 
 #+sbcl
-(defun lexical-variables (environment)
+(defmethod lexical-variables ((environment sb-kernel:lexenv))
   (loop
      for var-spec in (sb-c::lexenv-vars environment)
      when (and (atom (cdr var-spec))
@@ -71,17 +86,17 @@
        collect (car var-spec)))
 
 #+sbcl
-(defun lexical-functions (environment)
+(defmethod lexical-functions ((environment sb-kernel:lexenv))
   (mapcar #'first (sb-c::lexenv-funs environment)))
 
 ;;;; ** CMUCL
 
 #+cmu
-(defun environment-p (environment)
-  (subtypep (class-of environment) (find-class 'c::lexenv)))
+(defmethod environment-p ((environment c::lexenv))
+  t)
 
 #+cmu
-(defun lexical-variables (environment)
+(defmethod lexical-variables ((environment c::lexenv))
   (loop
      for var-spec in (c::lexenv-variables environment)
      ;; variable refs are (NAME . LAMBDA-VAR), we want to void
@@ -92,7 +107,7 @@
        collect (car var-spec)))
 
 #+cmu
-(defun lexical-functions (environment)
+(defmethod lexical-functions ((environment c::lexenv))
   (loop
      for func-spec in (c::lexenv-functions environment)
      ;; flet and labels function look like ((FLET ACTUAL-NAME) . STUFF)
