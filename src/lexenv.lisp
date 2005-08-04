@@ -39,7 +39,7 @@
 #+sbcl
 (defun lexical-variables (environment)
   (loop
-     for var-spec in (sb-c::lexenv-funs environment)
+     for var-spec in (sb-c::lexenv-vars environment)
      when (and (atom (cdr var-spec))
                (not (sb-c::lambda-var-ignorep (cdr var-spec))))
        collect (car var-spec)))
