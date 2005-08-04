@@ -44,7 +44,6 @@
 (defun lexical-functions (environment)
   (mapcar #'first (sb-c::lexenv-funs environment)))
 
-
 ;;;; ** CMUCL
 
 #+cmu
@@ -55,10 +54,24 @@
 (defun lexical-variables (environment)
   (mapcar #'first (c::lexenv-variables environment)))
 
-;fixme 
 #+cmu
 (defun lexical-functions (environment)
-  (declare (ignore environment))
-  nil)
+  (loop
+     for func-spec in environment
+     ;; flet and labels function look like ((FLET ACTUAL-NAME) . STUFF)
+     if (and (consp (first func-spec))
+             (member (car (first func-spec)) '(flet labels)))
+       collect (second (first func-spec))
+     ;; macrolets look like (NAME SYSTEM:MACRO . STUFF)
+     else if (and (consp (cdr func-spec))
+                  (eql 'system:macro (second func-spec)))
+       ;; except that we don't return macros for now
+       do (progn)
+     ;; if we get here we're confused :(
+     else
+       do (error "Sorry, don't know how to handle the lexcial function spec ~S."
+                 func-spec)))
+
+
 
 
