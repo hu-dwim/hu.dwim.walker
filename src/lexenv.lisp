@@ -52,7 +52,14 @@
 
 #+cmu
 (defun lexical-variables (environment)
-  (mapcar #'first (c::lexenv-variables environment)))
+  (loop
+     for var-spec in (c::lexenv-variables environment)
+     ;; variable refs are (NAME . LAMBDA-VAR), we want to void
+     ;; symbol-macrolets which are (NAME SYSTEM:MACRO . EXPANSION)
+     when (and (atom (cdr var-spec))
+               ;; don't return ignored vars
+               (not (c::lambda-var-ignorep (cdr var-spec))))
+       collect (car var-spec)))
 
 #+cmu
 (defun lexical-functions (environment)
