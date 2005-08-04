@@ -57,7 +57,7 @@
 #+cmu
 (defun lexical-functions (environment)
   (loop
-     for func-spec in environment
+     for func-spec in (c::lexenv-functions environment)
      ;; flet and labels function look like ((FLET ACTUAL-NAME) . STUFF)
      if (and (consp (first func-spec))
              (member (car (first func-spec)) '(flet labels)))
