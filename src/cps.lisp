@@ -131,7 +131,7 @@ semantics."
 (defmethod evaluate/cps ((func free-function-object-form) env k)
   (declare (ignore env))
   (if (fboundp (name func))
-      (kontinue k (symbol-function (name func)))
+      (kontinue k (fdefinition (name func)))
       (error "Unbound function ~S." (name func))))
 
 (defmethod evaluate/cps ((func local-function-object-form) env k)
