@@ -139,22 +139,20 @@
 
 #+clisp
 (defun walk-vector-tree (function vector-tree)
-  (let ((seen (make-hash-table :test 'eql)))
-    (labels ((%walk (vector-tree)
-               (unless (gethash vector-tree seen)
-                 (setf (gethash vector-tree seen) t)
-                 (loop
-                    for index upfrom 0 by 2
-                    for tree-top = (aref vector-tree index)
-                    if (null tree-top)
-                      do (return-from %walk nil)
-                    else if (vectorp tree-top)
-                      do (return-from %walk
-                           (%walk vector-tree))
-                    else
-                    do (funcall function (aref vector-tree index)
-                                (aref vector-tree (1+ index)))))))
-      (%walk vector-tree))))
+  (labels ((%walk (vector-tree)
+             (loop
+                for index upfrom 0 by 2
+                for tree-top = (aref vector-tree index)
+                if (null tree-top)
+                  do (return-from %walk nil)
+                else if (vectorp tree-top)
+                  do (return-from %walk
+                       (%walk tree-top))
+                else
+                  do (funcall function
+                              (aref vector-tree index)
+                              (aref vector-tree (1+ index))))))
+    (%walk vector-tree)))
 
 #+clisp
 (defmethod lexical-variables ((environment vector))
@@ -168,10 +166,9 @@
 
 #+clisp
 (defmethod lexical-functions ((environment vector))
-  '() #| 
   (let ((vars '()))
-  (when (aref environment 1)
-    (walk-vector-tree (lambda (func-name func-spec)
-                        (push func-name vars))
-                      (aref environment 1)))
-    vars) |# )
+    (when (aref environment 1)
+      (walk-vector-tree (lambda (func-name func-spec)
+                          (push func-name vars))
+                        (aref environment 1)))
+    vars))
