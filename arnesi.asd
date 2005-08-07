@@ -12,7 +12,6 @@
   :components ((:static-file "arnesi.asd")
                (:module :src
                 :components ((:file "accumulation" :depends-on ("packages" "one-liners"))
-                             (:static-file "arnesi.el")
                              (:file "asdf" :depends-on ("packages" "io"))
                              (:file "csv" :depends-on ("packages" "string"))
                              (:file "compat" :depends-on ("packages"))
