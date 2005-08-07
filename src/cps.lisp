@@ -172,14 +172,16 @@ semantics."
     ((eql 'apply (operator func))
      (evaluate/cps-apply   (arguments func) '() env k))
     
-    ((get (operator func) 'defun/cc)
+    ((and (symbolp (operator func))
+          (get (operator func) 'defun/cc))
      (evaluate-arguments-then-apply
       (lambda (arguments)
         (apply-cps-lambda (get (operator func) 'defun/cc) arguments k))
       (arguments func) '()
       env))
 
-    ((get (operator func) 'defmethod/cc)
+    ((and (symbolp (operator func))
+          (get (operator func) 'defmethod/cc))
      (evaluate-arguments-then-apply
       (lambda (arguments)
         (apply-cps-lambda (apply (symbol-function (operator func)) arguments) arguments k))

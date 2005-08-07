@@ -291,7 +291,7 @@
           (return application)))
       (when (lookup env :macrolet op)
         (return (walk-form (apply (lookup env :macrolet op) args) parent env)))
-      (when (macro-function op)
+      (when (and (symbolp op) (macro-function op))
 	(multiple-value-bind (expansion expanded)
 	    (macroexpand-1 form nil)
 	  (when expanded
