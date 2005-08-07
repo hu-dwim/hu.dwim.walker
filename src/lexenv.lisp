@@ -138,26 +138,40 @@
   (= 2 (length environment)))
 
 #+clisp
+(defun walk-vector-tree (function vector-tree)
+  (let ((seen (make-hash-table :test 'eql)))
+    (labels ((%walk (vector-tree)
+               (unless (gethash vector-tree seen)
+                 (setf (gethash vector-tree seen) t)
+                 (loop
+                    for index upfrom 0 by 2
+                    for tree-top = (aref vector-tree index)
+                    if (null tree-top)
+                      do (return-from %walk nil)
+                    else if (vectorp tree-top)
+                      do (return-from %walk
+                           (%walk vector-tree))
+                    else
+                    do (funcall function (aref vector-tree index)
+                                (aref vector-tree (1+ index)))))))
+      (%walk vector-tree))))
+
+#+clisp
 (defmethod lexical-variables ((environment vector))
-  (when (null environment)
-    (return-from lexical-variables '()))
   (let ((vars '()))
-    ;; variables-array is basically a tree of vectors
-    (labels ((walk-var-array (variables)
-               (loop
-                  for index upfrom 0 by 2
-                  for tree-top = (aref variables index)
-                  if (null tree-top)
-                    do (return-from walk-var-array
-                         nil)
-                  else if (vectorp tree-top)
-                    do (return-from walk-var-array
-                         (walk-var-array tree-top))
-                  else
-                    do (handle-variable (aref variables index)
-                                        (aref variables (1+ index)))))
-             (handle-variable (var-name var-spec)
-               (unless (system::symbol-macro-p var-spec)
-                 (push var-name vars))))
-      (walk-var-array (aref environment 0))
-      (nreverse vars))))
+    (when (aref environment 0)
+      (walk-vector-tree (lambda (var-name var-spec)
+                          (unless (system::symbol-macro-p var-spec)
+                            (push var-name vars)))
+                        (aref environment 0)))
+    vars))
+
+#+clisp
+(defmethod lexical-functions ((environment vector))
+  '() #| 
+  (let ((vars '()))
+  (when (aref environment 1)
+    (walk-vector-tree (lambda (func-name func-spec)
+                        (push func-name vars))
+                      (aref environment 1)))
+    vars) |# )
