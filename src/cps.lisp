@@ -184,14 +184,14 @@ semantics."
           (get (operator func) 'defmethod/cc))
      (evaluate-arguments-then-apply
       (lambda (arguments)
-        (apply-cps-lambda (apply (symbol-function (operator func)) arguments) arguments k))
+        (apply-cps-lambda (apply (fdefinition (operator func)) arguments) arguments k))
       (arguments func) '()
       env))
        
     (t
      (evaluate-arguments-then-apply
       (lambda (arguments)
-        (apply #'kontinue k (multiple-value-list (apply (symbol-function (operator func)) arguments))))
+        (apply #'kontinue k (multiple-value-list (apply (fdefinition (operator func)) arguments))))
       (arguments func) '()
       env))))
 
