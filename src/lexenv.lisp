@@ -19,6 +19,12 @@
   in ENVIRONMENT. Names may be symbols of lists of the form (setf
   name)."))
 
+(defmethod lexical-variables ((environment null))
+  '())
+
+(defmethod lexical-functions ((environment null))
+  '())
+
 ;;;; ** OpenMCL
 
 #+openmcl
