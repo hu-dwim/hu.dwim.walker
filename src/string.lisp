@@ -45,8 +45,8 @@ the vector ALPHABET.
 
 (defun fold-strings (list)
   "Traverse list and cancatenates any sequential elements which
-  are lists. removes any \"\" elements for LIST. returns a fresh
-  list."
+  are strings. Removes any \"\" elements for LIST. returns a
+  fresh list."
   (declare (optimize (speed 3) (safety 0) (debug 0)))
   (let ((return-list '())
         (string-buffer (make-array 20 :element-type 'character
