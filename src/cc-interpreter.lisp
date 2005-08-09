@@ -141,7 +141,20 @@ semantics."
 
 (defclass closure/cc ()
   ((code :accessor code :initarg :code)
-   (env :accessor env :initarg :env)))
+   (env :accessor env :initarg :env))
+  #+sbcl (:metaclass mopp:funcallable-standard-class))
+
+#+sbcl
+(defmethod initialize-instance :after ((fun closure/cc) &rest initargs)
+  (declare (ignore initargs))
+  (mopp:set-funcallable-instance-function 
+   fun 
+   #'(lambda (&rest args)
+       (drive-interpreter/cc 
+	(apply-lambda/cc fun
+			 args
+			 *toplevel-k*)))))
+
 
 (defmethod evaluate/cc ((lambda lambda-function-form) env k)
   (kontinue k (make-instance 'closure/cc :code lambda :env env)))
