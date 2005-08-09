@@ -2,31 +2,31 @@
 
 (in-package :it.bese.arnesi)
 
-(def-suite :it.bese.arnesi.cps :in :it.bese.arnesi)
+(def-suite :it.bese.arnesi.call/cc :in :it.bese.arnesi)
 
-(in-suite :it.bese.arnesi.cps)
+(in-suite :it.bese.arnesi.call/cc)
 
 (eval-when (:compile-toplevel :load-toplevel :execute)
   (setf *call/cc-returns* nil))
 
-(test cps-constant
+(test call/cc-constant
   (is (= 4 (with-call/cc 4)))
   (is (eql :a (with-call/cc :a)))
   (is (eql 'a (with-call/cc 'a)))
   (is (eql #'+ (with-call/cc #'+))))
 
-(test cps-progn
+(test call/cc-progn
   (is (null (with-call/cc)))
   (is (= 1 (with-call/cc 1)))
   (is (= 2 (with-call/cc 1 2)))
   (is (= 3 (with-call/cc 1 2 3)))
   (is (= 4 (with-call/cc 1 2 3 4))))
 
-(test cps-progn/cc
+(test call/cc-progn/cc
   (is (= 1 (kall (with-call/cc (let/cc k k) 1))))
   (is (= 1 (kall (with-call/cc (let/cc k k) 0 1)))))
 
-(test cps-let
+(test call/cc-let
   (is (= 1 (with-call/cc
 	    (let () 1))))
   (is (= 1 (with-call/cc
@@ -51,20 +51,20 @@
     (is (= 9 (kall cont 5)))
     (is (= 12 (kall cont 8)))))
 
-(test cps-let/cc
+(test call/cc-let/cc
   (let ((k (with-call/cc
              (let ((a (retk)))
                (+ a 1)))))
   (is (= 1 (kall k 0)))
   (is (= 2 (kall k 1)))))
 
-(test cps-setq
+(test call/cc-setq
   (is (= 1 (with-call/cc
              (let ((a nil)) (setq a 1)))))
   (is (= 2 (with-call/cc
              (let ((a 1)) (setq a (1+ a)))))))
 
-(test cps-let*
+(test call/cc-let*
   (with-call/cc
     (let* ((a 1)
 	   (b a))
@@ -81,18 +81,18 @@
        (setq a 47)
        (is (= a 47))))))
 
-(test cps-apply
+(test call/cc-apply
   (is (= 0 (with-call/cc (+))))
   (is (= 1 (with-call/cc (+ 1))))
   (is (= 2 (with-call/cc (+ 1 1))))
   (is (= 3 (with-call/cc (+ 1 (+ 1 (+ 1 (+))))))))
 
-(test cps-if
+(test call/cc-if
   (is (= 1 (with-call/cc (if t 1))))
   (is (= 1 (with-call/cc (if nil 0 1))))
   (is (null (with-call/cc (if nil 1)))))
 
-(test cps-block/return-from
+(test call/cc-block/return-from
   (is (= 1
          (with-call/cc
            (block foo
@@ -108,7 +108,7 @@
 (defun reached-unreachable-code ()
   (fail "Somehow we reached unreachable code in a tagbody."))
 
-(test cps-tagbody
+(test call/cc-tagbody
   (with-call/cc
     (tagbody
        (go a)
@@ -138,7 +138,7 @@
        b (incf i) (is (= 2 i))
        c (is (= 2 i))))))
 
-(test cps-flet
+(test call/cc-flet
   (with-call/cc
     (flet ((foo () 'x))
       (is (eql 'x (foo))))
@@ -153,7 +153,7 @@
                (foo)))
         (is (eql 'outer-foo (bar)))))))
 
-(test cps-labels
+(test call/cc-labels
   (with-call/cc
     (labels ((foo () 'x))
       (is (eql 'x (foo))))
@@ -168,13 +168,13 @@
   (defun (setf test-funcall.0) (new-value)
     (setf value new-value)))
 
-(test cps-setf-funcall
+(test call/cc-setf-funcall
   (setf (test-funcall.0) 0)
   (is (= 0 (with-call/cc (test-funcall.0))))
   (is (= 1 (with-call/cc (setf (test-funcall.0) 1))))
   (is (= 2 (with-call/cc (funcall #'(setf test-funcall.0) 2)))))
 
-(test cps-lambda-requried-arguments
+(test call/cc-lambda-requried-arguments
   (with-call/cc
     (is (eql t (funcall (lambda () t))))
     (is (eql t (funcall (lambda (x) x) t))))
@@ -182,7 +182,7 @@
     (with-call/cc
       (funcall (lambda (x) x)))))
 
-(test cps-lambda-optional-arguments
+(test call/cc-lambda-optional-arguments
   (with-call/cc
     (is (eql t (funcall (lambda (&optional a) a) t)))
     (is (eql t (funcall (lambda (&optional (a t)) a)))))
@@ -202,7 +202,7 @@
 (defun/cc test-defun/cc3 (a &optional (b 1))
   (+ a b))
 
-(test cps-defun/cc
+(test call/cc-defun/cc
   (let ((cont nil))
     (setf cont (with-call/cc (test-defun/cc1)))
     (is (eql nil (kall cont nil)))
@@ -223,14 +223,14 @@
 (defmethod/cc test-generic/cc ((a string) &optional (v 5))
   v)
 
-(test cps-defgeneric/cc
+(test call/cc-defgeneric/cc
   (with-call/cc
     (is (= 3 (test-generic/cc 'a)))
     (is (= 0 (test-generic/cc 'a 0)))
     (is (= 5 (test-generic/cc "a")))
     (is (= 0 (test-generic/cc "a" 0)))))
 
-(test cps-loop
+(test call/cc-loop
   (let ((cont (with-call/cc
                 (loop
                    repeat 2
