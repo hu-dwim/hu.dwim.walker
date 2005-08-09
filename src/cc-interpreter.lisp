@@ -46,12 +46,13 @@
                       `(lambda (,v) (setf ,name ,v))))
               evaluate-env)))
     (setf evaluate-env `(list ,@(nreverse evaluate-env)))
-    `(drive-cps (evaluate/cps ,(walk-form (if (rest body)
-                                              `(progn ,@body)
-                                              (first body))
-                                          nil walk-env)
-                              ,evaluate-env
-                              *toplevel-k*))))
+    `(drive-interpreter/cc
+      (evaluate/cc ,(walk-form (if (rest body)
+                                   `(progn ,@body)
+                                   (first body))
+                               nil walk-env)
+                   ,evaluate-env
+                   *toplevel-k*))))
 
 (defun kall (k &optional (primary-value nil primary-value-p)
                &rest other-values)
@@ -60,18 +61,19 @@
 This function can be used within the lexcial scope of
 with-call/cc and outside, though it has slightly different
 semantics."
-  (drive-cps (lambda ()
-               (let ((k (apply (car k) (cdr k))))
-                 (cond
-                   (other-values (apply k primary-value other-values))
-                   (primary-value-p (funcall k primary-value))
-                   (t (funcall k nil)))))))
+  (drive-interpreter/cc
+   (lambda ()
+     (let ((k (apply (car k) (cdr k))))
+       (cond
+         (other-values (apply k primary-value other-values))
+         (primary-value-p (funcall k primary-value))
+         (t (funcall k nil)))))))
 
 ;;;; Implementation
 
-(defun drive-cps (cps)
+(defun drive-interpreter/cc (code)
   (catch 'done
-    (loop for func = cps then (funcall func))))
+    (loop for thunk = code then (funcall thunk))))
 
 (defmacro let/cc (k &body body)
   `(call/cc (lambda (,k) ,@body)))
@@ -104,7 +106,7 @@ semantics."
      (declare (ignorable ,@args))
      (klambda ,k-args ,@body)))
 
-(defgeneric evaluate/cps (form env k))
+(defgeneric evaluate/cc (form env k))
 
 (defvar *k*)
 
@@ -116,33 +118,33 @@ semantics."
 
 ;;;; Variable References
 
-(defmethod evaluate/cps ((var local-variable-reference) env k)
+(defmethod evaluate/cc ((var local-variable-reference) env k)
   (kontinue k (lookup env :let (name var) :error-p t)))
 
-(defmethod evaluate/cps ((var local-lexical-variable-reference) env k)
+(defmethod evaluate/cc ((var local-lexical-variable-reference) env k)
   (kontinue k (funcall (first (lookup env :lexical-let (name var) :error-p t)))))
 
-(defmethod evaluate/cps ((var free-variable-reference) env k)
+(defmethod evaluate/cc ((var free-variable-reference) env k)
   (declare (ignore env))
   (kontinue k (symbol-value (name var))))
 
 ;;;; FUNCTION and LAMBDA form
 
-(defmethod evaluate/cps ((func free-function-object-form) env k)
+(defmethod evaluate/cc ((func free-function-object-form) env k)
   (declare (ignore env))
   (if (fboundp (name func))
       (kontinue k (fdefinition (name func)))
       (error "Unbound function ~S." (name func))))
 
-(defmethod evaluate/cps ((func local-function-object-form) env k)
+(defmethod evaluate/cc ((func local-function-object-form) env k)
   (kontinue k (lookup env :flet (name func) :error-p t)))
 
-(defclass cps-closure ()
+(defclass closure/cc ()
   ((code :accessor code :initarg :code)
    (env :accessor env :initarg :env)))
 
-(defmethod evaluate/cps ((lambda lambda-function-form) env k)
-  (kontinue k (make-instance 'cps-closure :code lambda :env env)))
+(defmethod evaluate/cc ((lambda lambda-function-form) env k)
+  (kontinue k (make-instance 'closure/cc :code lambda :env env)))
 
 (defk k-for-call/cc (k)
     (value)
@@ -150,10 +152,10 @@ semantics."
       (kontinue k value)
       (throw 'done value)))
 
-(defmethod evaluate/cps ((func free-application-form) env k)
+(defmethod evaluate/cc ((func free-application-form) env k)
   (cond 
     ((eql 'call/cc (operator func))
-     (evaluate/cps (make-instance 'free-application-form
+     (evaluate/cc (make-instance 'free-application-form
                                   :operator 'funcall
                                   :arguments (list (first (arguments func)) (make-instance 'constant-form :value k :source k))
                                   :source (source func))
@@ -167,16 +169,16 @@ semantics."
       env))
     
     ((eql 'funcall (operator func))
-     (evaluate/cps-funcall (arguments func) env k))
+     (evaluate-funcall/cc (arguments func) env k))
     
     ((eql 'apply (operator func))
-     (evaluate/cps-apply   (arguments func) '() env k))
+     (evaluate-apply/cc (arguments func) '() env k))
     
     ((and (symbolp (operator func))
           (get (operator func) 'defun/cc))
      (evaluate-arguments-then-apply
       (lambda (arguments)
-        (apply-cps-lambda (get (operator func) 'defun/cc) arguments k))
+        (apply-lambda/cc (get (operator func) 'defun/cc) arguments k))
       (arguments func) '()
       env))
 
@@ -184,7 +186,7 @@ semantics."
           (get (operator func) 'defmethod/cc))
      (evaluate-arguments-then-apply
       (lambda (arguments)
-        (apply-cps-lambda (apply (fdefinition (operator func)) arguments) arguments k))
+        (apply-lambda/cc (apply (fdefinition (operator func)) arguments) arguments k))
       (arguments func) '()
       env))
        
@@ -195,31 +197,31 @@ semantics."
       (arguments func) '()
       env))))
 
-(defmethod evaluate/cps ((func local-application-form) env k)
-  (evaluate/cps-apply (arguments func) (list (list (lookup env :flet (operator func) :error-p t))) env k))
+(defmethod evaluate/cc ((func local-application-form) env k)
+  (evaluate-apply/cc (arguments func) (list (list (lookup env :flet (operator func) :error-p t))) env k))
 
-(defk k-for-cps-apply (remaining-arguments evaluated-arguments env k)
+(defk k-for-apply/cc (remaining-arguments evaluated-arguments env k)
     (value)
-  (evaluate/cps-apply (cdr remaining-arguments) (cons value evaluated-arguments)
-                      env k))
+  (evaluate-apply/cc (cdr remaining-arguments) (cons value evaluated-arguments)
+                     env k))
 
-(defun evaluate/cps-apply (remaining-arguments evaluated-arguments env k)
+(defun evaluate-apply/cc (remaining-arguments evaluated-arguments env k)
   (if remaining-arguments
-      (evaluate/cps (car remaining-arguments) env
-                    `(k-for-cps-apply ,remaining-arguments ,evaluated-arguments ,env ,k))
+      (evaluate/cc (car remaining-arguments) env
+                    `(k-for-apply/cc ,remaining-arguments ,evaluated-arguments ,env ,k))
       (let ((arg-list (apply #'list* (reverse evaluated-arguments))))
-        (apply-cps-lambda (first arg-list) (rest arg-list) k))))
+        (apply-lambda/cc (first arg-list) (rest arg-list) k))))
 
-(defun evaluate/cps-funcall (arguments env k)
-  (evaluate/cps-apply (append (butlast arguments)
-                              (list (make-instance 'free-application-form
-                                                   :operator 'list
-                                                   :source `(list ,(source (car (last arguments))))
-                                                   :arguments (last arguments))))
-                      '()
-                      env k))
+(defun evaluate-funcall/cc (arguments env k)
+  (evaluate-apply/cc (append (butlast arguments)
+                             (list (make-instance 'free-application-form
+                                                  :operator 'list
+                                                  :source `(list ,(source (car (last arguments))))
+                                                  :arguments (last arguments))))
+                     '()
+                     env k))
 
-(defmethod apply-cps-lambda ((operator cps-closure) effective-arguments k)
+(defmethod apply-lambda/cc ((operator closure/cc) effective-arguments k)
   (let ((env (env operator))
         (remaining-arguments effective-arguments)
         (remaining-parameters (arguments (code operator))))
@@ -252,39 +254,39 @@ semantics."
                (setf env (register env :let (name parameter) (pop remaining-arguments)))
                (when (supplied-p-parameter parameter)
                  (setf env (register env :let (supplied-p-parameter parameter) t))))
-             (return-from apply-cps-lambda
+             (return-from apply-lambda/cc
                ;; we need to evaluate a default-value, since this may
                ;; contain call/cc we need to setup the continuation
                ;; and let things go from there (hence the return-from)
-               (evaluate/cps (default-value parameter) env
-                             `(k-for-apply-cps/optional-argument-default-value
-                               ;; remaining-arguments is, by
-                               ;; definition, NIL so we needn't pass
-                               ;; it here.
-                               ,operator ,remaining-parameters ,env ,k)))))))
+               (evaluate/cc (default-value parameter) env
+                            `(k-for-apply/cc/optional-argument-default-value
+                              ;; remaining-arguments is, by
+                              ;; definition, NIL so we needn't pass
+                              ;; it here.
+                              ,operator ,remaining-parameters ,env ,k)))))))
     
-    (evaluate/cps-progn (body (code operator)) env k)))
+    (evaluate-progn/cc (body (code operator)) env k)))
 
-(defk k-for-apply-cps/optional-argument-default-value
+(defk k-for-apply-cc/optional-argument-default-value
     (operator remaining-parameters env k)
     (value)
-  (apply-cps-lambda/optional-default-value
+  (apply-lambda/cc/optional-default-value
    operator (cdr remaining-parameters)
    (register env :let (name (first remaining-parameters)) value) k))
 
-(defun apply-cps-lambda/optional-default-value (operator remaining-parameters env k)
+(defun apply-lambda/cc/optional-default-value (operator remaining-parameters env k)
   (if remaining-parameters
       (dolist (parameter remaining-parameters)
         (typecase parameter
           (optional-function-argument-form
-           (return-from apply-cps-lambda/optional-default-value
-             (evaluate/cps (default-value parameter) env
-                           `(k-for-apply-cps/optional-argument-default-value
-                             ,operator ,(cdr remaining-parameters) ,env ,k))))
+           (return-from apply-lambda/cc/optional-default-value
+             (evaluate/cc (default-value parameter) env
+                          `(k-for-apply/cc-optional-argument-default-value
+                            ,operator ,(cdr remaining-parameters) ,env ,k))))
           (t (error "Sorry, only required and optional arguments for now."))))
-      (evaluate/cps-progn (body (code operator)) env k)))
+      (evaluate-progn/cc (body (code operator)) env k)))
 
-(defmethod apply-cps-lambda ((operator function) effective-arguments k)
+(defmethod apply-lambda/cc ((operator function) effective-arguments k)
   (apply #'kontinue k (multiple-value-list (apply operator effective-arguments))))
 
 (defk k-for-evaluate-arguments-then-apply (handler remaining-arguments evaluated-arguments env)
@@ -296,85 +298,86 @@ semantics."
 
 (defun evaluate-arguments-then-apply (handler remaining-arguments evaluated-arguments env)
   (if remaining-arguments
-      (evaluate/cps (car remaining-arguments) env
+      (evaluate/cc (car remaining-arguments) env
                     `(k-for-evaluate-arguments-then-apply ,handler ,(cdr remaining-arguments)
                                                           ,evaluated-arguments ,env))
       (funcall handler (reverse evaluated-arguments))))
 
 ;;;; FUNCTION and LAMBDA application
 
-(defmethod evaluate/cps ((lambda lambda-application-form) env k)
-  (evaluate/cps-funcall (cons (operator lambda) (arguments lambda)) env k))
+(defmethod evaluate/cc ((lambda lambda-application-form) env k)
+  (evaluate-funcall/cc (cons (operator lambda) (arguments lambda)) env k))
 
 ;;;; Constants
 
-(defmethod evaluate/cps ((c constant-form) env k)
+(defmethod evaluate/cc ((c constant-form) env k)
   (declare (ignore env))
   (kontinue k (value c)))
 
 ;;;; BLOCK/RETURN-FROM
 
-(defmethod evaluate/cps ((block block-form) env k)
-  (evaluate/cps-progn (body block) (register env :block (name block) k) k))
+(defmethod evaluate/cc ((block block-form) env k)
+  (evaluate-progn/cc (body block) (register env :block (name block) k) k))
 
-(defmethod evaluate/cps ((return return-from-form) env k)
+(defmethod evaluate/cc ((return return-from-form) env k)
   (declare (ignore k))
-  (evaluate/cps (result return) env (lookup env :block (name (target-block return)) :error-p t)))
+  (evaluate/cc (result return) env (lookup env :block (name (target-block return)) :error-p t)))
 
 ;;;; CATCH/THROW
 
 (defk catch-tag-k (catch env k)
     (tag)
-  (evaluate/cps-progn (body catch) (register env :catch tag k) k))
+  (evaluate-progn/cc (body catch) (register env :catch tag k) k))
 
-(defmethod evaluate/cps ((catch catch-form) env k)
-  (evaluate/cps (tag catch) env `(catch-tag-k ,catch ,env ,k)))
+(defmethod evaluate/cc ((catch catch-form) env k)
+  (evaluate/cc (tag catch) env `(catch-tag-k ,catch ,env ,k)))
 
 (defk throw-tag-k (throw env k)
     (tag)
-  (evaluate/cps (value throw) env (lookup env :catch tag :error-p t)))
+  (evaluate/cc (value throw) env (lookup env :catch tag :error-p t)))
 
-(defmethod evaluate/cps ((throw throw-form) env k)
-  (evaluate/cps (tag throw) env
+(defmethod evaluate/cc ((throw throw-form) env k)
+  (evaluate/cc (tag throw) env
                 `(throw-tag-k ,throw ,env ,k)))
 
 ;;;; FLET/LABELS
 
-(defmethod evaluate/cps ((flet flet-form) env k)
+(defmethod evaluate/cc ((flet flet-form) env k)
   (let ((new-env env))
     (dolist* ((name . form) (binds flet))
-      (setf new-env (register new-env :flet name (make-instance 'cps-closure
+      (setf new-env (register new-env :flet name (make-instance 'closure/cc
                                                                 :code form
                                                                 :env env))))
-    (evaluate/cps-progn (body flet) new-env k)))
+    (evaluate-progn/cc (body flet) new-env k)))
 
-(defmethod evaluate/cps ((labels labels-form) env k)
+(defmethod evaluate/cc ((labels labels-form) env k)
   (let ((closures '()))
     (dolist* ((name . form) (binds labels))
-      (let ((closure (make-instance 'cps-closure :code form)))
+      (let ((closure (make-instance 'closure/cc :code form)))
         (setf env (register env :flet name closure))
         (push closure closures)))
     (dolist (closure closures)
       (setf (env closure) env))
-    (evaluate/cps-progn (body labels) env k)))
+    (evaluate-progn/cc (body labels) env k)))
 
 ;;;; LET/LET*
 
-(defmethod evaluate/cps ((let let-form) env k)
-  (evaluate/cps-let (binds let) nil (body let) env k))
+(defmethod evaluate/cc ((let let-form) env k)
+  (evaluate-let/cc (binds let) nil (body let) env k))
 
-(defk k-for-evaluate/cps-let (var remaining-bindings evaluated-bindings body env k)
+(defk k-for-evaluate-let/cc (var remaining-bindings evaluated-bindings body env k)
     (value)
-  (evaluate/cps-let remaining-bindings
-                    (cons (cons var value) evaluated-bindings)
-                    body env k))
+  (evaluate-let/cc remaining-bindings
+                   (cons (cons var value) evaluated-bindings)
+                   body env k))
 
-(defun evaluate/cps-let (remaining-bindings evaluated-bindings body env k)
+(defun evaluate-let/cc (remaining-bindings evaluated-bindings body env k)
   (if remaining-bindings
       (destructuring-bind (var . initial-value)
           (car remaining-bindings)
-        (evaluate/cps initial-value env
-                      `(k-for-evaluate/cps-let
+        (evaluate/cc
+         initial-value env
+                      `(k-for-evaluate-let/cc
                         ,var
                         ,(cdr remaining-bindings)
                         ,evaluated-bindings
@@ -382,46 +385,46 @@ semantics."
                         ,env
                         ,k)))
       (dolist* ((var . value) evaluated-bindings
-                (evaluate/cps-progn body env k))
+                (evaluate-progn/cc body env k))
         (setf env (register env :let var value)))))
 
-(defmethod evaluate/cps ((let* let*-form) env k)
-  (evaluate/cps-let* (binds let*) (body let*) env k))
+(defmethod evaluate/cc ((let* let*-form) env k)
+  (evaluate-let*/cc (binds let*) (body let*) env k))
 
-(defk k-for-evaluate/cps-let* (var bindings body env k)
+(defk k-for-evaluate-let*/cc (var bindings body env k)
     (value)
-  (evaluate/cps-let* bindings body
+  (evaluate-let*/cc bindings body
                      (register env :let var value) k))
 
-(defun evaluate/cps-let* (bindings body env k)
+(defun evaluate-let*/cc (bindings body env k)
   (if bindings
       (destructuring-bind (var . initial-value)
           (car bindings)
-        (evaluate/cps initial-value env
-                      `(k-for-evaluate/cps-let* ,var ,(cdr bindings) ,body ,env ,k)))
-      (evaluate/cps-progn body env k)))
+        (evaluate/cc initial-value env
+                      `(k-for-evaluate-let*/cc ,var ,(cdr bindings) ,body ,env ,k)))
+      (evaluate-progn/cc body env k)))
 
 ;;;; IF
 
-(defk k-for-evaluate/cps-if (then else env k)
+(defk k-for-evaluate-if/cc (then else env k)
     (value)
   (if value
-      (evaluate/cps then env k)
-      (evaluate/cps else env k)))
+      (evaluate/cc then env k)
+      (evaluate/cc else env k)))
 
-(defmethod evaluate/cps ((if if-form) env k)
-  (evaluate/cps (consequent if) env
-                `(k-for-evaluate/cps-if ,(then if) ,(else if) ,env ,k )))
+(defmethod evaluate/cc ((if if-form) env k)
+  (evaluate/cc (consequent if) env
+                `(k-for-evaluate-if/cc ,(then if) ,(else if) ,env ,k )))
 
 ;;;; LOCALLY
 
-(defmethod evaluate/cps ((locally locally-form) env k)
-  (evaluate/cps-progn (body locally) env k))
+(defmethod evaluate/cc ((locally locally-form) env k)
+  (evaluate-progn/cc (body locally) env k))
 
 ;;;; MACROLET
 
-(defmethod evaluate/cps ((macrolet macrolet-form) env k)
-  (evaluate/cps-progn (body macrolet) env k))
+(defmethod evaluate/cc ((macrolet macrolet-form) env k)
+  (evaluate-progn/cc (body macrolet) env k))
 
 ;;;; multiple-value-call
 
@@ -433,34 +436,34 @@ semantics."
 
 (defun evaluate-m-v-c (remaining-arguments evaluated-arguments env k)
   (if remaining-arguments
-      (evaluate/cps (car remaining-arguments) env
+      (evaluate/cc (car remaining-arguments) env
                     `(k-for-m-v-c  ,(cdr remaining-arguments) ,evaluated-arguments ,env ,k))
       (destructuring-bind (function &rest arguments)
           evaluated-arguments
         (etypecase function
-          (cps-closure (apply-cps-lambda function evaluated-arguments k))
+          (closure/cc (apply-lambda/cc function evaluated-arguments k))
           (function (apply #'kontinue k (multiple-value-list
                                          (multiple-value-call function (values-list arguments)))))))))
 
-(defmethod evaluate/cps ((m-v-c multiple-value-call-form) env k)
+(defmethod evaluate/cc ((m-v-c multiple-value-call-form) env k)
   (evaluate-m-v-c (list* (func m-v-c) (arguments m-v-c)) '() env k))
 
 ;;;; PROGN
 
-(defmethod evaluate/cps ((progn progn-form) env k)
-  (evaluate/cps-progn (body progn) env k))
+(defmethod evaluate/cc ((progn progn-form) env k)
+  (evaluate-progn/cc (body progn) env k))
 
-(defk k-for-evaluate/cps-progn (rest-of-body env k)
+(defk k-for-evaluate-progn/cc (rest-of-body env k)
     ()
-  (evaluate/cps-progn rest-of-body env k))
+  (evaluate-progn/cc rest-of-body env k))
 
-(defun evaluate/cps-progn (body env k)
+(defun evaluate-progn/cc (body env k)
   (cond
     ((cdr body)
-      (evaluate/cps (first body) env
-                    `(k-for-evaluate/cps-progn ,(cdr body) ,env ,k)))
+      (evaluate/cc (first body) env
+                    `(k-for-evaluate-progn/cc ,(cdr body) ,env ,k)))
     (body
-     (evaluate/cps (first body) env k))
+     (evaluate/cc (first body) env k))
     (t
      (kontinue k nil))))
 
@@ -481,26 +484,26 @@ semantics."
   (funcall (second (lookup env :lexical-let var :error-p t)) value)
   (kontinue k value))
 
-(defmethod evaluate/cps ((setq setq-form) env k)
+(defmethod evaluate/cc ((setq setq-form) env k)
   (multiple-value-bind (value foundp)
       (lookup env :let (var setq))
     (declare (ignore value))
     (if foundp
-        (evaluate/cps (value setq)
+        (evaluate/cc (value setq)
                       env `(k-for-local-setq ,(var setq) ,env ,k))
         (multiple-value-bind (value foundp)
             (lookup env :lexical-let (var setq))
           (declare (ignore value))
           (if foundp
-              (evaluate/cps (value setq)
+              (evaluate/cc (value setq)
                             env `(k-for-local-lexical-setq ,(var setq) ,env ,k))
-              (evaluate/cps (value setq)
+              (evaluate/cc (value setq)
                             env `(k-for-free-setq ,(var setq) ,env ,k)))))))
 
 ;;;; SYMBOL-MACROLET
 
-(defmethod evaluate/cps ((symbol-macrolet symbol-macrolet-form) env k)
-  (evaluate/cps-progn (body symbol-macrolet) env k))
+(defmethod evaluate/cc ((symbol-macrolet symbol-macrolet-form) env k)
+  (evaluate-progn/cc (body symbol-macrolet) env k))
 
 ;;;; TAGBODY/GO
 
@@ -508,21 +511,21 @@ semantics."
     ()
   (kontinue k nil))
 
-(defmethod evaluate/cps ((tagbody tagbody-form) env k)
-  (evaluate/cps-progn (body tagbody) (register env :tag tagbody k) `(tagbody-k ,k)))
+(defmethod evaluate/cc ((tagbody tagbody-form) env k)
+  (evaluate-progn/cc (body tagbody) (register env :tag tagbody k) `(tagbody-k ,k)))
 
-(defmethod evaluate/cps ((go-tag go-tag-form) env k)
+(defmethod evaluate/cc ((go-tag go-tag-form) env k)
   (declare (ignore go-tag env))
   (kontinue k nil))
 
-(defmethod evaluate/cps ((go go-form) env k)
+(defmethod evaluate/cc ((go go-form) env k)
   (declare (ignore k))
-  (evaluate/cps-progn (target-progn go) env (lookup env :tag (enclosing-tagbody go) :error-p t)))
+  (evaluate-progn/cc (target-progn go) env (lookup env :tag (enclosing-tagbody go) :error-p t)))
 
 ;;;; THE
 
-(defmethod evaluate/cps ((the the-form) env k)
-  (evaluate/cps (value the) env k))
+(defmethod evaluate/cc ((the the-form) env k)
+  (evaluate/cc (value the) env k))
 
 ;;;; DEFUN/CC and DEFMETHOD/CC
 
@@ -562,7 +565,7 @@ semantics."
 
 (defmacro defun/cc (name arguments &body body)
   `(progn
-     (setf (get ',name 'defun/cc) (make-instance 'cps-closure
+     (setf (get ',name 'defun/cc) (make-instance 'closure/cc
                                                  :code (walk-form '(lambda ,arguments ,@body) nil nil)
                                                  :env nil))
      (defun ,name ,arguments
@@ -574,7 +577,7 @@ semantics."
      (setf (get ',name 'defmethod/cc) t)
      (defmethod ,name ,arguments
        (declare (ignorable ,@(extract-argument-names arguments :allow-specializers t)))
-       (make-instance 'cps-closure
+       (make-instance 'closure/cc
                       :code (walk-form '(lambda ,(extract-argument-names arguments :allow-specializers t
                                                                          :keep-lambda-keywords t)
                                          ,@body)
