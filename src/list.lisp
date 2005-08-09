@@ -10,7 +10,7 @@
 If ITERATOR is a symbol then dolist* is just like dolist EXCEPT
 that it creates a fresh binding."
   (if (listp iterator)
-      (let ((i (gensym "DOLIST*-i-")))
+      (let ((i (gensym "DOLIST*-I-")))
         `(dolist (,i ,list ,return-value)
            (destructuring-bind ,iterator ,i
              ,@body)))
