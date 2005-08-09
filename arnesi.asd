@@ -15,7 +15,7 @@
                              (:file "asdf" :depends-on ("packages" "io"))
                              (:file "csv" :depends-on ("packages" "string"))
                              (:file "compat" :depends-on ("packages"))
-                             (:file "cps" :depends-on ("packages" "walk" "flow-control" "list" "string" "defclass-struct"))
+                             (:file "cc-interpreter" :depends-on ("packages" "walk" "flow-control" "list" "string" "defclass-struct"))
 			     (:file "debug" :depends-on ("accumulation"))
                              (:file "decimal-arithmetic" :depends-on ("packages"))
                              (:file "defclass-struct" :depends-on ("packages" "list"))
@@ -39,7 +39,7 @@
                              (:file "string" :depends-on ("packages" "list"))
                              (:file "vector" :depends-on ("packages" "flow-control"))
                              (:file "walk" :depends-on ("packages" "list" "mopp" "lexenv")))))
-  :properties ((:features "v1.4.0" "v1.4.1" "cps-interpreter")))
+  :properties ((:features "v1.4.0" "v1.4.1" "v1.4.2" "cc-interpreter")))
 
 (defsystem :arnesi.test
   :components ((:module :t
