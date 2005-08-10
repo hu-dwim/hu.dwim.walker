@@ -106,22 +106,14 @@ form being evaluated.")
   (cond
     (other-values-p `(lambda (,value &rest ,other-values)
                        (lambda ()
-                         (when *debug-evaluate/cc*
-                           (format *debug-io* "~&Got (values ~S~{~^ ~S~}).~%"
-                                   ,value ,other-values))
                          ,@body)))
     (valuep `(lambda (,value &rest ,other-values)
                (declare (ignore ,other-values))
                (lambda ()
-                 (when *debug-evaluate/cc*
-                   (format *debug-io* "~&Got ~S.~%"
-                           ,value))
                  ,@body)))
     (t `(lambda (,value &rest ,other-values)
+          (declare (ignore ,value ,other-values))
           (lambda ()
-            (when *debug-evaluate/cc*
-              (format *debug-io* "~&Ignoring (values ~S~{~^ ~S~}).~%"
-                      ,value ,other-values))
             ,@body)))))
 
 (defun kontinue (k &optional (primary-value nil primary-value-p)
@@ -135,7 +127,10 @@ form being evaluated.")
 (defmacro defk (name args k-args &body body)
   `(defun ,name ,args
      (declare (ignorable ,@args))
-     (klambda ,k-args ,@body)))
+     (klambda ,k-args
+       (when *debug-evaluate/cc*
+         (format *debug-io* "~&(~S~{~^ ~S~}) Got (values~{~^ ~S~}).~%" ',name (list ,@args) (list ,@k-args)))
+       ,@body)))
 
 (defgeneric evaluate/cc (form env k))
 
