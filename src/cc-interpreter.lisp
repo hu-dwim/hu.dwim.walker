@@ -648,6 +648,12 @@ form being evaluated.")
        (declare (ignorable ,@(extract-argument-names arguments :allow-specializers nil)))
        (error "Sorry, /CC function are not callable outside of with-call/cc."))))
 
+(defmacro defgeneric/cc (name args &rest options)
+  "Trivial wrapper around defgeneric designed to alert readers that these methods are cc methods."
+  `(defgeneric ,name ,args
+     ,@options
+     (:method-combination cc-standard)))
+
 ; for emacs:  (setf (get 'defmethod/cc 'common-lisp-indent-function) 'lisp-indent-defmethod)
 
 (defmacro defmethod/cc (name &rest args)
@@ -666,12 +672,6 @@ form being evaluated.")
 					     ,@body)
 					   nil nil)
 			  :env nil))))))
-
-
-(defmacro defgeneric/cc (name args &rest options)
-  "Trivial wrapper around defgeneric designed to alert readers that these methods are cc methods."
-  `(defgeneric ,name ,args ,@options))
-
 
 (defun closure-with-nextmethod (closure next)
   (make-instance 'closure/cc 
