@@ -307,7 +307,7 @@ semantics."
     
     (evaluate-progn/cc (body (code operator)) env k)))
 
-(defk k-for-apply-cc/optional-argument-default-value
+(defk k-for-apply/cc/optional-argument-default-value
     (operator remaining-parameters env k)
     (value)
   (apply-lambda/cc/optional-default-value
