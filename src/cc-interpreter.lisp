@@ -605,9 +605,9 @@ semantics."
 
 (defmacro defun/cc (name arguments &body body)
   `(progn
-     (setf (fdefinition ',name) (make-instance 'closure/cc
-                                               :code (walk-form '(lambda ,arguments ,@body) nil nil)
-                                               :env nil))
+     (setf (fdefinition/cc ',name) (make-instance 'closure/cc
+                                                  :code (walk-form '(lambda ,arguments ,@body) nil nil)
+                                                  :env nil))
      (defun ,name ,arguments
        (declare (ignorable ,@(extract-argument-names arguments :allow-specializers nil)))
        (error "Sorry, /CC function are not callable outside of with-call/cc."))))
