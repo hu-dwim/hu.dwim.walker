@@ -410,8 +410,10 @@
                            :supplied-p-parameter supplied-p-parameter)
       (setf (default-value arg) (walk-form default-value arg env)))))
 
-(defclass keyword-function-argument-form (optional-function-argument-form)
-  ((keyword-name :accessor keyword-name :initarg :keyword-name)))
+(defclass keyword-function-argument-form (function-argument-form)
+  ((keyword-name :accessor keyword-name :initarg :keyword-name)
+   (default-value :accessor default-value :initarg :default-value)
+   (supplied-p-parameter :accessor supplied-p-parameter :initarg :supplied-p-parameter)))
 
 (defun walk-keyword-argument (form parent env)
   (destructuring-bind (name &optional default-value supplied-p-parameter)
