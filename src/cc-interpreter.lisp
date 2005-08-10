@@ -69,6 +69,17 @@ semantics."
          (primary-value-p (funcall k primary-value))
          (t (funcall k nil)))))))
 
+(defvar *cc-functions* (make-hash-table :test 'eql))
+
+(defun fmkunbound/cc (function-name)
+  (remhash function-name *cc-functions*))
+
+(defun fdefinition/cc (function-name)
+  (gethash function-name *cc-functions*))
+
+(defun (setf fdefinition/cc) (closure-object function-name)
+  (setf (gethash function-name *cc-functions*) closure-object))
+
 ;;;; Implementation
 
 (defun drive-interpreter/cc (code)
@@ -201,18 +212,18 @@ semantics."
      (evaluate-apply/cc (arguments func) '() env k))
     
     ((and (symbolp (operator func))
-          (get (operator func) 'defun/cc))
+          (fdefinition/cc (operator func)))
      (evaluate-arguments-then-apply
       (lambda (arguments)
-        (apply-lambda/cc (get (operator func) 'defun/cc) arguments k))
+        (apply-lambda/cc (fdefinition/cc (operator func)) arguments k))
       (arguments func) '()
       env))
 
     ((and (symbolp (operator func))
-          (get (operator func) 'defmethod/cc))
+          (fdefinition/cc (operator func)))
      (evaluate-arguments-then-apply
       (lambda (arguments)
-        (apply-lambda/cc (apply (fdefinition (operator func)) arguments) arguments k))
+        (apply-lambda/cc (apply (fdefinition/cc (operator func)) arguments) arguments k))
       (arguments func) '()
       env))
        
@@ -594,9 +605,9 @@ semantics."
 
 (defmacro defun/cc (name arguments &body body)
   `(progn
-     (setf (get ',name 'defun/cc) (make-instance 'closure/cc
-                                                 :code (walk-form '(lambda ,arguments ,@body) nil nil)
-                                                 :env nil))
+     (setf (fdefinition ',name) (make-instance 'closure/cc
+                                               :code (walk-form '(lambda ,arguments ,@body) nil nil)
+                                               :env nil))
      (defun ,name ,arguments
        (declare (ignorable ,@(extract-argument-names arguments :allow-specializers nil)))
        (error "Sorry, /CC function are not callable outside of with-call/cc."))))
