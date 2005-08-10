@@ -15,7 +15,12 @@
                              (:file "asdf" :depends-on ("packages" "io"))
                              (:file "csv" :depends-on ("packages" "string"))
                              (:file "compat" :depends-on ("packages"))
-                             (:file "cc-interpreter" :depends-on ("packages" "walk" "flow-control" "list" "string" "defclass-struct"))
+                             (:module :call-cc
+                              :components ((:file "apply" :depends-on ("interpreter"))
+                                           (:file "generic-functions" :depends-on ("interpreter"))
+                                           (:file "handlers" :depends-on ("interpreter"))
+                                           (:file "interpreter"))
+                              :depends-on ("packages" "walk" "flow-control" "list" "string" "defclass-struct"))
 			     (:file "debug" :depends-on ("accumulation"))
                              (:file "decimal-arithmetic" :depends-on ("packages"))
                              (:file "defclass-struct" :depends-on ("packages" "list"))
