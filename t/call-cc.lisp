@@ -192,6 +192,18 @@
                            (+ a 1))))))
     (is (= 1 (kall cont 0)))))
 
+(test call/cc-lambda-keyword-arguments
+  (with-call/cc
+    (is (eql 'a   (funcall (lambda (&key a) a) :a 'a)))
+    (is (eql 'b   (funcall (lambda (&key (a 'b)) a))))
+    (is (eql t    (funcall (lambda (&optional a &key (b (not a))) b))))
+    (is (eql nil  (funcall (lambda (&optional a &key (b (not a)))
+                             b)
+                           t)))
+    (is (eql 42 (funcall (lambda (&optional a &key (b (not a)))
+                           b)
+                         t :b 42)))))
+
 (defun/cc test-defun/cc1 ()
   (let/cc k k))
 
