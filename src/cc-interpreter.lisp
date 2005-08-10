@@ -80,6 +80,15 @@ semantics."
 (defun (setf fdefinition/cc) (closure-object function-name)
   (setf (gethash function-name *cc-functions*) closure-object))
 
+(defvar *debug-evaluate/cc* nil
+  "When non NIL the evaluator will print, at each evaluation
+  step, what it's evaluating and the value passed in from the
+  previous step.
+
+If set to :FULL then at each step we print the form, the
+environment and the continuation. If set to T we just print the
+form being evaluated.")
+
 ;;;; Implementation
 
 (defun drive-interpreter/cc (code)
@@ -96,13 +105,24 @@ semantics."
                    &body body)
   (cond
     (other-values-p `(lambda (,value &rest ,other-values)
-                       (lambda () ,@body)))
+                       (lambda ()
+                         (when *debug-evaluate/cc*
+                           (format *debug-io* "~&Got (values ~S~{~^ ~S~}).~%"
+                                   ,value ,other-values))
+                         ,@body)))
     (valuep `(lambda (,value &rest ,other-values)
                (declare (ignore ,other-values))
-               (lambda () ,@body)))
+               (lambda ()
+                 (when *debug-evaluate/cc*
+                   (format *debug-io* "~&Got ~S.~%"
+                           ,value))
+                 ,@body)))
     (t `(lambda (,value &rest ,other-values)
-          (declare (ignore ,value ,other-values))
-          (lambda () ,@body)))))
+          (lambda ()
+            (when *debug-evaluate/cc*
+              (format *debug-io* "~&Ignoring (values ~S~{~^ ~S~}).~%"
+                      ,value ,other-values))
+            ,@body)))))
 
 (defun kontinue (k &optional (primary-value nil primary-value-p)
                  &rest other-values)
@@ -118,6 +138,22 @@ semantics."
      (klambda ,k-args ,@body)))
 
 (defgeneric evaluate/cc (form env k))
+
+(defun print-debug-step (form env k)
+  (let ((*print-pretty* nil))
+    (ecase *debug-evaluate/cc*
+      (:full
+       (format *debug-io*
+               "~&Evaluating: ~S~%Env: ~S~%K: ~S~%"
+               form env k))
+      ((t)
+       (format *debug-io* "~&Evaluating: ~S~%" form))
+      ((nil) ;; do nothing
+       nil))))
+
+(defmethod evaluate/cc :before (form env k)
+  (when *debug-evaluate/cc*
+    (print-debug-step form env k)))
 
 (defvar *k*)
 
