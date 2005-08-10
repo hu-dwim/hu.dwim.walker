@@ -43,41 +43,37 @@ the vector ALPHABET.
     (dotree (s string-designators)
       (princ s strcat))))
 
-(defun fold-strings (list)
-  "Traverse list and cancatenates any sequential elements which
-  are strings. Removes any \"\" elements for LIST. returns a
-  fresh list."
+;;; A "faster" version for string concatenating.
+;;; Could use just (apply #'concatenate 'string list), but that's quite slow
+(defun join-strings (list)
   (declare (optimize (speed 3) (safety 0) (debug 0)))
-  (let ((return-list '())
-        (string-buffer (make-array 20 :element-type 'character
-                                      :fill-pointer 0
-                                      :adjustable t)))
-    (flet ((collect-string (string)
-             (if (stringp (car return-list))
-                 ;; collecting another string, just add it.
-                 (loop
-                    for char across string
-                    do (vector-push-extend char (car return-list)))
-                 ;; new string
-                 (progn
-                   (loop
-                      initially (setf (fill-pointer string-buffer) 0)
-                      for char across string
-                      do (vector-push-extend char string-buffer))
-                   (push string-buffer return-list))))
-           (collect-object (object)
-             (if (stringp (car return-list))
-                 (setf (car return-list)
-                       (map-into (make-string (length string-buffer))
-                                 #'identity
-                                 string-buffer)
-                       return-list (cons object return-list))
-                 (push object return-list))))
-      (dolist (l list)
-        (if (stringp l)
-            (collect-string l)
-            (collect-object l)))
-      (nreverse return-list))))
+  (let* ((length (reduce #'+ list :key #'length))
+         (result (make-string length)))
+    (declare (type fixnum length)
+             (type (simple-array character (*)) result))
+    (loop
+         for string of-type (simple-array character (*)) in list
+         for start of-type fixnum = 0 then end
+         for end of-type fixnum = (+ start
+                                     (if string
+                                         (length string)
+                                         0))
+         while string
+         do (replace result string :start1 start :end1 end))))
+
+(defun fold-strings (list)
+  (declare (optimize (speed 3) (safety 0) (debug 0)))
+  (let ((strings '())
+        (result '()))
+    (dolist (object list)
+      (typecase object
+        (string (push object strings))
+        (t (when strings
+             (push (join-strings (nreverse strings)) result)
+             (setf strings '()))
+           (push object result))))
+    (when strings (push (join-strings (nreverse strings)) result))
+    (nreverse result)))
 
 (defun trim-string (string &optional (char '(#\Space #\Tab #\Newline
                                              #\Return #\Linefeed)))
