@@ -75,10 +75,10 @@ semantics."
   (remhash function-name *cc-functions*))
 
 (defun fdefinition/cc (function-name)
-  (gethash function-name *cc-functions*))
+  (values-list (gethash function-name *cc-functions*)))
 
-(defun (setf fdefinition/cc) (closure-object function-name)
-  (setf (gethash function-name *cc-functions*) closure-object))
+(defun (setf fdefinition/cc) (closure-object function-name &optional (type 'defun/cc))
+  (setf (gethash function-name *cc-functions*) (list closure-object type)))
 
 (defvar *debug-evaluate/cc* nil
   "When non NIL the evaluator will print, at each evaluation
@@ -144,7 +144,7 @@ form being evaluated.")
     (ecase *debug-evaluate/cc*
       (:full
        (format *debug-io*
-               "~&Evaluating: ~S~%Env: ~S~%K: ~S~%"
+               "~&Evaluating: ~S~%~3TEnv: ~S~%~3TK: ~S~%"
                form env k))
       ((t)
        (format *debug-io* "~&Evaluating: ~S~%" form))
@@ -248,7 +248,7 @@ form being evaluated.")
      (evaluate-apply/cc (arguments func) '() env k))
     
     ((and (symbolp (operator func))
-          (fdefinition/cc (operator func)))
+          (eql 'defun/cc (nth-value 1 (fdefinition/cc (operator func)))))
      (evaluate-arguments-then-apply
       (lambda (arguments)
         (apply-lambda/cc (fdefinition/cc (operator func)) arguments k))
@@ -256,10 +256,10 @@ form being evaluated.")
       env))
 
     ((and (symbolp (operator func))
-          (fdefinition/cc (operator func)))
+          (eql 'defmethod/cc (nth-value 1 (fdefinition/cc (operator func)))))
      (evaluate-arguments-then-apply
       (lambda (arguments)
-        (apply-lambda/cc (apply (fdefinition/cc (operator func)) arguments) arguments k))
+        (apply-lambda/cc (apply (operator func) arguments) arguments k))
       (arguments func) '()
       env))
        
@@ -641,9 +641,10 @@ form being evaluated.")
 
 (defmacro defun/cc (name arguments &body body)
   `(progn
-     (setf (fdefinition/cc ',name) (make-instance 'closure/cc
-                                                  :code (walk-form '(lambda ,arguments ,@body) nil nil)
-                                                  :env nil))
+     (setf (fdefinition/cc ',name 'defun/cc)
+           (make-instance 'closure/cc
+                          :code (walk-form '(lambda ,arguments ,@body) nil nil)
+                          :env nil))
      (defun ,name ,arguments
        (declare (ignorable ,@(extract-argument-names arguments :allow-specializers nil)))
        (error "Sorry, /CC function are not callable outside of with-call/cc."))))
@@ -663,7 +664,10 @@ form being evaluated.")
 		     (setf args (cdr args))))))
     (destructuring-bind (arguments &body body) args
       `(progn
-	 (setf (get ',name 'defmethod/cc) t)
+	 (setf (fdefinition/cc ',name 'defmethod/cc) t)
+         (defgeneric/cc ,name ,(extract-argument-names arguments
+                                                       :allow-specializers t
+                                                       :keep-lambda-keywords t))
 	 (defmethod ,name ,@qlist ,arguments
 	   (declare (ignorable ,@(extract-argument-names arguments :allow-specializers t)))
 	   (make-instance 'closure/cc
