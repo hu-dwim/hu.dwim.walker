@@ -242,6 +242,30 @@
     (is (= 5 (test-generic/cc "a")))
     (is (= 0 (test-generic/cc "a" 0)))))
 
+(defmethod/cc test-generic/cc2 :before (a)
+  (let/cc k
+    'before))
+
+(defmethod/cc test-generic/cc2 (a)
+  'primary)
+
+(test test-generic/cc2
+  (is (eql 'before (test-generic/cc2 t))))
+
+(defmethod/cc test-generic/cc3 :before (a)
+  (let/cc k (cons 'before k)))
+
+(defmethod/cc test-generic/cc3 :around (a)
+  (let/cc k (cons 'around k))
+  (call-next-method a))
+
+(defmethod/cc test-generic/cc3 (a)
+  (let/cc k (cons 'primary k))
+  a)
+
+(defmethod/cc test-generic/cc3 :after (a)
+  (let/cc k (cons 'after k)))
+
 (test call/cc-loop
   (let ((cont (with-call/cc
                 (loop

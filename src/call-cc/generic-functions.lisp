@@ -143,6 +143,19 @@
            (push '&allow-other-keys generic-lambda-list)))
      finally (return (nreverse generic-lambda-list))))
 
+(defun clean-argument-list (lambda-list)
+  (loop
+     for head on lambda-list
+     for argument = (car head)
+     if (member argument '(&optional &key &rest &allow-other-keys))
+       return (append cleaned head)
+     else
+       collect (if (listp argument)
+                   (first argument)
+                   argument)
+       into cleaned
+     finally (return cleaned)))
+
 ;; Copyright (c) 2002-2005, Edward Marco Baringer
 ;; All rights reserved. 
 ;; 
