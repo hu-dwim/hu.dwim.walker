@@ -13,7 +13,7 @@
                           :code (walk-form '(lambda ,arguments ,@body) nil nil)
                           :env nil))
      (defun ,name ,arguments
-       (declare (ignorable ,@(extract-argument-names arguments :allow-specializers nil)))
+       (declare (ignore ,@(extract-argument-names arguments)))
        (error "Sorry, /CC function are not callable outside of with-call/cc."))))
 
 ;;;; DEFGENERIC/CC
@@ -36,14 +36,11 @@
     (destructuring-bind (arguments &body body) args
       `(progn
 	 (setf (fdefinition/cc ',name 'defmethod/cc) t)
-         (defgeneric/cc ,name ,(extract-argument-names arguments
-                                                       :allow-specializers t
-                                                       :keep-lambda-keywords t))
+         (defgeneric/cc ,name ,(convert-to-generic-lambda-list arguments))
 	 (defmethod ,name ,@qlist ,arguments
-	   (declare (ignorable ,@(extract-argument-names arguments :allow-specializers t)))
+	   (declare (ignorable ,@(extract-argument-names arguments)))
 	   (make-instance 'closure/cc
-			  :code (walk-form '(lambda ,(extract-argument-names arguments :allow-specializers t
-									     :keep-lambda-keywords t)
+			  :code (walk-form '(lambda ,(clean-argument-list arguments)
 					     ,@body)
 					   nil nil)
 			  :env nil))))))
@@ -116,39 +113,35 @@
 
 ;;;; Helper
 
-(defun extract-argument-names (lambda-list &key allow-specializers keep-lambda-keywords)
-  (let ((state :required)
-        (argument-names '()))
-    (loop
-       for argument in lambda-list
-       do (if (member argument '(&optional &key &rest &allow-other-keys))
-              (progn
-                (setf state argument)
-                (when keep-lambda-keywords
-                  (push argument argument-names)))
-              (ecase state
-                (:required
-                 (push (if allow-specializers
-                           (if (consp argument)
-                               (first argument)
-                               argument)
-                           argument)
-                       argument-names))
-                (&optional (push (if (consp argument)
-                                     (first argument)
-                                     argument)
-                                 argument-names))
-                (&key (push (if (consp argument)
-                                (if (consp (first argument))
-                                    (second (first argument))
-                                    (first argument))
-                                argument)
-                            argument-names))
-                (&allow-other-keys
-                 (when keep-lambda-keywords
-                   (push argument argument-names)))
-                (&rest (push argument argument-names)))))
-    (nreverse argument-names)))
+(defun extract-argument-names (lambda-list)
+  "Returns a list of symbols representing the names of the
+  variables bound by the lambda list LAMBDA-LIST."
+  (mapcar #'name (walk-lambda-list lambda-list nil '() :allow-specializers t)))
+
+(defun convert-to-generic-lambda-list (defmethod-lambda-list)
+  (loop
+     with generic-lambda-list = '()
+     for arg in (walk-lambda-list defmethod-lambda-list
+                                  nil nil
+                                  :allow-specializers t)
+     do (etypecase arg
+          ((or required-function-argument-form
+               specialized-function-argument-form)
+           (push (name arg) generic-lambda-list))
+          (keyword-function-argument-form
+           (pushnew '&key generic-lambda-list)
+           (push (list (list (keyword-name arg)
+                             (name arg)))
+                 generic-lambda-list))
+          (rest-function-argument-form
+           (push '&rest generic-lambda-list)
+           (push (name arg) generic-lambda-list))
+          (optional-function-argument-form
+           (pushnew '&optional generic-lambda-list)
+           (push (name arg) generic-lambda-list))
+          (allow-other-keys-function-argument-form
+           (push '&allow-other-keys generic-lambda-list)))
+     finally (return (nreverse generic-lambda-list))))
 
 ;; Copyright (c) 2002-2005, Edward Marco Baringer
 ;; All rights reserved. 

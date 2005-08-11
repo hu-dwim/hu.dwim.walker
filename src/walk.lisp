@@ -347,38 +347,40 @@
   (with-form-object (func lambda-function-form
                           :parent parent
                           :source form)
-    (let ((arguments '())
-          (state))
-      ;; 1) parse the argument list creating a list of FUNCTION-ARGUMENT-FORM objects
-      (setf state :required)
-      (dolist (argument (second form))
-        (flet ((extend-env (argument)
-		 (unless (typep argument 'allow-other-keys-function-argument-form)
-		   (setf env (register env :let (name argument) argument)))))
-          (if (member argument '(&optional &key &rest))
-              (setf state argument)
-              (case state
-                (:required
-                 (push (walk-required-argument argument func env) arguments)
-                 (extend-env (car arguments)))
-                (&optional
-                 (push (walk-optional-argument argument func env) arguments)
-                 (extend-env (car arguments)))
-                (&key
-                 (if (eql argument '&allow-other-keys)
-                     (push (make-instance 'allow-other-keys-function-argument-form
-                                          :parent func :source argument)
-                           arguments)
-                     (push (walk-keyword-argument argument func env) arguments))
-                 (extend-env (car arguments)))
-                (&rest
-                 (push (walk-rest-argument argument func env) arguments)
-                 (extend-env (car arguments)))))))
-      (setf (arguments func) (nreverse arguments))
-      ;; 2) parse the body
-      (multiple-value-setf ((body func) nil (declares func)) (walk-implict-progn func (cddr form) env :declare t))
-      ;; all done
-      func)))
+    ;; 1) parse the argument list creating a list of FUNCTION-ARGUMENT-FORM objects
+    (multiple-value-setf ((arguments func) env)
+      (walk-lambda-list (second form) func env))
+    ;; 2) parse the body
+    (multiple-value-setf ((body func) nil (declares func))
+      (walk-implict-progn func (cddr form) env :declare t))
+    ;; all done
+    func))
+
+(defun walk-lambda-list (lambda-list parent env &key allow-specializers)
+  (flet ((extend-env (argument)
+                 (unless (typep argument 'allow-other-keys-function-argument-form)
+                   (setf env (register env :let (name argument) argument)))))
+    (let ((state :required)
+          (arguments '()))
+      (dolist (argument lambda-list)
+        (if (member argument '(&optional &key &rest))
+            (setf state argument)
+            (progn
+              (push (case state
+                      (:required
+                       (if allow-specializers
+                           (walk-specialized-argument-form argument parent env)
+                           (walk-required-argument argument parent env)))
+                      (&optional (walk-optional-argument argument parent env))
+                      (&key
+                       (if (eql '&allow-other-keys argument)
+                           (make-instance 'allow-other-keys-function-argument-form
+                                          :parent parent :source argument)
+                           (walk-keyword-argument argument parent env)))
+                      (&rest (walk-rest-argument argument parent env)))
+                    arguments)
+              (extend-env (car arguments)))))
+      (values (nreverse arguments) env))))
 
 (defclass function-argument-form (form)
   ((name :accessor name :initarg :name)))
@@ -395,6 +397,21 @@
   (make-instance 'required-function-argument-form
                  :name form
                  :parent parent :source form))
+
+(defclass specialized-function-argument-form (required-function-argument-form)
+  ((specializer :accessor specializer :initarg :specializer)))
+
+(defun walk-specialized-argument-form (form parent env)
+  (declare (ignore env))
+  (make-instance 'specialized-function-argument-form
+                 :name (if (listp form)
+                           (first form)
+                           form) 
+                 :specializer (if (listp form)
+                                  (second form)
+                                  'T)
+                 :parent parent
+                 :source form))
 
 (defclass optional-function-argument-form (function-argument-form)
   ((default-value :accessor default-value :initarg :default-value)
