@@ -243,14 +243,14 @@
     (is (= 0 (test-generic/cc "a" 0)))))
 
 (defmethod/cc test-generic/cc2 :before (a)
-  (let/cc k
-    'before))
+  (let/cc k 'before))
 
 (defmethod/cc test-generic/cc2 (a)
   'primary)
 
 (test test-generic/cc2
-  (is (eql 'before (test-generic/cc2 t))))
+  (with-call/cc
+   (is (eql 'before (test-generic/cc2 t)))))
 
 (defmethod/cc test-generic/cc3 :before (a)
   (let/cc k (cons 'before k)))
@@ -265,6 +265,21 @@
 
 (defmethod/cc test-generic/cc3 :after (a)
   (let/cc k (cons 'after k)))
+
+(test call/cc-defgeneric/cc3
+  (destructuring-bind (value . cont)
+      (with-call/cc (test-generic/cc3 32))
+    (is (eql 'around value))
+    (destructuring-bind (value . cont)
+        (with-call/cc (kall cont))
+      (is (eql 'before value))
+      (destructuring-bind (value . cont)
+          (with-call/cc (kall cont))
+        (is (eql 'primary value))
+        (destructuring-bind (value . cont)
+            (with-call/cc (kall cont))
+          (is (eql 'after value))
+          (is (eql 32 (kall cont))))))))
 
 (test call/cc-loop
   (let ((cont (with-call/cc
