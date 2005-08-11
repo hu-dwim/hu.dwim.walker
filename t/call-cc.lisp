@@ -287,3 +287,13 @@
                            finally (return-from done total)))))))
     (is (= 26 (kall (kall (kall cont 2) 13) 13)))))
 
+
+(test common-lisp/cc
+  (let (cont value)
+    (setf cont (with-call/cc (mapcar (lambda (x)
+                                       (+ x (let/cc k k)))
+                                     (list 1 2 3))))
+    (setf cont (with-call/cc (kall cont -1))
+          cont (with-call/cc (kall cont -2))
+          value (with-call/cc (kall cont -3)))
+    (is (equal (list 0 0 0) value))))

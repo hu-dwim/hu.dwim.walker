@@ -16,10 +16,12 @@
                              (:file "csv" :depends-on ("packages" "string"))
                              (:file "compat" :depends-on ("packages"))
                              (:module :call-cc
-                              :components ((:file "apply" :depends-on ("interpreter"))
-                                           (:file "generic-functions" :depends-on ("interpreter"))
-                                           (:file "handlers" :depends-on ("interpreter"))
-                                           (:file "interpreter"))
+                              :components ((:file "interpreter")
+                                           (:file "handlers")
+                                           (:file "apply")
+                                           (:file "generic-functions")
+                                           (:file "common-lisp-cc"))
+                              :serial t
                               :depends-on ("packages" "walk" "flow-control" "list" "string" "defclass-struct"))
 			     (:file "debug" :depends-on ("accumulation"))
                              (:file "decimal-arithmetic" :depends-on ("packages"))
