@@ -46,21 +46,15 @@ the vector ALPHABET.
 ;;; A "faster" version for string concatenating.
 ;;; Could use just (apply #'concatenate 'string list), but that's quite slow
 (defun join-strings (list)
-  (declare (optimize (speed 3) (safety 0) (debug 0)))
   (let* ((length (reduce #'+ list :key #'length))
          (result (make-string length)))
-    (declare (type fixnum length)
-             (type (simple-array character (*)) result))
     (loop
-         for string of-type (simple-array character (*)) in list
-         for start of-type fixnum = 0 then end
-         for end of-type fixnum = (+ start
-                                     (if string
-                                         (length string)
-                                         0))
-         while string
-         do (replace result string :start1 start :end1 end)
-         finally (return result))))
+       for string in list
+       for start = 0 then end
+       for end = (+ start (length string))
+       while string
+       do (replace result string :start1 start :end1 end)
+       finally (return result))))
 
 (defun fold-strings (list)
   (declare (optimize (speed 3) (safety 0) (debug 0)))
