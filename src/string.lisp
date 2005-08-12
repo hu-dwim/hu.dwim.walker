@@ -67,7 +67,8 @@ the vector ALPHABET.
              (push (join-strings (nreverse strings)) result)
              (setf strings '()))
            (push object result))))
-    (when strings (push (join-strings (nreverse strings)) result))
+    (when strings
+      (push (join-strings (nreverse strings)) result))
     (nreverse result)))
 
 (defun trim-string (string &optional (char '(#\Space #\Tab #\Newline

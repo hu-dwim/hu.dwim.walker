@@ -49,7 +49,8 @@
     ((eql 'call/cc (operator func))
      (evaluate/cc (make-instance 'free-application-form
                                   :operator 'funcall
-                                  :arguments (list (first (arguments func)) (make-instance 'constant-form :value k :source k))
+                                  :arguments (list (first (arguments func))
+                                                   (make-instance 'constant-form :value k :source k))
                                   :source (source func))
                    env `(k-for-call/cc ,k)))
     
