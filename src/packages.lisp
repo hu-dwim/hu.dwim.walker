@@ -35,8 +35,8 @@
    #:defun/cc
    #:defgeneric/cc
    #:defmethod/cc
-   #:assert-cc
    #:fmakun-cc
+   #:*debug-evaluate/cc*
    
    #:ppm
    #:ppm1
@@ -157,6 +157,7 @@
    #:strcat*
    #:princ-csv
    #:parse-csv-string
+   #:join-strings
    #:fold-strings
    #:trim-string
    #:~%
