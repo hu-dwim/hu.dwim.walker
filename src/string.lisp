@@ -59,7 +59,8 @@ the vector ALPHABET.
                                          (length string)
                                          0))
          while string
-         do (replace result string :start1 start :end1 end))))
+         do (replace result string :start1 start :end1 end)
+         finally (return result))))
 
 (defun fold-strings (list)
   (declare (optimize (speed 3) (safety 0) (debug 0)))

@@ -46,7 +46,8 @@
                              (:file "string" :depends-on ("packages" "list"))
                              (:file "vector" :depends-on ("packages" "flow-control"))
                              (:file "walk" :depends-on ("packages" "list" "mopp" "lexenv")))))
-  :properties ((:features "v1.4.0" "v1.4.1" "v1.4.2" "cc-interpreter")))
+  :properties ((:features "v1.4.0" "v1.4.1" "v1.4.2" "cc-interpreter"
+                          "join-strings-return-value")))
 
 (defsystem :arnesi.test
   :components ((:module :t
