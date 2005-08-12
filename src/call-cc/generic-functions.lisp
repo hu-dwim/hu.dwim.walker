@@ -29,10 +29,9 @@
 ; for emacs:  (setf (get 'defmethod/cc 'common-lisp-indent-function) 'lisp-indent-defmethod)
 
 (defmacro defmethod/cc (name &rest args)
-  (let ((qlist (if (symbolp (car args))
-		   (prog1 
-		       (list (car args))
-		     (setf args (cdr args))))))
+  (let ((qlist (list (if (symbolp (car args))
+                         (pop args)
+                         :primary))))
     (destructuring-bind (arguments &body body) args
       `(progn
 	 (setf (fdefinition/cc ',name 'defmethod/cc) t)
@@ -78,7 +77,7 @@
           (after-order :most-specific-last))
   ((around (:around))
    (before (:before))
-   (primary () :required t)
+   (primary (:primary) :required t)
    (after (:after)))
   
   (labels ((effective-order (methods order)
