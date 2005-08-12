@@ -24,12 +24,14 @@
 
 (defvar *walker-handlers* (make-hash-table :test 'eq))
 
+(defvar +atom-marker+ '+atom-marker+)
+
 (defun find-walker-handler (form)
   "Simple function which tells us what handler should deal
   with FORM. Signals an error if we don't have a handler for
   FORM."
   (if (atom form)
-      (gethash 'atom *walker-handlers*)
+      (gethash '+atom-marker+ *walker-handlers*)
       (aif (gethash (car form) *walker-handlers*)
 	   it
 	   (case (car form)
@@ -241,7 +243,7 @@
 (defclass free-variable-reference (variable-reference)
   ())
 
-(defwalker-handler atom (form parent env)
+(defwalker-handler +atom-marker+ (form parent env)
   (declare (special *macroexpand*))
   (cond
     ((not (or (symbolp form) (consp form)))
