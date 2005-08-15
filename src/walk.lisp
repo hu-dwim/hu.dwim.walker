@@ -138,9 +138,9 @@
                     ,@ignores
                     ,@body))))
 
-(defun split-body (body env &key (docstring t) (declare t))
+(defun split-body (body env &key parent (docstring t) (declare t))
   (let ((documentation nil) 
-	(decl nil)
+	(newdecls nil)
 	(decls nil))
     (flet ((done ()
              (return-from split-body (values body env documentation decls))))
@@ -152,9 +152,8 @@
                         ;; declare form
                         (let ((declarations (rest form)))
                           (dolist* (dec declarations)
-                            (multiple-value-setf (env decl) (parse-declaration dec env))
-			    (when decl
-			      (push decl decls))))
+                            (multiple-value-setf (env newdecls) (parse-declaration dec env parent))
+			    (setf decls (append newdecls decls))))
                         ;; source code, all done
                         (done)))
               (string (if docstring
@@ -178,42 +177,112 @@
 (defclass declaration-form (form)
   ())
 
-(defun parse-declaration (declaration environment)
-  (macrolet ((extend-env ((var list) &rest datum)
-               `(dolist (,var ,list)
-                  (setf environment (register environment :declare ,@datum)))))
-    (destructuring-bind (type &rest arguments)
-        declaration
-      (case type
-        (dynamic-extent
-         (extend-env (var arguments)
-                     var `(dynamic-extent)))        
-        (ftype
-         (extend-env (function-name (cdr arguments))
-                     function-name `(ftype ,(first arguments))))
-        (ignorable
-         (extend-env (var arguments)
-                     var `(ignorable)))
-        (ignore
-         (extend-env (var arguments)
-                     var `(ignorable)))
-        (inline
-          (extend-env (function arguments) function `(ignorable)))
-        (notinline
-         (extend-env (function arguments) function `(notinline)))
-        (optimize
-         (extend-env (optimize-spec arguments) 'optimize optimize-spec))
-        (special
-         (extend-env (var arguments) var `(special)))
-        (type
-         (extend-env (var (rest arguments)) var `(type ,(first arguments))))
-        (t
-         (extend-env (var arguments) var `(type ,type))))))
-  (values environment (make-instance 'declaration-form :source declaration)))
+(defclass optimize-declaration-form (declaration-form)
+  ((optimize-spec :accessor optimize-spec :initarg :optimize-spec)))
+
+(defclass variable-declaration-form (declaration-form)
+  ((name :accessor name :initarg :name)))
+
+(defclass function-declaration-form (declaration-form)
+  ((name :accessor name :initarg :name)))
+
+(defclass dynamic-extent-declaration-form (variable-declaration-form)
+  ())
+
+(defclass ignorable-declaration-form-mixin (declaration-form)
+  ())
+
+(defclass variable-ignorable-declaration-form (variable-declaration-form ignorable-declaration-form-mixin)
+  ())
+
+(defclass function-ignorable-declaration-form (function-declaration-form ignorable-declaration-form-mixin)
+  ())
+
+(defclass special-declaration-form (variable-declaration-form)
+  ())
+
+(defclass type-declaration-form (variable-declaration-form)
+  ((type-form :accessor type-form :initarg :type-form)))
+
+(defclass ftype-declaration-form (function-declaration-form)
+  ((type-form :accessor type-form :initarg :type-form)))
+
+(defclass notinline-declaration-form (function-declaration-form)
+  ())
+
+
+(defun parse-declaration (declaration environment parent)
+  (let ((declares nil))
+    (flet ((funname (form)
+	     (if (and (consp form) (eql (car form) 'function))
+		 (cadr form)
+		 nil)))
+      (macrolet ((mkdecl (varname formclass &rest rest)
+		   `(make-instance ,formclass :parent parent :source (list type ,varname) ,@rest))		 
+		 (extend-env ((var list) newdeclare &rest datum)
+		   `(dolist (,var ,list)
+		      (when ,newdeclare (push ,newdeclare declares))
+		      (setf environment (register environment :declare ,@datum)))))
+	(destructuring-bind (type &rest arguments)
+	    declaration
+	  (case type
+	    (dynamic-extent
+	     (extend-env (var arguments)
+			 (mkdecl var 'variable-ignorable-declaration-form) 
+			 var `(dynamic-extent)))        
+	    (ftype
+	     (extend-env (function-name (cdr arguments))
+			 (make-instance 'ftype-declaration-form 
+					:parent parent
+					:source `(ftype ,(first arguments) function-name)
+					:name function-name
+					:type-form (first arguments))
+			 function-name `(ftype ,(first arguments))))
+	    ((ignore ignorable)
+	     (extend-env (var arguments)
+			 (aif (funname var)
+			      (mkdecl var 'function-ignorable-declaration-form :name it)
+			      (mkdecl var 'variable-ignorable-declaration-form :name var))
+			 var `(ignorable)))
+	    (inline
+	      (extend-env (function arguments) 
+			  (mkdecl function 'function-ignorable-declaration-form :name function)
+			  function `(ignorable)))
+	    (notinline
+	     (extend-env (function arguments)
+			 (mkdecl function 'notinline-declaration-form :name function)
+			 function `(notinline)))
+	    (optimize
+	     (extend-env (optimize-spec arguments) 
+			 (mkdecl optimize-spec 'optimize-declaration-form :optimize-spec optimize-spec)
+			 'optimize optimize-spec))
+	    (special
+	     (extend-env (var arguments) 
+			 (mkdecl var 'special-declaration-form :name var)
+			 var `(special)))
+	    (type
+	     (extend-env (var (rest arguments))
+			 (make-instance 'type-declaration-form 
+					:parent parent
+					:source `(type ,(first arguments) var)
+					:name var
+					:type-form (first arguments))
+			 var `(type ,(first arguments))))
+	    (t
+	     (extend-env (var arguments)
+			 (make-instance 'type-declaration-form 
+					:parent parent
+					:source `(,type var)
+					:name var
+					:type-form type)
+			 var `(type ,type)))))))
+    (when (null declares)
+      (setq declares (list (make-instance 'declaration-form :parent parent :source declaration))))
+    (values environment declares)))
 
 (defun walk-implict-progn (parent forms env &key docstring declare)
   (multiple-value-bind (body env docstring declarations)
-      (split-body forms env :docstring docstring :declare declare)
+      (split-body forms env :parent parent :docstring docstring :declare declare)
     (values (mapcar (lambda (form)
                       (walk-form form parent env))
                     body)
