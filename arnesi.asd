@@ -45,7 +45,8 @@
                              (:file "specials" :depends-on ("packages" "hash"))
                              (:file "string" :depends-on ("packages" "list"))
                              (:file "vector" :depends-on ("packages" "flow-control"))
-                             (:file "walk" :depends-on ("packages" "list" "mopp" "lexenv")))))
+                             (:file "walk" :depends-on ("packages" "list" "mopp" "lexenv"
+                                                        "one-liners")))))
   :properties ((:features "v1.4.0" "v1.4.1" "v1.4.2" "cc-interpreter"
                           "join-strings-return-value")))
 

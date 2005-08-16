@@ -82,6 +82,39 @@ are discarded \(that is, the body is an implicit PROGN)."
         `(export ',name ,(package-name (symbol-package name))))
      (defconstant ,name ,value ,doc-string)))
 
+
+(defun register (environment type name datum &rest other-datum)
+  (cons (if other-datum
+            (list* type name datum other-datum)
+            (list* type name datum))
+        environment))
+
+(defmacro extend (environment type name datum &rest other-datum)
+  `(setf ,environment (register ,environment ,type ,name ,datum ,@other-datum)))
+
+(defun lookup (environment type name &key (error-p nil) (default-value nil))
+  (loop
+     for (.type .name . data) in environment
+     when (and (eql .type type) (eql .name name))
+       return (values data t)
+     finally
+       (if error-p
+           (error "Sorry, No value for ~S of type ~S in environment ~S found."
+                  name type environment)
+           (values default-value nil))))
+
+(defun (setf lookup) (value environment type name &key (error-p nil))
+  (loop
+     for env-piece in environment
+     when (and (eql (first env-piece)  type)
+               (eql (second env-piece) name))
+       do (setf (cddr env-piece) value) and
+       return value
+     finally
+       (when error-p
+         (error "Sorry, No value for ~S of type ~S in environment ~S found."
+                name type environment))))
+
 ;; Copyright (c) 2002-2005, Edward Marco Baringer
 ;; All rights reserved. 
 ;; 

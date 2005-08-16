@@ -80,35 +80,6 @@
             (*print-length* 4))
         (format stream "~S" (source form))))))
 
-(defun register (environment type name datum &rest other-datum)
-  (cons (if other-datum
-            (list* type name datum other-datum)
-            (list* type name datum))
-        environment))
-
-(defun lookup (environment type name &key (error-p nil) (default-value nil))
-  (loop
-     for (.type .name . data) in environment
-     when (and (eql .type type) (eql .name name))
-       return (values data t)
-     finally
-       (if error-p
-           (error "Sorry, No value for ~S of type ~S in environment ~S found."
-                  name type environment)
-           (values default-value nil))))
-
-(defun (setf lookup) (value environment type name &key (error-p nil))
-  (loop
-     for env-piece in environment
-     when (and (eql (first env-piece)  type)
-               (eql (second env-piece) name))
-       do (setf (cddr env-piece) value) and
-       return value
-     finally
-       (when error-p
-         (error "Sorry, No value for ~S of type ~S in environment ~S found."
-                name type environment))))
-
 (defmacro with-form-object ((variable type &rest initargs)
                             &body body)
   `(let ((,variable (make-instance ',type ,@initargs)))
