@@ -172,3 +172,27 @@
                           (push func-name vars))
                         (aref environment 1)))
     vars))
+
+;;;; ** LispWorks
+
+#+lispworks
+(defmethod environment-p ((environment system::augmented-environment))
+  t)
+
+#+lispworks
+(defmethod lexical-variables ((environment system::augmented-environment))
+  (mapcar (lambda (venv)
+            (slot-value venv 'compiler::name))
+          (remove-if (lambda (venv)
+                       ;; regular variables, the ones we're interested
+                       ;; in, appear to have a NIL in this slot.
+                       (slot-value venv 'compiler::kind))
+                     (slot-value environment 'compiler::venv))))
+
+#+lispworks
+(defmethod lexical-functions ((environment system::augmented-environment))
+  (mapcar #'car
+          (remove-if (lambda (fenv)
+                       ;; remove all the macros
+                       (eql 'compiler::macro (slot-value (cdr fenv) 'compiler::function-or-macro)))
+                     (slot-value environment 'compiler::fenv))))
