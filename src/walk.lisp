@@ -14,9 +14,9 @@
   (let ((walk-env '()))
     (when lexical-env
       (dolist (var (lexical-variables lexical-env))
-        (setf walk-env (register walk-env :lexical-let var t)))
+        (extend walk-env :lexical-let var t))
       (dolist (fun (lexical-functions lexical-env))
-	(setf walk-env (register walk-env :lexical-flet fun t))))
+	(extend walk-env :lexical-flet fun t)))
     walk-env))
 
 ;;;; This takes a Common Lisp form and transforms it into a tree of
@@ -193,7 +193,7 @@
 		 (extend-env ((var list) newdeclare &rest datum)
 		   `(dolist (,var ,list)
 		      (when ,newdeclare (push ,newdeclare declares))
-		      (setf environment (register environment :declare ,@datum)))))
+                      (extend environment :declare ,@datum))))
 	(destructuring-bind (type &rest arguments)
 	    declaration
 	  (case type
@@ -401,7 +401,7 @@
 (defun walk-lambda-list (lambda-list parent env &key allow-specializers)
   (flet ((extend-env (argument)
                  (unless (typep argument 'allow-other-keys-function-argument-form)
-                   (setf env (register env :let (name argument) argument)))))
+                   (extend env :let (name argument) argument))))
     (let ((state :required)
           (arguments '()))
       (dolist (argument lambda-list)
@@ -602,7 +602,7 @@
 					       (loop
 						  with env = env
 						  for (name . lambda) in (binds flet)
-						  do (setf env (register env :flet name lambda))
+						  do (extend env :flet name lambda)
 						  finally (return env))
 					       :declare t)))))
 
@@ -622,7 +622,7 @@
                                      :parent labels
                                      :source (list* name arguments body))
          do (push (cons name lambda) (binds labels))
-         do (setf env (register env :flet name lambda)))
+         do (extend env :flet name lambda))
       (setf (binds labels) (nreverse (binds labels)))
       (loop
          for form in binds
@@ -652,7 +652,7 @@
                                  (second form)))
     (dolist* ((var . value) (binds let))
       (declare (ignore value))
-      (setf env (register env :let var :dummy)))
+      (extend env :let var :dummy))
     (multiple-value-setf ((body let) nil (declares let)) (walk-implict-progn let (cddr form) env :declare t))))
 
 (defclass let*-form (variable-binding-form)
@@ -662,7 +662,7 @@
   (with-form-object (let* let*-form :parent parent :source form :binds '())
     (dolist* ((var &optional initial-value) (mapcar #'ensure-list (second form)))
       (push (cons var (walk-form initial-value let* env)) (binds let*))
-      (setf env (register env :let var :dummy)))
+      (extend env :let var :dummy))
     (setf (binds let*) (nreverse (binds let*)))
     (multiple-value-setf ((body let*) nil (declares let*)) (walk-implict-progn let* (cddr form) env :declare t))))
 
@@ -685,7 +685,7 @@
                               :binds '())
     (dolist* ((name args &body body) (second form))
       (let ((handler (eval `(lambda ,args ,@body))))
-        (setf env (register env :macrolet name handler))
+        (extend env :macrolet name handler)
         (push (cons name handler) (binds macrolet))))
     (setf (binds macrolet) (nreverse (binds macrolet)))
     (multiple-value-setf ((body macrolet) nil (declares macrolet)) (walk-implict-progn macrolet (cddr form) env :declare t))))
@@ -780,7 +780,7 @@
   (with-form-object (symbol-macrolet symbol-macrolet-form :parent parent :source form
                                      :binds '())
     (dolist* ((symbol expansion) (second form))
-      (setf env (register env :symbol-macrolet symbol expansion))
+      (extend env :symbol-macrolet symbol expansion)
       (push (cons symbol expansion) (binds symbol-macrolet)))
     (setf (binds symbol-macrolet) (nreverse (binds symbol-macrolet))
           (body symbol-macrolet) (walk-implict-progn parent (cddr form) env))))
@@ -799,7 +799,7 @@
 
 (defwalker-handler tagbody (form parent env)
   (with-form-object (tagbody tagbody-form :parent parent :source form :body (cdr form))
-    (setf env (register env :tagbody 'enclosing-tagbody tagbody))
+    (extend env :tagbody 'enclosing-tagbody tagbody)
     (flet ((go-tag-p (form)
              (or (symbolp form) (integerp form))))
       ;; the loop below destructuivly modifies the body of tagbody,
@@ -808,7 +808,7 @@
       (loop
          for part on (body tagbody)
          if (go-tag-p (car part))
-           do (setf env (register env :tag (car part) (cdr part))))
+           do (extend env :tag (car part) (cdr part)))
       (loop
          for part on (body tagbody)
          if (go-tag-p (car part))
