@@ -235,7 +235,7 @@
 	     (extend-env (var (rest arguments))
 			 (make-instance 'type-declaration-form 
 					:parent parent
-					:source `(type ,(first arguments) var)
+					:source `(type ,(first arguments) ,var)
 					:name var
 					:type-form (first arguments))
 			 var `(type ,(first arguments))))
@@ -243,7 +243,7 @@
 	     (extend-env (var arguments)
 			 (make-instance 'type-declaration-form 
 					:parent parent
-					:source `(,type var)
+					:source `(,type ,var)
 					:name var
 					:type-form type)
 			 var `(type ,type)))))))
