@@ -346,6 +346,85 @@
   (lambda (&rest arguments)
     (not (apply function arguments))))
 
+(redefun/cc list-delete-if (test list start end count key)
+  (let* ((head (cons nil list))
+	 (splice head))
+    (do ((i 0 (1+ i))
+	 (x list (cdr x)))
+	((endp x) (rplacd splice nil) (cdr head))
+      (when (and count (<= count 0))
+	(rplacd splice x)
+	(return (cdr head)))
+      (if (and (<= start i) (or (null end) (< i end))
+	       (funcall test (apply-key key (car x))))
+	  (when count (decf count))
+          (setq splice (cdr (rplacd splice x)))))))
+
+(redefun/cc vector-delete-if (test vector start end count key)
+  (let* ((length (length vector))
+	 (end (or end length))
+	 (count (or count length))
+	 (i 0))
+    (do* ((j 0 (1+ j))
+	  element)
+         ((>= j length))
+      (setq element (aref vector j))
+      (if (and (<= start j) (< j end)
+	       (plusp count)
+	       (funcall test (apply-key key element)))
+	  (when count (decf count))
+          (progn
+            (setf (aref vector i) element)
+            (incf i))))
+    (cond
+      ((array-has-fill-pointer-p vector)
+       (setf (fill-pointer vector) i)
+       vector)
+      ((adjustable-array-p vector) (adjust-array vector i))
+      (t (subseq vector 0 i))))) 
+
+(redefun/cc delete-if (predicate sequence &key from-end (start 0) end count key)
+  "Modify SEQUENCE by deleting elements satisfying PREDICATE."
+  (if from-end
+      (let ((length (length sequence)))
+	(nreverse (delete-if predicate (nreverse sequence)
+			     :start (- length (or end length))
+			     :end (- length start)
+			     :count count :key key)))
+    (etypecase sequence
+      (null nil)
+      (cons (list-delete-if predicate sequence start end count key))
+      (vector (vector-delete-if predicate sequence start end count key)))))
+
+(redefun/cc delete (item sequence &key from-end (test #'eql) test-not (start 0) end
+		    count key)
+  "Modify SEQUENCE by deleting elements equal to ITEM."
+  (when test-not (setq test (complement test-not)))
+  (delete-if #'(lambda (arg) (funcall test item arg)) sequence
+	     :from-end from-end :start start :end end :count count :key key))
+
+(redefun/cc delete-if-not (predicate sequence &key from-end (start 0) end count key)
+  "Modify SEQUENCE by deleting elements not satisfying PREDICATE."
+  (delete-if (complement predicate) sequence :from-end from-end
+	     :start start :end end :count count :key key))
+
+(redefun/cc remove-if (predicate sequence &key from-end (start 0) end count key)
+  "Return a copy of SEQUENCE with elements satisfying PREDICATE removed."
+  (delete-if predicate (copy-seq sequence) :from-end from-end :start start :end end
+	     :count count :key key))
+
+(redefun/cc remove (item sequence &key from-end (test #'eql) test-not (start 0)
+		    end count key)
+  "Return a copy of SEQUENCE with elements equal to ITEM removed."
+  (when test-not (setq test (complement test-not)))
+  (remove-if #'(lambda (arg) (funcall test item arg)) sequence
+	     :from-end from-end :start start :end end :count count :key key))
+
+(redefun/cc remove-if-not (predicate sequence &key from-end (start 0) end count key)
+  "Return a copy of SEQUENCE with elements not satisfying PREDICATE removed."
+  (remove-if (complement predicate) sequence :from-end from-end
+	     :start start :end end :count count :key key))
+
 ;; Copyright (c) 2002-2005, Edward Marco Baringer
 ;; All rights reserved. 
 ;; 
