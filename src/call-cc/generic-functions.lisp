@@ -29,15 +29,20 @@
 ; for emacs:  (setf (get 'defmethod/cc 'common-lisp-indent-function) 'lisp-indent-defmethod)
 
 (defmacro defmethod/cc (name &rest args)
-  (let ((qlist (list (if (symbolp (car args))
+  (let ((qlist (list (if (and (symbolp (car args))
+				  (not (null (car args))))
                          (pop args)
                          :primary))))
-    (destructuring-bind (arguments &body body) args
+    (let ((arguments (car args))
+	  (body (cdr args)))
       `(progn
 	 (setf (fdefinition/cc ',name 'defmethod/cc) t)
-         (defgeneric/cc ,name ,(convert-to-generic-lambda-list arguments))
+         (defgeneric/cc ,name ,(if arguments 
+				   (convert-to-generic-lambda-list arguments)
+				   '()))
 	 (defmethod ,name ,@qlist ,arguments
-	   (declare (ignorable ,@(extract-argument-names arguments)))
+	   ,(when arguments 
+	     `(declare (ignorable ,@(extract-argument-names arguments))))
 	   (make-instance 'closure/cc
 			  :code (walk-form '(lambda ,(clean-argument-list arguments)
 					     ,@body)
