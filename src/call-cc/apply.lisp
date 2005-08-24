@@ -106,7 +106,11 @@
 ;;;; apply'ing a local function
 
 (defmethod evaluate/cc ((func local-application-form) env k)
-  (evaluate-apply/cc (arguments func) (list (list (lookup env :flet (operator func) :error-p t))) env k))
+  (evaluate-arguments-then-apply
+   (lambda (arguments)
+     (apply-lambda/cc (lookup env :flet (operator func) :error-p t) arguments k))
+   (arguments func) '()
+   env))
 
 ;;;; apply'ing a lambda
 

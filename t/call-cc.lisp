@@ -160,7 +160,15 @@
     (labels ((foo () 'outer-foo))
       (labels ((bar () (foo))
                (foo () 'inner-foo))
-        (is (eql 'inner-foo (bar)))))))
+        (is (eql 'inner-foo (bar))))))
+  (let ((cont (with-call/cc
+                (labels ((rec (n)
+                           (if (zerop n)
+                               0
+                               (+ (rec (1- n))
+                                  (let/cc k k)))))
+                  (rec 2)))))
+    (is (= 5 (kall (kall cont 2) 3)))))
 
 (let ((value 0))
   (defun test-funcall.0 ()
