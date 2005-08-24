@@ -197,6 +197,33 @@
                        (eql 'compiler::macro (slot-value (cdr fenv) 'compiler::function-or-macro)))
                      (slot-value environment 'compiler::fenv))))
 
+;;;; ** Allegro
+
+#+(and allegro (version>= 7 0))
+(defmethod environment-p ((env sys::augmentable-environment)) t)
+
+#+(and allegro (version>= 7 0))
+(defmethod lexical-variables ((env sys::augmentable-environment))
+  (let (fns)
+    (system::map-over-environment-variables
+     (lambda (symbol type rest)
+       (declare (ignore rest))
+       (when (eq type :lexical)
+	 (push symbol fns)))
+     env)
+    fns))
+
+#+(and allegro (version>= 7 0))
+(defmethod lexical-functions ((env sys::augmentable-environment))
+  (let (fns)
+    (system::map-over-environment-functions
+     (lambda (name type rest)
+       (when (eq type :function)
+	 (push name fns)))
+     env)
+    fns))
+
+
 ;; Copyright (c) 2002-2005, Edward Marco Baringer
 ;; All rights reserved. 
 ;; 
