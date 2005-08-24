@@ -161,6 +161,16 @@
       (labels ((bar () (foo))
                (foo () 'inner-foo))
         (is (eql 'inner-foo (bar))))))
+  (finishes 
+    (with-call/cc
+      (labels ((rec (x) x))
+        #'rec
+        (is (= 1 (funcall #'rec 1) 1))
+        (is (= 1 (apply #'rec (list 1)))))
+      (flet ((f () 1))
+        (is (= 1 (f)))
+        (is (= 1 (funcall #'f)))
+        (is (= 1 (apply #'f '()))))))
   (let ((cont (with-call/cc
                 (labels ((rec (n)
                            (if (zerop n)
@@ -309,7 +319,6 @@
                            sum (let/cc k k) into total
                            finally (return-from done total)))))))
     (is (= 26 (kall (kall (kall cont 2) 13) 13)))))
-
 
 (test common-lisp/cc
   (let (cont value)
