@@ -55,6 +55,16 @@
   (loop for k being the hash-keys of hash-table
         collect (cons k (gethash k hash-table))))
 
+(defun hash-table-keys (hash-table)
+  (loop
+     for k being the hash-keys of hash-table
+     collect k))
+
+(defun hash-table-values (hash-table)
+  (loop
+     for v being the hash-values of hash-table
+     collect v))
+
 ;; Copyright (c) 2002-2005, Edward Marco Baringer
 ;; All rights reserved. 
 ;; 

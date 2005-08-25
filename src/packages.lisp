@@ -67,7 +67,9 @@
    #:build-hash-table
    #:deflookup-table
    #:hash-to-alist
-
+   #:hash-table-keys
+   #:hash-table-values
+   
    #:write-as-uri
    #:escape-as-uri
    #:unescape-as-uri
