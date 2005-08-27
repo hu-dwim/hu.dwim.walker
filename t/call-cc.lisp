@@ -229,7 +229,7 @@
   (let/cc k k)
   arg1)
 
-(defun/cc test-defun/cc3 (a &optional (b 1))
+(defun/cc test-defun/cc3 (a &key (b 1))
   (+ a b))
 
 (test call/cc-defun/cc
@@ -245,20 +245,20 @@
       (is (= 1 (test-defun/cc3 0)))
       (is (= 2 (test-defun/cc3 1))))))
 
-(defgeneric/cc test-generic/cc (a &optional v))
+(defgeneric/cc test-generic/cc (a &key v))
 
-(defmethod/cc test-generic/cc ((a symbol) &optional (v 3))
+(defmethod/cc test-generic/cc ((a symbol) &key (v 3))
   v)
 
-(defmethod/cc test-generic/cc ((a string) &optional (v 5))
+(defmethod/cc test-generic/cc ((a string) &key (v 5))
   v)
 
 (test call/cc-defgeneric/cc
   (with-call/cc
     (is (= 3 (test-generic/cc 'a)))
-    (is (= 0 (test-generic/cc 'a 0)))
+    (is (= 0 (test-generic/cc 'a :v 0)))
     (is (= 5 (test-generic/cc "a")))
-    (is (= 0 (test-generic/cc "a" 0)))))
+    (is (= 0 (test-generic/cc "a" :v 0)))))
 
 (defmethod/cc test-generic/cc2 :before (a)
   (let/cc k 'before))
