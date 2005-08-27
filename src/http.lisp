@@ -56,9 +56,9 @@
 
 (defvar *unescape-table* (make-escaped-table))
 
-(defun nunescape-as-uri (string)
-  (unescape-as-uri string)) 
-  
+(defun nunescape-as-uri (string &rest args)
+  (apply #'unescape-as-uri string args))
+
 (defun unescape-as-uri (string &optional (external-format :latin-1))
   (declare (ignorable external-format))
   (flet ((unescape-to-bytes (string)
