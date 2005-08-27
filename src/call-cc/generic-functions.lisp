@@ -129,9 +129,11 @@
            (push (name arg) generic-lambda-list))
           (keyword-function-argument-form
            (pushnew '&key generic-lambda-list)
-           (push (list (list (keyword-name arg)
-                             (name arg)))
-                 generic-lambda-list))
+           (if (keyword-name arg)
+               (push (list (list (keyword-name arg)
+                                 (name arg)))
+                     generic-lambda-list)
+               (push (list (name arg)) generic-lambda-list)))
           (rest-function-argument-form
            (push '&rest generic-lambda-list)
            (push (name arg) generic-lambda-list))

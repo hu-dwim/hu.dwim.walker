@@ -231,7 +231,9 @@
                    "Odd number of arguments in ~S being applied to ~S."
                    remaining-arguments
                    (source (code operator)))
-           (let ((value (getf remaining-arguments (keyword-name parameter) parameter)))
+           (let ((value (getf remaining-arguments
+                              (effective-keyword-name parameter)
+                              parameter)))
              (if (eql parameter value)
                  ;; no such keyword. need to evaluate the default value
                  (return-from apply-lambda/cc/keyword
@@ -241,8 +243,8 @@
                                   ,env ,k)))
                  ;; keyword passed in explicitly.
                  (progn
-                   (let ((value (getf remaining-arguments (keyword-name parameter))))
-                     (remf remaining-arguments (keyword-name parameter))
+                   (let ((value (getf remaining-arguments (effective-keyword-name parameter))))
+                     (remf remaining-arguments (effective-keyword-name parameter))
                      (setf env (register env :let (name parameter) value))
                    (when (supplied-p-parameter parameter)
                      (setf env (register env :let (supplied-p-parameter parameter) t))))))))

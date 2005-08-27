@@ -474,6 +474,10 @@
    (default-value :accessor default-value :initarg :default-value)
    (supplied-p-parameter :accessor supplied-p-parameter :initarg :supplied-p-parameter)))
 
+(defmethod effective-keyword-name ((k keyword-function-argument-form))
+  (or (keyword-name k)
+      (intern (symbol-name (name k)) :keyword)))
+
 (defun walk-keyword-argument (form parent env)
   (destructuring-bind (name &optional default-value supplied-p-parameter)
       (ensure-list form)
@@ -482,7 +486,7 @@
                     name))
           (keyword (if (consp name)
                        (first name)
-                       (intern (string name) :keyword))))
+                       nil)))
       (with-form-object (arg keyword-function-argument-form
                              :parent parent
                              :source form
