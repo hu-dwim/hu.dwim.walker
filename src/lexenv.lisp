@@ -124,8 +124,11 @@
      ;; macrolets look like (NAME SYSTEM:MACRO . STUFF)
      else if (and (consp (cdr func-spec))
                   (eql 'system:macro (second func-spec)))
-       ;; except that we don't return macros for now
-       do (progn)
+     ;; except that we don't return macros for now
+     do (progn)
+     ;; handle the case  (NAME . #<C::FUNCTIONAL>)
+     else if (typep (cdr func-spec) 'C::FUNCTIONAL)
+       collect (car func-spec)
      ;; if we get here we're confused :(
      else
        do (error "Sorry, don't know how to handle the lexcial function spec ~S."
