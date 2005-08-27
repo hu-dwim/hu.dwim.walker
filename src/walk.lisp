@@ -325,12 +325,12 @@
         form
       (when (and (consp op)
                  (eq 'cl:lambda (car op)))
-        (with-form-object (application lambda-application-form :parent parent :source form)
-          (setf (operator application) (walk-form op application env)
-                (arguments application) (mapcar (lambda (form)
-                                                  (walk-form form application env))
-                                                args))
-          (return application)))
+        (return
+          (with-form-object (application lambda-application-form :parent parent :source form)
+            (setf (operator application) (walk-form op application env)
+                  (arguments application) (mapcar (lambda (form)
+                                                    (walk-form form application env))
+                                                  args)))))
       (when (lookup env :macrolet op)
         (return (walk-form (apply (lookup env :macrolet op) args) parent env)))
       (when (and (symbolp op) (macro-function op))
