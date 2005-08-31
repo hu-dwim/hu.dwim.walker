@@ -6,9 +6,13 @@
 
 (defmethod evaluate/cc ((func free-function-object-form) env k)
   (declare (ignore env))
-  (if (fboundp (name func))
-      (kontinue k (fdefinition (name func)))
-      (error "Unbound function ~S." (name func))))
+  (multiple-value-bind (definition cc-boundp)
+      (fdefinition/cc (name func))
+    (if cc-boundp
+        (kontinue k definition)
+        (if (fboundp (name func))
+            (kontinue k (fdefinition (name func)))
+            (error "Unbound function ~S." (name func))))))
 
 (defmethod evaluate/cc ((func local-function-object-form) env k)
   (kontinue k (lookup env :flet (name func) :error-p t)))
