@@ -193,12 +193,20 @@
                      (slot-value environment 'compiler::venv))))
 
 #+lispworks
+(defmethod lexical-variables ((environment lexical::environment))
+  (mapcar #'car (slot-value environment 'lexical::variables)))
+
+#+lispworks
 (defmethod lexical-functions ((environment system::augmented-environment))
   (mapcar #'car
           (remove-if (lambda (fenv)
                        ;; remove all the macros
                        (eql 'compiler::macro (slot-value (cdr fenv) 'compiler::function-or-macro)))
                      (slot-value environment 'compiler::fenv))))
+
+#+lispworks
+(defmethod lexical-functions ((environment lexical::environment))
+  (mapcar #'car (slot-value environment 'lexical::functions)))
 
 ;;;; ** Allegro
 
