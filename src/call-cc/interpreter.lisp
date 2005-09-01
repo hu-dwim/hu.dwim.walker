@@ -134,6 +134,10 @@ form being evaluated.")
 
 (defgeneric evaluate/cc (form env k))
 
+(defmethod evaluate/cc ((form t) env k)
+  (declare (ignore env k))
+  (error "No EVALUATE/CC method defined for ~S." form))
+
 (defun print-debug-step (form env k)
   (let ((*print-pretty* nil))
     (ecase *debug-evaluate/cc*
