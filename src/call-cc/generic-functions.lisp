@@ -41,6 +41,8 @@
 				   (convert-to-generic-lambda-list arguments)
 				   '()))
 	 (defmethod ,name ,@qlist ,arguments
+           ,(when (stringp (first body))
+              (pop body))
 	   ,(when arguments 
 	     `(declare (ignorable ,@(extract-argument-names arguments))))
 	   (make-instance 'closure/cc
