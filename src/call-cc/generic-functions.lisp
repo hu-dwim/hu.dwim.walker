@@ -41,10 +41,10 @@
 				   (convert-to-generic-lambda-list arguments)
 				   '()))
 	 (defmethod ,name ,@qlist ,arguments
-           ,(when (stringp (first body))
-              (pop body))
-	   ,(when arguments 
+           ,(when arguments 
 	     `(declare (ignorable ,@(extract-argument-names arguments))))
+	   ,@(when (stringp (first body))
+              (list (pop body)))
 	   (make-instance 'closure/cc
 			  :code (walk-form '(lambda ,(clean-argument-list arguments)
 					     ,@body)
