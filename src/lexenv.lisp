@@ -178,11 +178,11 @@
 
 ;;;; ** LispWorks
 
-#+lispworks
+#+(and lispworks macosx)
 (defmethod environment-p ((environment system::augmented-environment))
   t)
 
-#+lispworks
+#+(and lispworks macosx)
 (defmethod lexical-variables ((environment system::augmented-environment))
   (mapcar (lambda (venv)
             (slot-value venv 'compiler::name))
@@ -192,11 +192,7 @@
                        (slot-value venv 'compiler::kind))
                      (slot-value environment 'compiler::venv))))
 
-#+lispworks
-(defmethod lexical-variables ((environment lexical::environment))
-  (mapcar #'car (slot-value environment 'lexical::variables)))
-
-#+lispworks
+#+(and lispworks macosx)
 (defmethod lexical-functions ((environment system::augmented-environment))
   (mapcar #'car
           (remove-if (lambda (fenv)
@@ -204,7 +200,37 @@
                        (eql 'compiler::macro (slot-value (cdr fenv) 'compiler::function-or-macro)))
                      (slot-value environment 'compiler::fenv))))
 
-#+lispworks
+#+(and lispworks macosx)
+(defmethod environment-p ((environment compiler::environment))
+  t)
+
+#+(and lispworks macosx)
+(defmethod lexical-variables ((environment compiler::environment))
+  (mapcar (lambda (venv)
+            (slot-value venv 'compiler::name))
+          (remove-if (lambda (venv)
+                       ;; regular variables, the ones we're interested
+                       ;; in, appear to have a NIL in this slot.
+                       (slot-value venv 'compiler::kind))
+                     (slot-value environment 'compiler::venv))))
+
+#+(and lispworks macosx)
+(defmethod lexical-functions ((environment compiler::environment))
+  (mapcar #'car
+          (remove-if (lambda (fenv)
+                       ;; remove all the macros
+                       (macro-function (car fenv) environment))
+                     (slot-value environment 'compiler::fenv))))
+
+#+(and lispworks linux)
+(defmethod environment-p ((environment lexical::environment))
+  t)
+
+#+(and lispworks linux)
+(defmethod lexical-variables ((environment lexical::environment))
+  (mapcar #'car (slot-value environment 'lexical::variables)))
+
+#+(and lispworks linux)
 (defmethod lexical-functions ((environment lexical::environment))
   (mapcar #'car (slot-value environment 'lexical::functions)))
 
