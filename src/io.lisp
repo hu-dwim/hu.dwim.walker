@@ -32,9 +32,9 @@
 	      do (write-sequence buffer datum :start 0 :end bytes-read)
 	      while (= bytes-read buffer-size))))))
 
-(defun write-string-to-file (string pathname &key (if-exists :error))
+(defun write-string-to-file (string pathname &key (if-exists :error) (if-does-not-exist :error))
   "Write @var{string} to @var{pathname}."
-  (with-output-to-file (file-stream pathname :if-exists if-exists)
+  (with-output-to-file (file-stream pathname :if-exists if-exists :if-does-not-exist if-does-not-exist)
     (write-sequence string file-stream)))
 
 (defun copy-file (from to &key (if-to-exists :supersede)
