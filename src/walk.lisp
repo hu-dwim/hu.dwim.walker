@@ -297,6 +297,9 @@
                     :parent parent :source form))
     ((lookup env :symbol-macrolet form)
      (walk-form (lookup env :symbol-macrolet form) parent env))
+    ((nth-value 1 (macroexpand-1 form))
+     ;; a globaly defined symbol-macro
+     (walk-form (macroexpand-1 form) parent env))
     (t
      (make-instance 'free-variable-reference :name form
                     :parent parent :source form))))
