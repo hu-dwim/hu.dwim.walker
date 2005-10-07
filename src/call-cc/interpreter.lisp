@@ -25,7 +25,7 @@
   their normal semantics. The following special forms are
   allowed:
 
-  (call/cc LAMBDA) - LAMBDA, a one orgument function, will be
+  (call/cc LAMBDA) - LAMBDA, a one argument function, will be
   passed a continutaion. This object may then be passed to the
   function KALL which will cause execution to resume around the
   call/cc form. "
@@ -51,7 +51,7 @@
                                    `(progn ,@body)
                                    (first body))
                                nil walk-env)
-                   ,evaluate-env
+                   ,evaluate-env nil
                    *toplevel-k*))))
 
 (defun kall (k &optional (primary-value nil primary-value-p)
@@ -105,10 +105,12 @@ form being evaluated.")
                    &body body)
   (cond
     (other-values-p `(lambda (&optional ,value &rest ,other-values)
+                       (declare (ignorable dynamic-environment))
                        (lambda ()
                          ,@body)))
     (valuep `(lambda (&optional ,value &rest ,other-values)
-               (declare (ignore ,other-values))
+               (declare (ignore ,other-values)
+                        (ignorable dynamic-environment))
                (lambda ()
                  ,@body)))
     (t `(lambda (&optional ,value &rest ,other-values)
@@ -116,8 +118,7 @@ form being evaluated.")
           (lambda ()
             ,@body)))))
 
-(defun kontinue (k &optional (primary-value nil primary-value-p)
-                 &rest other-values)
+(defun kontinue (k &optional (primary-value nil primary-value-p) &rest other-values)
   (let ((k (apply (car k) (cdr k))))
     (cond
       (other-values (apply k primary-value other-values))
@@ -132,27 +133,27 @@ form being evaluated.")
          (format *debug-io* "~&(~S~{~^ ~S~}) Got (values~{~^ ~S~}).~%" ',name (list ,@args) (list ,@k-args)))
        ,@body)))
 
-(defgeneric evaluate/cc (form env k))
+(defgeneric evaluate/cc (form lexical-environment dynamic-environment k))
 
-(defmethod evaluate/cc ((form t) env k)
-  (declare (ignore env k))
+(defmethod evaluate/cc ((form t) lex-env dyn-env k)
+  (declare (ignore lex-env dyn-env k))
   (error "No EVALUATE/CC method defined for ~S." form))
 
-(defun print-debug-step (form env k)
+(defun print-debug-step (form lex-env dyn-env k)
   (let ((*print-pretty* nil))
     (ecase *debug-evaluate/cc*
       (:full
        (format *debug-io*
-               "~&Evaluating: ~S~%~3TEnv: ~S~%~3TK: ~S~%"
-               form env k))
+               "~&Evaluating: ~S~%~3TLex Env: ~S~%~3TDyn Env: ~S~%~3TK: ~S~%"
+               form lex-env dyn-env k))
       ((t)
        (format *debug-io* "~&Evaluating: ~S~%" form))
       ((nil) ;; do nothing
        nil))))
 
-(defmethod evaluate/cc :before (form env k)
+(defmethod evaluate/cc :before (form lex-env dyn-env k)
   (when *debug-evaluate/cc*
-    (print-debug-step form env k)))
+    (print-debug-step form lex-env dyn-env k)))
 
 (defvar *k*)
 

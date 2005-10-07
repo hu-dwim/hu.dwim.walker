@@ -329,3 +329,27 @@
           cont (with-call/cc (kall cont -2))
           value (with-call/cc (kall cont -3)))
     (is (equal (list 0 0 0) value))))
+
+(defun/cc throw-something (something)
+  (throw 'done something))
+
+(test catch/cc
+  (with-call/cc
+    (is (eql t
+             (catch 'whatever
+               (throw 'whatever t)
+               (throw 'whatever nil)
+               'something-else)))
+    (is (eql t
+             (catch 'whatever
+               t)))
+    (is (eql t
+             (flet ((throw-it (it)
+                      (throw 'done it)))
+               (catch 'done
+                 (throw-it t)
+                 (throw 'done 'bad-bad-bad)))))
+    (is (eql t
+             (catch 'done
+               (throw-something t)
+               nil)))))

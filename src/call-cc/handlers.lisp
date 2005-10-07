@@ -6,212 +6,234 @@
 
 ;;;; Variable References
 
-(defmethod evaluate/cc ((var local-variable-reference) env k)
-  (kontinue k (lookup env :let (name var) :error-p t)))
+(defmethod evaluate/cc ((var local-variable-reference) lex-env dyn-env k)
+  (declare (ignore dyn-env))
+  (kontinue k (lookup lex-env :let (name var) :error-p t)))
 
-(defmethod evaluate/cc ((var local-lexical-variable-reference) env k)
-  (kontinue k (funcall (first (lookup env :lexical-let (name var) :error-p t)))))
+(defmethod evaluate/cc ((var local-lexical-variable-reference) lex-env dyn-env k)
+  (declare (ignore dyn-env))
+  (kontinue k (funcall (first (lookup lex-env :lexical-let (name var) :error-p t)))))
 
-(defmethod evaluate/cc ((var free-variable-reference) env k)
-  (declare (ignore env))
-  (kontinue k (symbol-value (name var))))
+(defmethod evaluate/cc ((var free-variable-reference) lex-env dyn-env k)
+  (declare (ignore lex-env))
+  (multiple-value-bind (value foundp)
+      (lookup dyn-env :let (name var))
+    (if foundp
+        (kontinue k value)
+        (kontinue k (symbol-value (name var))))))
 
 ;;;; Constants
 
-(defmethod evaluate/cc ((c constant-form) env k)
-  (declare (ignore env))
+(defmethod evaluate/cc ((c constant-form) lex-env dyn-env k)
+  (declare (ignore lex-env dyn-env))
   (kontinue k (value c)))
 
 ;;;; BLOCK/RETURN-FROM
 
-(defmethod evaluate/cc ((block block-form) env k)
-  (evaluate-progn/cc (body block) (register env :block (name block) k) k))
+(defmethod evaluate/cc ((block block-form) lex-env dyn-env k)
+  (evaluate-progn/cc (body block)
+                     (register lex-env :block (name block) k)
+                     dyn-env k))
 
-(defmethod evaluate/cc ((return return-from-form) env k)
+(defmethod evaluate/cc ((return return-from-form) lex-env dyn-env k)
   (declare (ignore k))
-  (evaluate/cc (result return) env (lookup env :block (name (target-block return)) :error-p t)))
+  (evaluate/cc (result return)
+               lex-env dyn-env
+               (lookup lex-env :block (name (target-block return)) :error-p t)))
 
 ;;;; CATCH/THROW
 
-(defk catch-tag-k (catch env k)
+(defmethod evaluate/cc ((catch catch-form) lex-env dyn-env k)
+  (evaluate/cc (tag catch) lex-env dyn-env
+               `(catch-tag-k ,catch ,lex-env ,dyn-env ,k)))
+
+(defk catch-tag-k (catch lex-env dyn-env k)
     (tag)
-  (evaluate-progn/cc (body catch) (register env :catch tag k) k))
+  (evaluate-progn/cc (body catch) lex-env (register dyn-env :catch tag k) k))
 
-(defmethod evaluate/cc ((catch catch-form) env k)
-  (evaluate/cc (tag catch) env `(catch-tag-k ,catch ,env ,k)))
+(defmethod evaluate/cc ((throw throw-form) lex-env dyn-env k)
+  (evaluate/cc (tag throw) lex-env dyn-env
+               `(throw-tag-k ,throw ,lex-env ,dyn-env ,k)))
 
-(defk throw-tag-k (throw env k)
+(defk throw-tag-k (throw lex-env dyn-env k)
     (tag)
-  (evaluate/cc (value throw) env (lookup env :catch tag :error-p t)))
-
-(defmethod evaluate/cc ((throw throw-form) env k)
-  (evaluate/cc (tag throw) env
-                `(throw-tag-k ,throw ,env ,k)))
+  (evaluate/cc (value throw) lex-env dyn-env
+               (lookup dyn-env :catch tag :error-p t)))
 
 ;;;; FLET/LABELS
 
-(defmethod evaluate/cc ((flet flet-form) env k)
-  (let ((new-env env))
+(defmethod evaluate/cc ((flet flet-form) lex-env dyn-env k)
+  (let ((new-env lex-env))
     (dolist* ((name . form) (binds flet))
       (setf new-env (register new-env :flet name (make-instance 'closure/cc
                                                                 :code form
-                                                                :env env))))
-    (evaluate-progn/cc (body flet) new-env k)))
+                                                                :env lex-env))))
+    (evaluate-progn/cc (body flet) new-env dyn-env k)))
 
-(defmethod evaluate/cc ((labels labels-form) env k)
+(defmethod evaluate/cc ((labels labels-form) lex-env dyn-env k)
   (let ((closures '()))
     (dolist* ((name . form) (binds labels))
       (let ((closure (make-instance 'closure/cc :code form)))
-        (setf env (register env :flet name closure))
+        (setf lex-env (register lex-env :flet name closure))
         (push closure closures)))
     (dolist (closure closures)
-      (setf (env closure) env))
-    (evaluate-progn/cc (body labels) env k)))
+      (setf (env closure) lex-env))
+    (evaluate-progn/cc (body labels) lex-env dyn-env k)))
 
 ;;;; LET/LET*
 
-(defmethod evaluate/cc ((let let-form) env k)
-  (evaluate-let/cc (binds let) nil (body let) env k))
+(defmethod evaluate/cc ((let let-form) lex-env dyn-env k)
+  (evaluate-let/cc (binds let) nil (body let) lex-env dyn-env k))
 
-(defk k-for-evaluate-let/cc (var remaining-bindings evaluated-bindings body env k)
+(defk k-for-evaluate-let/cc (var remaining-bindings evaluated-bindings body lex-env dyn-env k)
     (value)
   (evaluate-let/cc remaining-bindings
                    (cons (cons var value) evaluated-bindings)
-                   body env k))
+                   body lex-env dyn-env k))
 
-(defun evaluate-let/cc (remaining-bindings evaluated-bindings body env k)
+(defun evaluate-let/cc (remaining-bindings evaluated-bindings body lex-env dyn-env k)
   (if remaining-bindings
       (destructuring-bind (var . initial-value)
           (car remaining-bindings)
         (evaluate/cc
-         initial-value env
-                      `(k-for-evaluate-let/cc
-                        ,var
-                        ,(cdr remaining-bindings)
-                        ,evaluated-bindings
-                        ,body
-                        ,env
-                        ,k)))
+         initial-value
+         lex-env dyn-env
+         `(k-for-evaluate-let/cc
+           ,var
+           ,(cdr remaining-bindings)
+           ,evaluated-bindings
+           ,body
+           ,lex-env ,dyn-env ,k)))
       (dolist* ((var . value) evaluated-bindings
-                (evaluate-progn/cc body env k))
-        (setf env (register env :let var value)))))
+                (evaluate-progn/cc body lex-env dyn-env k))
+        (setf lex-env (register lex-env :let var value)))))
 
-(defmethod evaluate/cc ((let* let*-form) env k)
-  (evaluate-let*/cc (binds let*) (body let*) env k))
+(defmethod evaluate/cc ((let* let*-form) lex-env dyn-env k)
+  (evaluate-let*/cc (binds let*) (body let*) lex-env dyn-env k))
 
-(defk k-for-evaluate-let*/cc (var bindings body env k)
+(defk k-for-evaluate-let*/cc (var bindings body lex-env dyn-env k)
     (value)
   (evaluate-let*/cc bindings body
-                     (register env :let var value) k))
+                     (register lex-env :let var value) dyn-env
+                     k))
 
-(defun evaluate-let*/cc (bindings body env k)
+(defun evaluate-let*/cc (bindings body lex-env dyn-env k)
   (if bindings
       (destructuring-bind (var . initial-value)
           (car bindings)
-        (evaluate/cc initial-value env
-                      `(k-for-evaluate-let*/cc ,var ,(cdr bindings) ,body ,env ,k)))
-      (evaluate-progn/cc body env k)))
+        (evaluate/cc initial-value lex-env dyn-env
+                      `(k-for-evaluate-let*/cc ,var ,(cdr bindings) ,body ,lex-env ,dyn-env ,k)))
+      (evaluate-progn/cc body lex-env dyn-env k)))
 
 ;;;; IF
 
-(defk k-for-evaluate-if/cc (then else env k)
+(defk k-for-evaluate-if/cc (then else lex-env dyn-env k)
     (value)
   (if value
-      (evaluate/cc then env k)
-      (evaluate/cc else env k)))
+      (evaluate/cc then lex-env dyn-env k)
+      (evaluate/cc else lex-env dyn-env k)))
 
-(defmethod evaluate/cc ((if if-form) env k)
-  (evaluate/cc (consequent if) env
-                `(k-for-evaluate-if/cc ,(then if) ,(else if) ,env ,k )))
+(defmethod evaluate/cc ((if if-form) lex-env dyn-env k)
+  (evaluate/cc (consequent if) lex-env dyn-env
+                `(k-for-evaluate-if/cc ,(then if) ,(else if) ,lex-env ,dyn-env ,k)))
 
 ;;;; LOCALLY
 
-(defmethod evaluate/cc ((locally locally-form) env k)
-  (evaluate-progn/cc (body locally) env k))
+(defmethod evaluate/cc ((locally locally-form) lex-env dyn-env k)
+  (evaluate-progn/cc (body locally) lex-env dyn-env k))
 
 ;;;; MACROLET
 
-(defmethod evaluate/cc ((macrolet macrolet-form) env k)
-  (evaluate-progn/cc (body macrolet) env k))
+(defmethod evaluate/cc ((macrolet macrolet-form) lex-env dyn-env k)
+  ;; since the walker already performs macroexpansion there's nothing
+  ;; left to do here.
+  (evaluate-progn/cc (body macrolet) lex-env dyn-env k))
 
 ;;;; multiple-value-call
 
-(defk k-for-m-v-c (remaining-arguments evaluated-arguments env k)
+(defk k-for-m-v-c (remaining-arguments evaluated-arguments lex-env dyn-env k)
     (value other-values)
   (evaluate-m-v-c
    remaining-arguments (append evaluated-arguments (list value) other-values)
-   env k))
+   lex-env dyn-env k))
 
-(defun evaluate-m-v-c (remaining-arguments evaluated-arguments env k)
+(defun evaluate-m-v-c (remaining-arguments evaluated-arguments lex-env dyn-env k)
   (if remaining-arguments
-      (evaluate/cc (car remaining-arguments) env
-                    `(k-for-m-v-c  ,(cdr remaining-arguments) ,evaluated-arguments ,env ,k))
+      (evaluate/cc (car remaining-arguments) lex-env dyn-env
+                    `(k-for-m-v-c  ,(cdr remaining-arguments) ,evaluated-arguments ,lex-env ,dyn-env ,k))
       (destructuring-bind (function &rest arguments)
           evaluated-arguments
         (etypecase function
-          (closure/cc (apply-lambda/cc function evaluated-arguments k))
+          (closure/cc (apply-lambda/cc function evaluated-arguments dyn-env k))
           (function (apply #'kontinue k (multiple-value-list
                                          (multiple-value-call function (values-list arguments)))))))))
 
-(defmethod evaluate/cc ((m-v-c multiple-value-call-form) env k)
-  (evaluate-m-v-c (list* (func m-v-c) (arguments m-v-c)) '() env k))
+(defmethod evaluate/cc ((m-v-c multiple-value-call-form) lex-env dyn-env k)
+  (evaluate-m-v-c (list* (func m-v-c) (arguments m-v-c)) '() lex-env dyn-env k))
 
 ;;;; PROGN
 
-(defmethod evaluate/cc ((progn progn-form) env k)
-  (evaluate-progn/cc (body progn) env k))
+(defmethod evaluate/cc ((progn progn-form) lex-env dyn-env k)
+  (evaluate-progn/cc (body progn) lex-env dyn-env k))
 
-(defk k-for-evaluate-progn/cc (rest-of-body env k)
+(defk k-for-evaluate-progn/cc (rest-of-body lex-env dyn-env k)
     ()
-  (evaluate-progn/cc rest-of-body env k))
+  (evaluate-progn/cc rest-of-body lex-env dyn-env k))
 
-(defun evaluate-progn/cc (body env k)
+(defun evaluate-progn/cc (body lex-env dyn-env k)
   (cond
     ((cdr body)
-      (evaluate/cc (first body) env
-                    `(k-for-evaluate-progn/cc ,(cdr body) ,env ,k)))
+      (evaluate/cc (first body) lex-env dyn-env
+                    `(k-for-evaluate-progn/cc ,(cdr body) ,lex-env ,dyn-env ,k)))
     (body
-     (evaluate/cc (first body) env k))
+     (evaluate/cc (first body) lex-env dyn-env k))
     (t
      (kontinue k nil))))
 
 ;;;; SETQ
 
-(defk k-for-local-setq (var env k)
+(defk k-for-local-setq (var lex-env dyn-env k)
     (value)
-  (setf (lookup env :let var :error-p t) value)
+  (setf (lookup lex-env :let var :error-p t) value)
   (kontinue k value))
 
-(defk k-for-free-setq (var env k)
+(defk k-for-free-setq (var lex-env dyn-env k)
     (value)
   (setf (symbol-value var) value)
   (kontinue k value))
 
-(defk k-for-local-lexical-setq (var env k)
+(defk k-for-local-lexical-setq (var lex-env dyn-env k)
     (value)
-  (funcall (second (lookup env :lexical-let var :error-p t)) value)
+  (funcall (second (lookup lex-env :lexical-let var :error-p t)) value)
   (kontinue k value))
 
-(defmethod evaluate/cc ((setq setq-form) env k)
-  (multiple-value-bind (value foundp)
-      (lookup env :let (var setq))
-    (declare (ignore value))
-    (if foundp
-        (evaluate/cc (value setq)
-                      env `(k-for-local-setq ,(var setq) ,env ,k))
-        (multiple-value-bind (value foundp)
-            (lookup env :lexical-let (var setq))
-          (declare (ignore value))
-          (if foundp
-              (evaluate/cc (value setq)
-                            env `(k-for-local-lexical-setq ,(var setq) ,env ,k))
-              (evaluate/cc (value setq)
-                            env `(k-for-free-setq ,(var setq) ,env ,k)))))))
+(defmethod evaluate/cc ((setq setq-form) lex-env dyn-env k)
+  (macrolet ((if-found (&key in-env of-type kontinue-with)
+               `(multiple-value-bind (value foundp)
+                    (lookup ,in-env ,of-type (var setq))
+                  (declare (ignore value))
+                  (when foundp
+                    (return-from evaluate/cc
+                      (evaluate/cc (value setq) lex-env dyn-env
+                                   `(,',kontinue-with ,(var setq) ,lex-env ,dyn-env ,k)))))))
+    (if-found :in-env lex-env
+              :of-type :let
+              :kontinue-with k-for-local-setq)
+    (if-found :in-env dyn-env
+              :of-type :let
+              :kontinue-with k-for-special-setq)
+    (if-found :in-env lex-env
+              :of-type :lexical-let
+              :kontinue-with k-for-local-lexical-setq)
+    (evaluate/cc (value setq)
+                       lex-env dyn-env
+                       `(k-for-free-setq ,(var setq) ,lex-env ,dyn-env ,k))))
 
 ;;;; SYMBOL-MACROLET
 
-(defmethod evaluate/cc ((symbol-macrolet symbol-macrolet-form) env k)
-  (evaluate-progn/cc (body symbol-macrolet) env k))
+(defmethod evaluate/cc ((symbol-macrolet symbol-macrolet-form) lex-env dyn-env k)
+  ;; like macrolet the walker has already done all the work needed for this.
+  (evaluate-progn/cc (body symbol-macrolet) lex-env dyn-env k))
 
 ;;;; TAGBODY/GO
 
@@ -219,21 +241,24 @@
     ()
   (kontinue k nil))
 
-(defmethod evaluate/cc ((tagbody tagbody-form) env k)
-  (evaluate-progn/cc (body tagbody) (register env :tag tagbody k) `(tagbody-k ,k)))
+(defmethod evaluate/cc ((tagbody tagbody-form) lex-env dyn-env k)
+  (evaluate-progn/cc (body tagbody)
+                     (register lex-env :tag tagbody k) dyn-env
+                     `(tagbody-k ,k)))
 
-(defmethod evaluate/cc ((go-tag go-tag-form) env k)
-  (declare (ignore go-tag env))
+(defmethod evaluate/cc ((go-tag go-tag-form) lex-env dyn-env k)
+  (declare (ignore go-tag lex-env dyn-env))
   (kontinue k nil))
 
-(defmethod evaluate/cc ((go go-form) env k)
+(defmethod evaluate/cc ((go go-form) lex-env dyn-env k)
   (declare (ignore k))
-  (evaluate-progn/cc (target-progn go) env (lookup env :tag (enclosing-tagbody go) :error-p t)))
+  (evaluate-progn/cc (target-progn go) lex-env dyn-env
+                     (lookup lex-env :tag (enclosing-tagbody go) :error-p t)))
 
 ;;;; THE
 
-(defmethod evaluate/cc ((the the-form) env k)
-  (evaluate/cc (value the) env k))
+(defmethod evaluate/cc ((the the-form) lex-env dyn-env k)
+  (evaluate/cc (value the) lex-env dyn-env k))
 
 ;; Copyright (c) 2002-2005, Edward Marco Baringer
 ;; All rights reserved. 
