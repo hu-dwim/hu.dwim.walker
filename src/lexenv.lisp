@@ -222,15 +222,15 @@
                        (macro-function (car fenv) environment))
                      (slot-value environment 'compiler::fenv))))
 
-#+(and lispworks linux)
+#+(and lispworks (or win32 linux))
 (defmethod environment-p ((environment lexical::environment))
   t)
 
-#+(and lispworks linux)
+#+(and lispworks (or win32 linux))
 (defmethod lexical-variables ((environment lexical::environment))
   (mapcar #'car (slot-value environment 'lexical::variables)))
 
-#+(and lispworks linux)
+#+(and lispworks (or win32 linux))
 (defmethod lexical-functions ((environment lexical::environment))
   (mapcar #'car (slot-value environment 'lexical::functions)))
 
