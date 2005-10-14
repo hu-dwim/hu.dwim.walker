@@ -29,10 +29,7 @@
    (primary () :required t)
    (after (:after)))
   "Same semantics as standard method combination but allows
-\"wrapping\" methods which get called before :around methods and
-in :most-specific-last order.
-
-Ordering of methods:
+\"wrapping\" methods. Ordering of methods:
 
  (around
     (before)
@@ -87,7 +84,7 @@ which the methods are called and be set to either
         ;; wrap FORM in calls to its around methods
         (setf form `(call-method ,(first around)
                                  (,@(rest around)
-                                  (make-method ,form)))))
+                                    (make-method ,form)))))
       form)))
 
 ;; Copyright (c) 2002-2005, Edward Marco Baringer
