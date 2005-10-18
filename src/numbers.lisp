@@ -20,7 +20,8 @@
           "RADIX must be between 2 and 35 (inclusive), not ~D." radix)
   (make-array radix
               :displaced-to "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ"
-              :displaced-index-offset 0))
+              :displaced-index-offset 0
+              :element-type 'character))
 
 (defun parse-float (float-string
                     &key (start 0) (end nil) (radix 10)
