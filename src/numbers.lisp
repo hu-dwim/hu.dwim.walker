@@ -14,8 +14,6 @@
                       for frac = (* (/ n) (ldb (byte 1 i) u64))
                       sum frac)))))
 
-(parse-integer)
-
 (defun radix-values (radix)
   (assert (<= 2 radix 35)
           (radix)
