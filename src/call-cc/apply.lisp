@@ -32,6 +32,7 @@
        (drive-interpreter/cc 
 	(apply-lambda/cc fun
 			 args
+                         '()
 			 *toplevel-k*)))))
 
 ;;;; LAMBDA
