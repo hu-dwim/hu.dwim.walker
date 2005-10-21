@@ -25,3 +25,17 @@
     (is (= 0 (minf a 10)))
     (is (= 0 a))))
 
+(test parse-float
+  (is (= 0 (parse-float "0")))
+  (is (= -1 (parse-float "-1")))
+  (is (= 1 (parse-float "1")))
+
+  (dolist (type '(short-float single-float double-float long-float))
+    (dotimes (i 1000)
+      (let* ((*print-radix* 10)
+             (number (random  (1+ (coerce i type))))
+             (string (princ-to-string number))
+             (value (parse-float string :type type)))
+        (unless (= number value)
+          (fail "~S parse-float'd to ~S (not ~S)." string value number))))))
+
