@@ -110,8 +110,9 @@
      ;; symbol-macrolets which are (NAME SYSTEM:MACRO . EXPANSION)
      when (and (atom (cdr var-spec))
                ;; don't return ignored vars
+               (not (eq (type-of (cdr var-spec)) 'c::global-var))
                (not (c::lambda-var-ignorep (cdr var-spec))))
-       collect (car var-spec)))
+     collect (car var-spec)))
 
 #+cmu
 (defmethod lexical-functions ((environment c::lexenv))
