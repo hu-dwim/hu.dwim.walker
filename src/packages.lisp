@@ -24,6 +24,63 @@
    #:with-collector
    #:with-collectors
 
+   #:walk-form
+   #:make-walk-env
+   #:*walk-handlers*
+   #:defwalker-handler
+   #:form
+   #:implicit-progn-mixin
+   #:implicit-progn-with-declare-mixin
+   #:binding-form-mixin
+   #:declaration-form
+   #:constant-form
+   #:variable-reference
+   #:local-variable-reference
+   #:local-lexical-variable-reference
+   #:free-variable-reference
+   #:application-form
+   #:local-application-form
+   #:lexical-application-form
+   #:free-application-form
+   #:lambda-application-form
+   #:function-form
+   #:lambda-function-form
+   #:function-object-form
+   #:local-function-object-form
+   #:free-function-object-form
+   #:lexical-function-object-form
+   #:function-argument-form
+   #:required-function-argument-form
+   #:specialized-function-argument-form
+   #:optional-function-argument-form
+   #:keyword-function-argument-form
+   #:allow-other-keys-function-argument-form
+   #:rest-function-argument-form
+   #:block-form
+   #:return-from-form
+   #:catch-form
+   #:throw-form
+   #:eval-when-form
+   #:if-form
+   #:function-binding-form
+   #:flet-form
+   #:labels-form
+   #:variable-binding-form
+   #:let-form
+   #:let*-form
+   #:locally-form
+   #:macrolet-form
+   #:multiple-value-call-form
+   #:multiple-value-prog1-form
+   #:progn-form
+   #:progv-form
+   #:setq-form
+   #:symbol-macrolet-form
+   #:tagbody-form
+   #:go-tag-form
+   #:go-form
+   #:the-form
+   
    #:to-cps
    #:with-call/cc
    #:kall
