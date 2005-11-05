@@ -6,14 +6,19 @@
 
 ;;;; ** Anaphoric conditionals
 
-(defmacro if-bind (var test then &optional else)
+(defmacro if-bind (var test &body then/else)
   "Anaphoric IF control structure.
 
 VAR (a symbol) will be bound to the primary value of TEST. If
 TEST returns a true value then THEN will be executed, otherwise
 ELSE will be executed."
-  `(let ((,var ,test))
-     (if ,var ,then ,else)))
+  (assert (first then/else)
+          (then/else)
+          "IF-BIND missing THEN clause.")
+  (destructuring-bind (then &optional else)
+      then/else
+    `(let ((,var ,test))
+       (if ,var ,then ,else))))
 
 (defmacro aif (test then &optional else)
   "Just like IF-BIND but the var is always IT."
