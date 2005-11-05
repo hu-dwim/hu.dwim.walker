@@ -28,7 +28,6 @@
    #:make-walk-env
    #:*walk-handlers*
    #:defwalker-handler
-   #:form
    #:implicit-progn-mixin
    #:implicit-progn-with-declare-mixin
    #:binding-form-mixin
