@@ -302,7 +302,7 @@
 
 ;;;;@include "compat.lisp"
 
-;;;;@include "cps.lisp"
+;;;; / @include "cps.lisp"
 
 ;;;;@include "csv.lisp"
 
