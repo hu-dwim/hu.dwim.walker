@@ -109,7 +109,7 @@
     (t
      (evaluate-arguments-then-apply
       (lambda (arguments)
-        (trace-statement "Calling (~S~{ ~S~})" (operator func) arguments)
+        (trace-statement "Calling function ~S with arguments ~S" (operator func) arguments)
         (apply #'kontinue k (multiple-value-list (apply (fdefinition (operator func)) arguments))))
       (arguments func) '()
       lex-env dyn-env))))
@@ -157,6 +157,7 @@
 ;;;; environment and transfers control.
 
 (defmethod apply-lambda/cc ((operator closure/cc) effective-arguments dyn-env k)
+  (trace-statement "Applying cc closure ~S to ~S" (source (code (first arg-list))) (rest arg-list))
   (let ((lex-env (env operator))
         (remaining-arguments effective-arguments)
         (remaining-parameters (arguments (code operator))))
@@ -280,6 +281,7 @@
 (defmethod apply-lambda/cc ((operator function) effective-arguments dyn-env k)
   "Method used when we're applying a regular, non cc, function object."
   (declare (ignore dyn-env))
+  (trace-statement "Applying function ~S to ~S" (source (code (first operator)))  effective-arguments)
   (apply #'kontinue k (multiple-value-list (apply operator effective-arguments))))
 
 ;;;; Small helper function
