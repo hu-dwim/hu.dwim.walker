@@ -116,7 +116,19 @@ form being evaluated.")
           (lambda ()
             ,@body)))))
 
+(defvar *trace-cc* nil
+  "Variable which controls the tracing of WITH-CALL/CC code.
+
+If set to NIL no tracing is done. If set to T function
+calls (local and global) are traced. If set to :ALL then every
+step of the interpreter is traced.")
+
+(defmacro trace-statement (format-control &rest format-args)
+  `(when *trace-cc*
+     (format *trace-output* ,(strcat "~&" format-control "~%") ,@format-args)))
+
 (defun kontinue (k &optional (primary-value nil primary-value-p) &rest other-values)
+  (trace-statement "Got ~S~{; ~S~}" primary-value other-values)
   (let ((k (apply (car k) (cdr k))))
     (cond
       (other-values (apply k primary-value other-values))
@@ -136,6 +148,12 @@ form being evaluated.")
 (defmethod evaluate/cc ((form t) lex-env dyn-env k)
   (declare (ignore lex-env dyn-env k))
   (error "No EVALUATE/CC method defined for ~S." form))
+
+(defmethod evaluate/cc :around ((form form) lex-env dyn-env k)
+  (declare (ignore lex-env dyn-env k))
+  (when (eql :all *trace-cc*)
+    (format *trace-output* "~&Evaluating ~S.~%" (source form)))
+  (call-next-method))
 
 (defun print-debug-step (form lex-env dyn-env k)
   (let ((*print-pretty* nil))

@@ -64,6 +64,7 @@
     ((eql 'kall (operator func))
      (evaluate-arguments-then-apply
       (lambda (arguments)
+        (trace-statement "KALL'ing ~S on ~S" (first arguments) (rest arguments))
         (apply #'kontinue (first arguments) (cdr arguments)))
       (arguments func) '()
       lex-env dyn-env))
@@ -91,6 +92,7 @@
           (eql 'defun/cc (nth-value 1 (fdefinition/cc (operator func)))))
      (evaluate-arguments-then-apply
       (lambda (arguments)
+        (trace-statement "Calling cc function ~S with arguments ~S" (operator func) arguments)
         (apply-lambda/cc (fdefinition/cc (operator func)) arguments dyn-env k))
       (arguments func) '()
       lex-env dyn-env))
@@ -99,6 +101,7 @@
           (eql 'defmethod/cc (nth-value 1 (fdefinition/cc (operator func)))))
      (evaluate-arguments-then-apply
       (lambda (arguments)
+        (trace-statement "Calling cc method ~S with arguments ~S" (operator func) arguments)
         (apply-lambda/cc (apply (operator func) arguments) arguments dyn-env k))
       (arguments func) '()
       lex-env dyn-env))
@@ -106,6 +109,7 @@
     (t
      (evaluate-arguments-then-apply
       (lambda (arguments)
+        (trace-statement "Calling (~S~{ ~S~})" (operator func) arguments)
         (apply #'kontinue k (multiple-value-list (apply (fdefinition (operator func)) arguments))))
       (arguments func) '()
       lex-env dyn-env))))

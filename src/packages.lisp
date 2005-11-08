@@ -93,6 +93,7 @@
    #:defmethod/cc
    #:fmakun-cc
    #:*debug-evaluate/cc*
+   #:*trace-cc*
    
    #:ppm
    #:ppm1
