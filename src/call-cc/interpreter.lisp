@@ -119,9 +119,8 @@ form being evaluated.")
 (defvar *trace-cc* nil
   "Variable which controls the tracing of WITH-CALL/CC code.
 
-If set to NIL no tracing is done. If set to T function
-calls (local and global) are traced. If set to :ALL then every
-step of the interpreter is traced.")
+When not NIL the interepreter will report what code it is
+evaluating and what it returns.")
 
 (defmacro trace-statement (format-control &rest format-args)
   `(when *trace-cc*
@@ -151,8 +150,7 @@ step of the interpreter is traced.")
 
 (defmethod evaluate/cc :around ((form form) lex-env dyn-env k)
   (declare (ignore lex-env dyn-env k))
-  (when (eql :all *trace-cc*)
-    (format *trace-output* "~&Evaluating ~S.~%" (source form)))
+  (trace-statement "Evaluating ~S." (source form))
   (call-next-method))
 
 (defun print-debug-step (form lex-env dyn-env k)
