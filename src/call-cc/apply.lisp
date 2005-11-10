@@ -281,7 +281,7 @@
 (defmethod apply-lambda/cc ((operator function) effective-arguments dyn-env k)
   "Method used when we're applying a regular, non cc, function object."
   (declare (ignore dyn-env))
-  (trace-statement "Applying function ~S to ~S" (source (code operator))  effective-arguments)
+  (trace-statement "Applying function ~S to ~S" operator effective-arguments)
   (apply #'kontinue k (multiple-value-list (apply operator effective-arguments))))
 
 ;;;; Small helper function
