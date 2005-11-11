@@ -237,7 +237,7 @@
   (loop
      for head on remaining-parameters
      for parameter = (first head) 
-     do (etypecase parameter
+     do (typecase parameter
           (keyword-function-argument-form
            (assert (evenp (length remaining-arguments))
                    (remaining-arguments)
