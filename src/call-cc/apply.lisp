@@ -157,7 +157,7 @@
 ;;;; environment and transfers control.
 
 (defmethod apply-lambda/cc ((operator closure/cc) effective-arguments dyn-env k)
-  (trace-statement "Applying cc closure ~S to ~S" (source (code operator)) (rest arg-list))
+  (trace-statement "Applying cc closure ~S to ~S" (source (code operator)) effective-arguments)
   (let ((lex-env (env operator))
         (remaining-arguments effective-arguments)
         (remaining-parameters (arguments (code operator))))
