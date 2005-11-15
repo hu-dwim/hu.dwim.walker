@@ -849,6 +849,15 @@
                                   :type-form (second form))
     (setf (value the) (walk-form (third form) the env))))
 
+;;;; ** Implementation specific walkers
+
+;;;; These are for forms which certain compilers treat specially but
+;;;; aren't macros or special-operators.
+
+#+lispworks
+(defwalker-handler compiler::internal-the (form parent env)
+  (walk-form (third form) parent env))
+
 ;; Copyright (c) 2002-2005, Edward Marco Baringer
 ;; All rights reserved. 
 ;; 
