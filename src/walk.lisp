@@ -858,6 +858,18 @@
                                   :type-form (second form))
     (setf (value the) (walk-form (third form) the env))))
 
+;;;; UNWIND-PROTECT
+
+(defclass unwind-protect-form (form)
+  ((protected-form :accessor protected-form :initarg :protected-form)
+   (cleanup-form :accessor cleanup-form :initarg :cleanup-form)))
+
+(defwalker-handler unwind-protect (form parent env)
+  (with-form-object (unwind-protect unwind-protect-form :parent parent
+                                    :source form)
+    (setf (protected-form unwind-protect) (walk-form (second form) unwind-protect env)
+          (cleanup-form unwind-protect) (walk-implict-progn unwind-protect (cddr form) env))))
+
 ;;;; ** Implementation specific walkers
 
 ;;;; These are for forms which certain compilers treat specially but
