@@ -528,6 +528,11 @@
                                              body
                                              (register env :block block-name block))))))
 
+(define-condition return-from-unknown-block (error)
+  ((block-name :accessor block-name :initarg :block-name))
+  (:report (lambda (condition stream)
+             (format stream "Unable to return from block named ~S." (block-name condition)))))
+
 (defwalker-handler return-from (form parent env)
   (destructuring-bind (block-name &optional (value '(values)))
       (cdr form)
@@ -535,7 +540,11 @@
         (with-form-object (return-from return-from-form :parent parent :source form
                            :target-block (lookup env :block block-name))
           (setf (result return-from) (walk-form value return-from env)))
-        (error "Can't return-from unknown block named ~S." block-name))))
+        (restart-case
+            (error 'return-from-unknown-block :block-name block-name)
+          (add-block ()
+            :report "Add this block and continue."
+            (walk-form form parent (register env :block block-name :unknown-block)))))))
 
 ;;;; CATCH/THROW
 
