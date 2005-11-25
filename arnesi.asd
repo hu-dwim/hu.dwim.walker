@@ -73,4 +73,8 @@
   (funcall (intern (string :run!) (string :it.bese.5am))
            :it.bese.arnesi))
 
+;;;; * Introduction
+
+;;;; A collection of various common lisp utilites.
+
 ;;;;@include "src/packages.lisp"

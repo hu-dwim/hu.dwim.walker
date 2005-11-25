@@ -4,11 +4,39 @@
 
 ;;;; * A reader macro for simple lambdas
 
-(defun enable-sharp-l ()
-  (set-dispatch-macro-character #\# #\L #'sharpL-reader))
+;;;; Often we have to create small (in the sense of textually short)
+;;;; lambdas. This read macro, bound to #L by default, allows us to
+;;;; eliminate the 'boilerplate' LAMBDA and concentrate on the body of
+;;;; the lambda.
 
 (defun sharpL-reader (stream subchar min-args)
-  "Reader macro for simple lambdas."
+  "Reader macro for simple lambdas.
+
+This read macro reads exactly one form and serves to eliminate
+the 'boiler' plate text from such lambdas and write only the body
+of the lambda itself. If the form contains any references to
+varibales named !1, !2, !3, !n etc. these are bound to the Nth
+parameter of the lambda.
+
+Examples:
+
+#L(foo) ==> (lambda () (foo)).
+
+#L(foo !1) ==> (lambda (!1) (foo !1))
+
+#L(foo (bar !2) !1) ==> (lambda (!1 !2) (foo (bar !2) !1))
+
+All arguments are declared ignorable. So if there is a reference
+to an argument !X but not !(x-1) we still take X arguments, but x
+- 1 is ignored. Examples:
+
+#L(foo !2) ==> (lambda (!1 !2) (declare (ignore !1)) (foo !2))
+
+We can specify exactly how many arguments to take by using the
+read macro's prefix parameter. NB: this is only neccessary if the
+lambda needs to accept N arguments but only uses N - 1. Example:
+
+#2L(foo !1) ==> (lambda (!1 !2) (declare (ignore !2)) (foo !1))"
   (declare (ignore subchar))
   (let* ((form (read stream t nil t))
          (lambda-args (loop
@@ -19,6 +47,12 @@
        , (when lambda-args
            `(declare (ignorable ,@lambda-args)))
        ,form)))
+
+(defun enable-sharp-l ()
+  "Bind SHARPL-READER to the macro character #L.
+
+This function overrides (and forgets) and previous value of #L."
+  (set-dispatch-macro-character #\# #\L #'sharpL-reader))
 
 (defun highest-bang-var (form)
   (acond
