@@ -10,7 +10,7 @@
 (defmacro with-unique-names ((&rest bindings) &body body)
   "Evaluate BODY with BINDINGS bound to fresh unique symbols.
 
-Syntax: WITH-UNIQUE-NAMES ( { var | (var x) }* ) declaration* form*
+Syntax: WITH-UNIQUE-NAMES ( [ var | (var x) ]* ) declaration* form*
 
 Executes a series of forms with each VAR bound to a fresh,
 uninterned symbol. The uninterned symbol is as if returned by a call
