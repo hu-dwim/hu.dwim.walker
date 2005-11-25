@@ -25,18 +25,18 @@ ELSE will be executed."
   `(if-bind it ,test ,then ,else))
 
 (defmacro when-bind (var test &body body)
-  "Just like @code{WHEN} except @var{var} will be bound to the
-  result of @var{test} in @var{body}."
+  "Just like when except VAR will be bound to the
+  result of TEST in BODY."
   `(if-bind ,var ,test (progn ,@body)))
 
 (defmacro awhen (test &body body)
-  "Just like @code{WHEN} expect the symbol @code{IT} will be
-  bound to the result of @var{test} in @var{body}."
+  "Just like when expect the symbol IT will be
+  bound to the result of TEST in BODY."
   `(when-bind it ,test ,@body))
 
 (defmacro cond-bind (var &body clauses)
-  "Just like @code{COND} @var{var} will be bound to the result of
-  the first cond which returns true."
+  "Just like COND but VAR will be bound to the result of the
+  condition in the clause when executing the body of the clause."
   (if clauses
       (destructuring-bind ((test &rest body) &rest others)
           clauses
@@ -46,8 +46,7 @@ ELSE will be executed."
       nil))
 
 (defmacro acond (&rest clauses)
-  "Just like @code{COND-BIND} except the var is automatically
-  @code{IT}."
+  "Just like cond-bind except the var is automatically IT."
   `(cond-bind it ,@clauses))
 
 (defmacro aand (&rest forms)
@@ -97,8 +96,8 @@ ELSE will be executed."
 ;;;; ** Switch
 
 (defmacro switch ((obj &key (test #'eql)) &body clauses)
-  "Evaluate the first clause whose car satisfies @code{(funcall
-  test car obj)}."
+  "Evaluate the first clause whose car satisfies (funcall test
+  car obj)."
   ;; NB: There is no need to do the find-if and the remove here, we
   ;; can just as well do them with in the expansion
   (let ((default-clause (find-if (lambda (c) (eq t (car c))) clauses)))
@@ -121,7 +120,7 @@ ELSE will be executed."
                    `((t ,@(cdr default-clause)))))))))
 
 (defmacro eswitch ((obj &key (test #'eql)) &rest body)
-  "Like @code{SWITCH} but signals an error if no clause succeds."
+  "Like switch but signals an error if no clause succeds."
   (let ((obj-sym (gensym)))
     `(let ((,obj-sym ,obj))
        (switch (,obj-sym :test ,test)
@@ -131,8 +130,8 @@ ELSE will be executed."
                        ,obj-sym))))))
 
 (defmacro cswitch ((obj &key (test #'eql)) &rest body)
-  "Like @code{SWITCH} but signals a continuable error if no
-  clause matches."
+  "Like SWITCH but signals a continuable error if no clause
+  matches."
   (let ((obj-sym (gensym)))
     `(let ((,obj-sym ,obj))
        (switch (,obj-sym :test ,test)

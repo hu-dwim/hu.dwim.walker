@@ -5,18 +5,18 @@
 ;;;; * Utilites for file system I/O
 
 (defmacro with-input-from-file ((stream-name file-name &rest args) &body body)
-  "Evaluate @var{body} with @var{stream-name} bound to an
-  input-stream from file @var{file-name}. @var{args} is passed
-  directly to @code{OPEN}."
+  "Evaluate BODY with STREAM-NAME bound to an
+  input-stream from file FILE-NAME. ARGS is passed
+  directly to open."
   (when (member :direction args)
     (error "Can't specifiy :DIRECTION in WITH-INPUT-FILE."))
   `(with-open-file (,stream-name ,file-name :direction :input ,@args)
      ,@body))
 
 (defmacro with-output-to-file ((stream-name file-name &rest args) &body body)
-  "Evaluate @var{body} with @var{stream-name} to an output stream
-  on the file named @var{file-name}. @var{args} is sent as is to
-  the call te @var{OPEN}."
+  "Evaluate BODY with STREAM-NAME to an output stream
+  on the file named FILE-NAME. ARGS is sent as is to
+  the call te open."
   (when (member :direction args)
     (error "Can't specifiy :DIRECTION in WITH-OUTPUT-FILE."))
   `(with-open-file (,stream-name ,file-name :direction :output ,@args)
@@ -24,7 +24,7 @@
 
 (defun read-string-from-file (pathname &key (buffer-size 4096)
                                             (element-type 'character))
-  "Return the contents of @var{pathname} as a string."
+  "Return the contents of PATHNAME as a string."
   (with-input-from-file (file-stream pathname)
     (with-output-to-string (datum) 
       (let ((buffer (make-array buffer-size :element-type element-type)))
@@ -33,7 +33,7 @@
 	      while (= bytes-read buffer-size))))))
 
 (defun write-string-to-file (string pathname &key (if-exists :error) (if-does-not-exist :error))
-  "Write @var{string} to @var{pathname}."
+  "Write STRING to PATHNAME."
   (with-output-to-file (file-stream pathname :if-exists if-exists :if-does-not-exist if-does-not-exist)
     (write-sequence string file-stream)))
 

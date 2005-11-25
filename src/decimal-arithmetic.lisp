@@ -10,7 +10,7 @@
   "Default precision.")
 
 (defmacro with-precision (prec &body body)
-  "Evalute BODY with *precision* bound to @var{prec}."
+  "Evalute BODY with *precision* bound to PREC."
   (let ((precision (gensym)))
     `(let ((,precision ,prec))
        (assert (integerp ,precision)
@@ -23,14 +23,13 @@
 (defun decimal-from-float (float
                            &optional (precision *precision*)
                                      (rounding-method #'round-half-up))
-  "Convert @var{float} to an exact value with precision
-  @var{precision} using @var{rounding-method} to do any
-  neccessary rounding."
+  "Convert FLOAT to an exact value with precision PRECISION using
+  ROUNDING-METHOD to do any neccessary rounding."
   (funcall rounding-method float precision))
 
 (defun float-from-decimal (decimal)
-  "Convert the exact decimal value @var{decimal} to a (not
-  neccassily equal) floating point value."
+  "Convert the exact decimal value DECIMAL to a (not neccassily
+  equal) floating point value."
   (float decimal))
 
 ;;;; Rounding functions
