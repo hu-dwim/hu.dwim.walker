@@ -41,10 +41,6 @@
 specific method via call-next-method (as in standard method
 combination).
 
-The order of method application is settable via parameters to
-the :method-combination argument of the defgeneric which uses
-this method combination.
-
 The various WHATEVER-order keyword arguments set the order in
 which the methods are called and be set to either
 :most-specific-last or :most-specific-first."
