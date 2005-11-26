@@ -700,11 +700,19 @@
   (with-form-object (macrolet macrolet-form :parent parent :source form
                               :binds '())
     (dolist* ((name args &body body) (second form))
-      (let ((handler (eval `(lambda ,args ,@body))))
+      (let ((handler (eval
+                      ;; NB: macrolet arguments are a
+                      ;; destructuring-bind list, not a lambda list
+                      (with-unique-names (handler-args)
+                        `(lambda (&rest ,handler-args)
+                           (destructuring-bind ,args
+                               ,handler-args
+                             ,@body))))))
         (extend env :macrolet name handler)
         (push (cons name handler) (binds macrolet))))
     (setf (binds macrolet) (nreverse (binds macrolet)))
-    (multiple-value-setf ((body macrolet) nil (declares macrolet)) (walk-implict-progn macrolet (cddr form) env :declare t))))
+    (multiple-value-setf ((body macrolet) nil (declares macrolet))
+      (walk-implict-progn macrolet (cddr form) env :declare t))))
 
 ;;;; MULTIPLE-VALUE-CALL
 
