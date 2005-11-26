@@ -345,6 +345,8 @@
 
 ;;;;@include "string.lisp"
 
+;;;;@include "walk.lisp"
+
 ;;;;@include "vector.lisp"
 
 ;; Copyright (c) 2002-2005, Edward Marco Baringer
