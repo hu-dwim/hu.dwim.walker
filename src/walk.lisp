@@ -682,6 +682,18 @@
     (setf (binds let*) (nreverse (binds let*)))
     (multiple-value-setf ((body let*) nil (declares let*)) (walk-implict-progn let* (cddr form) env :declare t))))
 
+;;;; LOAD-TIME-VALUE
+
+(defclass load-time-value-form (form)
+  ((value :accessor value)
+   (read-only-p :accessor read-only-p)))
+
+(defwalker-handler load-time-value (form parent env)
+  (with-form-object (load-time-value load-time-value-form
+                                     :parent parent :source form)
+    (setf (value load-time-value) (walk-form (second form) load-time-value env)
+          (read-only-p load-time-value) (third form))))
+
 ;;;; LOCALLY
 
 (defclass locally-form (form implicit-progn-with-declare-mixin)
