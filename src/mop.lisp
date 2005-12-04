@@ -22,8 +22,10 @@
           (before-order :most-specific-first)
           (primary-order :most-specific-first)
           (after-order :most-specific-last)
-          (wrapping-order :most-specific-last))
-  ((around (:around))
+          (wrapping-order :most-specific-last)
+          (wrap-around-order :most-specific-last))
+  ((wrap-around (:wrap-around))
+   (around (:around))
    (before (:before))
    (wrapping (:wrapping))
    (primary () :required t)
@@ -31,15 +33,16 @@
   "Same semantics as standard method combination but allows
 \"wrapping\" methods. Ordering of methods:
 
- (around
-    (before)
-    (wrapping
-      (primary))
-    (after))
+ (wrap-around
+   (around
+     (before)
+     (wrapping
+       (primary))
+     (after)))
 
-:around, :wrapping and :primary methods call the next least/most
-specific method via call-next-method (as in standard method
-combination).
+:warp-around, :around, :wrapping and :primary methods call the
+next least/most specific method via call-next-method (as in
+standard method combination).
 
 The various WHATEVER-order keyword arguments set the order in
 which the methods are called and be set to either
@@ -52,6 +55,7 @@ which the methods are called and be set to either
              (mapcar (lambda (meth) `(call-method ,meth))
                      methods)))
     (let* (;; reorder the methods based on the -order arguments
+           (wrap-around (effective-order wrap-around wrap-around-order))
            (around (effective-order around around-order))
            (wrapping (effective-order wrapping wrapping-order))
            (before (effective-order before before-order))
@@ -80,6 +84,10 @@ which the methods are called and be set to either
         ;; wrap FORM in calls to its around methods
         (setf form `(call-method ,(first around)
                                  (,@(rest around)
+                                    (make-method ,form)))))
+      (when wrap-around
+        (setf form `(call-method ,(first wrap-around)
+                                 (,@(rest wrap-around)
                                     (make-method ,form)))))
       form)))
 
