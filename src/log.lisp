@@ -160,6 +160,7 @@
 						  :appenders (list ,@appenders)
 						  :ancestors (list ,@ancestors)))
 	 ,(make-log-helper '#:dribble '+dribble+)
+	 ,(make-log-helper '#:debug '+debug+)
 	 ,(make-log-helper '#:info '+info+)
 	 ,(make-log-helper '#:warn '+warn+)
 	 ,(make-log-helper '#:error '+error+)
