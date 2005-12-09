@@ -6,18 +6,18 @@
 
 ;;;; A logger is a way to have the system generate a text message and
 ;;;; have that messaged saved somewhere for future review. Logging can
-;;;; be used as a debugging mechinasm or for just reporting on the
+;;;; be used as a debugging mechanism or for just reporting on the
 ;;;; status of a system.
 
 ;;;; Logs are sent to a particular log category, each log category
-;;;; sends the messages it recieves to its handlers. A handler's job
+;;;; sends the messages it receives to its handlers. A handler's job
 ;;;; is to take a message and write it somewhere. Log categories are
-;;;; organized in a hierarchy and messages sent to a log cateogry will
+;;;; organized in a hierarchy and messages sent to a log category will
 ;;;; also be sent to that category's ancestors.
 
 ;;;; Each log category has a log level which is used to determine
 ;;;; whether are particular message should be processed or
-;;;; not. Categories inheirt their log level fro their ancestors. If a
+;;;; not. Categories inherit their log level from their ancestors. If a
 ;;;; category has multiple fathers its log level is the min of the
 ;;;; levels of its fathers.
 
