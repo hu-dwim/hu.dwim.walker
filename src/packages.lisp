@@ -79,6 +79,8 @@
    #:go-tag-form
    #:go-form
    #:the-form
+   #:extract-argument-names
+   #:walk-lambda-list
    
    #:to-cps
    #:with-call/cc
