@@ -122,7 +122,12 @@
 (defun extract-argument-names (lambda-list)
   "Returns a list of symbols representing the names of the
   variables bound by the lambda list LAMBDA-LIST."
-  (mapcar #'name (walk-lambda-list lambda-list nil '() :allow-specializers t)))
+  (delete-if #'null
+             (mapcar (lambda (argument)
+                       (and (slot-exists-p argument 'name)
+                            (slot-boundp argument 'name)
+                            (slot-value argument 'name)))
+                     (walk-lambda-list lambda-list nil '() :allow-specializers t))))
 
 (defun convert-to-generic-lambda-list (defmethod-lambda-list)
   (loop
@@ -148,7 +153,9 @@
            (pushnew '&optional generic-lambda-list)
            (push (name arg) generic-lambda-list))
           (allow-other-keys-function-argument-form
-           (push '&allow-other-keys generic-lambda-list)))
+           (push '&allow-other-keys generic-lambda-list)
+           (unless (member '&key generic-lambda-list)
+             (push '&key generic-lambda-list))))
      finally (return (nreverse generic-lambda-list))))
 
 (defun clean-argument-list (lambda-list)

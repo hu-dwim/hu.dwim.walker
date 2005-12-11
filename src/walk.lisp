@@ -403,8 +403,8 @@
 
 (defun walk-lambda-list (lambda-list parent env &key allow-specializers)
   (flet ((extend-env (argument)
-                 (unless (typep argument 'allow-other-keys-function-argument-form)
-                   (extend env :let (name argument) argument))))
+           (unless (typep argument 'allow-other-keys-function-argument-form)
+             (extend env :let (name argument) argument))))
     (let ((state :required)
           (arguments '()))
       (dolist (argument lambda-list)
