@@ -153,9 +153,9 @@
            (pushnew '&optional generic-lambda-list)
            (push (name arg) generic-lambda-list))
           (allow-other-keys-function-argument-form
-           (push '&allow-other-keys generic-lambda-list)
            (unless (member '&key generic-lambda-list)
-             (push '&key generic-lambda-list))))
+             (push '&key generic-lambda-list))
+           (push '&allow-other-keys generic-lambda-list)))
      finally (return (nreverse generic-lambda-list))))
 
 (defun clean-argument-list (lambda-list)
