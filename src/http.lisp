@@ -121,11 +121,6 @@
                (write-char char stream)))
           ((gethash char *html-entites*)
            (princ (gethash char *html-entites*) stream))
-          #-(and sbcl sb-unicode)
-          ((> (char-code char) 127)
-           (princ "&#x" stream)
-           (write (char-code char) :stream stream :base 16)
-           (write-char #\; stream))
           (t (write-char char stream)))))
 
 (defun escape-as-html (string &key (escape-whitespace nil))
