@@ -107,6 +107,8 @@
    #:read-string-from-file
    #:write-string-to-file
    #:copy-file
+   #:string-to-octets
+   #:octets-to-string
    
    #:if-bind
    #:aif

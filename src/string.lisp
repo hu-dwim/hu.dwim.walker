@@ -108,6 +108,70 @@ the vector ALPHABET.
 (defun ~W (object &optional stream)
   (format stream "~W" object))
 
+;;;; ** Converting strings to/from foreign encodings
+
+(defun string-to-octets (string encoding)
+  "Convert STRING, a list string, a vector of bytes according to ENCODING.
+
+ENCODING is a keyword representing the desired character
+encoding. We gurantee that :UTF-8, :UTF-16 and :ISO-8859-1 will
+work as expected. Any other values are simply passed to the
+underlying lisp's function and the results are implementation
+dependant.
+
+On CLISP we intern the ENCODING symbol in the CHARSET package and
+pass that. On SBCL we simply pass the keyword."
+  (%string-to-octets string encoding))
+
+(defun octets-to-string (octets encoding)
+  (%octets-to-string octets encoding))
+
+;;;; *** CLISP
+
+#+clisp
+(progn
+  (defun encoding-keyword-to-native (encoding)
+    (case encoding
+      (:utf-8 charset:utf-8)
+      (:utf-16 charset:utf-16)
+      (:us-ascii charset:ascii)
+      (t
+       (intern (string encoding) (find-package :charset)))))
+  (defun %string-to-octets (string encoding)
+    (ext:convert-string-to-bytes string (encoding-keyword-to-native encoding)))
+  (defun %octets-to-string (octets encoding)
+    (ext:convert-bytes-to-string octets (encoding-keyword-to-native encoding))))
+
+;;;; *** SBCL
+
+#+sbcl
+(progn
+  (defun encoding-keyword-to-native (encoding)
+    (ecase encoding
+      (:utf-8 :utf8)
+      (:utf-16 :utf16)
+      (:us-ascii :us-ascii)
+      (t encoding)))
+  (defun %string-to-octets (string encoding)
+    (sb-ext:string-to-octets string :external-format (encoding-keyword-to-native encoding)))
+  (defun %octets-to-string (octets encoding)
+    (sb-ext:octets-to-string octets :external-format (encoding-keyword-to-native encoding))))
+
+;;;; *** Default Implementation
+
+#-(or sbcl clisp)
+(progn
+  (defun %string-to-octets (string encoding)
+    (declare (ignore encoding))
+    (map-into (make-array (length string) :element-type 'unsigned-byte)
+              #'char-code string))
+  
+  (defun %octets-to-string (octets encoding)
+    (declare (ignore encoding))
+    (map-into (make-array (length octets) :element-type 'character)
+              #'code-char octets)))
+
+
 ;; Copyright (c) 2002-2005, Edward Marco Baringer
 ;; All rights reserved. 
 ;; 
