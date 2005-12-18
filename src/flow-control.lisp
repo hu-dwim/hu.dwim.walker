@@ -119,17 +119,16 @@ ELSE will be executed."
            ,@(when default-clause
                    `((t ,@(cdr default-clause)))))))))
 
-(defmacro eswitch ((obj &key (test #'eql)) &rest body)
+(defmacro eswitch ((obj &key (test #'eql)) &body body)
   "Like switch but signals an error if no clause succeds."
-  (let ((obj-sym (gensym)))
-    `(let ((,obj-sym ,obj))
-       (switch (,obj-sym :test ,test)
+  (rebinding (obj test)
+    `(switch (,obj-sym :test ,test)
                ,@body
                (t
                 (error "Unmatched SWITCH. Testing against ~A."
-                       ,obj-sym))))))
+                       ,obj-sym)))))
 
-(defmacro cswitch ((obj &key (test #'eql)) &rest body)
+(defmacro cswitch ((obj &key (test #'eql)) &body body)
   "Like SWITCH but signals a continuable error if no clause
   matches."
   (let ((obj-sym (gensym)))
