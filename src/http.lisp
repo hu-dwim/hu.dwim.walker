@@ -24,6 +24,7 @@
        do (write-char char stream)
      else do (format stream "%~2,'0X" (char-code char))))
 
+(declaim (inline char->hex-value))
 (defun char->hex-value (char)
   "Returns the number associated the hex value of CHAR. CHAR must
   be one of #\0 - #\9, #\a - #\f, #\A - #\F."
