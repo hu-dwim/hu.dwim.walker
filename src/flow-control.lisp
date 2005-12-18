@@ -122,22 +122,21 @@ ELSE will be executed."
 (defmacro eswitch ((obj &key (test #'eql)) &body body)
   "Like switch but signals an error if no clause succeds."
   (rebinding (obj test)
-    `(switch (,obj-sym :test ,test)
-               ,@body
-               (t
-                (error "Unmatched SWITCH. Testing against ~A."
-                       ,obj-sym)))))
+    `(switch (,obj :test ,test)
+       ,@body
+       (t
+        (error "Unmatched SWITCH. Testing against ~S with ~S."
+               ,obj ,test)))))
 
 (defmacro cswitch ((obj &key (test #'eql)) &body body)
   "Like SWITCH but signals a continuable error if no clause
   matches."
-  (let ((obj-sym (gensym)))
-    `(let ((,obj-sym ,obj))
-       (switch (,obj-sym :test ,test)
-               ,@body
-               (t
-                (cerror "Unmatched SWITCH. Testing against ~A."
-                        ,obj-sym))))))
+  (rebinding (obj test)
+    `(switch (,obj :test ,test)
+       ,@body
+       (t
+        (cerror "Unmatched SWITCH. Testing against ~S with ~S."
+                ,obj ,test)))))
 
 ;;;; ** Eliminating Nesting
 
