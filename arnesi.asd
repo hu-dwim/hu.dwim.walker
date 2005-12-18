@@ -28,7 +28,7 @@
                              (:file "defclass-struct" :depends-on ("packages" "list"))
                              (:file "flow-control" :depends-on ("packages" "one-liners"))
                              (:file "hash" :depends-on ("packages" "list" "one-liners" "string"))
-                             (:file "http" :depends-on ("packages" "vector"))
+                             (:file "http" :depends-on ("packages" "vector" "string"))
                              (:file "io" :depends-on ("packages" "flow-control"))
                              (:file "lambda" :depends-on ("packages"))
                              (:file "lexenv" :depends-on ("packages"))

@@ -77,11 +77,8 @@
                            (#\+ #.(char-code #\space))
                            (t (char-code (aref string index1))))))
              result)))
-    (let ((bytes (unescape-to-bytes string)))
-      #+(and sbcl sb-unicode)
-      (sb-ext:octets-to-string bytes :external-format external-format)
-      #-(and sbcl sb-unicode)
-      (map-into (make-string (length bytes)) #'code-char bytes)))) 
+    (octets-to-string (unescape-to-bytes string)
+                      external-format))) 
 
 ;;;; ** HTML
 
