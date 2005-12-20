@@ -24,28 +24,6 @@
        do (write-char char stream)
      else do (format stream "%~2,'0X" (char-code char))))
 
-(declaim (inline char->hex-value))
-(defun char->hex-value (char)
-  "Returns the number associated the hex value of CHAR. CHAR must
-  be one of #\0 - #\9, #\a - #\f, #\A - #\F."
-  (ecase char
-    (#\0 0)
-    (#\1 1)
-    (#\2 2)
-    (#\3 3)
-    (#\4 4)
-    (#\5 5)
-    (#\6 6)
-    (#\7 7)
-    (#\8 8)
-    (#\9 9)
-    ((#\a #\A) 10)
-    ((#\b #\B) 11)
-    ((#\c #\C) 12)
-    ((#\d #\D) 13)
-    ((#\e #\E) 14)
-    ((#\f #\F) 15)))
-
 (defun make-escaped-table ()
   (let ((table (make-array '(16 16)
                            :element-type 'character
@@ -60,25 +38,21 @@
 (defun nunescape-as-uri (string &rest args)
   (apply #'unescape-as-uri string args))
 
-(defun unescape-as-uri (string &optional (external-format :latin-1))
-  (declare (ignorable external-format))
-  (flet ((unescape-to-bytes (string)
-           (let* ((length (- (length string)
-                             (* 2 (count #\% string :test #'char=))))
-                  (result (make-array length :element-type '(unsigned-byte 8))))
-             (loop
-                for index1 upfrom 0
-                for index2 upfrom 0
-                while (< index1 (length string))
-                do (setf (aref result index2)
-                         (case (aref string index1)
-                           (#\% (+ (ash (digit-char-p (aref string (incf index1)) 16) 4)
-                                   (digit-char-p (aref string (incf index1)) 16)))
-                           (#\+ #.(char-code #\space))
-                           (t (char-code (aref string index1))))))
-             result)))
-    (octets-to-string (unescape-to-bytes string)
-                      external-format))) 
+(defun unescape-as-uri (string &optional (external-format :iso-8859-1))
+  (let* ((length (- (length string)
+                    (* 2 (count #\% string :test #'char=))))
+         (result (make-array length :element-type '(unsigned-byte 8))))
+    (loop
+       for index1 upfrom 0
+       for index2 upfrom 0
+       while (< index1 (length string))
+       do (setf (aref result index2)
+                (case (aref string index1)
+                  (#\% (+ (ash (digit-char-p (aref string (incf index1)) 16) 4)
+                          (digit-char-p (aref string (incf index1)) 16)))
+                  (#\+ #.(char-code #\space))
+                  (t (char-code (aref string index1))))))
+    (octets-to-string result external-format))) 
 
 ;;;; ** HTML
 
