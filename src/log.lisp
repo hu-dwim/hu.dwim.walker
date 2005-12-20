@@ -38,7 +38,7 @@
 (defclass log-category ()
   ((ancestors :initform '()     :accessor ancestors :initarg :ancestors
               :documentation "The log categories this category inherits from.")
-   (childer   :initform '()     :Accessor childer   :initarg :childer
+   (childer   :initform '()     :accessor childer   :initarg :childer
               :documentation "The log categories which inherit from this category.")
    (appenders :initform '()     :accessor appenders :initarg :appenders
               :documentation "A list of appender objects this category sholud send messages to.")

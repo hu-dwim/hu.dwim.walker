@@ -64,19 +64,19 @@
 (defun %make-matcher (spec)
   ;; NIL means many different things, deal with it explicitly
   (if (eql nil spec)
-      (%make-matcher `(:EQL ,spec))
+      (%make-matcher `(:eql ,spec))
       (if (listp spec)
           (aif (get-match-handler (car spec))
                (apply it (cdr spec))
                (error "Don't know how to handle ~S" spec))
           (aif (get-match-handler spec)
-               ;; we allow :X as a an abbreviation for (:x)
+               ;; we allow :x as a an abbreviation for (:x)
                (funcall it)
                (if (and (symbolp spec)
                         (not (keywordp spec)))
-                   (%make-matcher `(:BIND :ANYTHING ,spec))
+                   (%make-matcher `(:bind :anything ,spec))
                    (if (constantp spec)
-                       (%make-matcher `(:EQL ,spec))
+                       (%make-matcher `(:eql ,spec))
                        (error "Don't know how to deal with ~S" spec)))))))
 
 (defun match (matcher target)
@@ -119,7 +119,7 @@ function or a list."
 
 ;;;; ** Matching forms
 
-(def-matcher :BIND (spec var)
+(def-matcher :bind (spec var)
   "The :bind matcher attempts to match MATCHER and bind whatever
    MATCHER consumnd to VAR. group is equivalent to SPEC except the value
    of matched when spec has matched will be bound to var."
@@ -135,7 +135,7 @@ function or a list."
 			  k q.))
 	       q))))
 
-(def-matcher :REF (var &key (test #'eql))
+(def-matcher :ref (var &key (test #'eql))
   (lambda (s k q)
     (if (and (assoc var (bindings s))
 	     (funcall test (target s) (cdr (assoc var (bindings s)))))
@@ -143,7 +143,7 @@ function or a list."
 		 k q)
         (funcall q s k q))))
 
-(def-matcher :ALTERNATION (a-spec b-spec)
+(def-matcher :alternation (a-spec b-spec)
   (let ((a (%make-matcher a-spec))
 	(b (%make-matcher b-spec)))
     (lambda (s k q)
@@ -154,22 +154,22 @@ function or a list."
 		 (declare (ignore s. k. q.))
 		 (funcall b s k q))))))
 
-(def-matcher-macro :ALT (&rest possibilities)
+(def-matcher-macro :alt (&rest possibilities)
   (case (length possibilities)
-    (0 `(:FAIL))
+    (0 `(:fail))
     (1 (car possibilities))
-    (t `(:ALTERNATION ,(car possibilities) (:ALT ,@(cdr possibilities))))))
+    (t `(:alternation ,(car possibilities) (:alt ,@(cdr possibilities))))))
 
-(def-matcher :FAIL ()
+(def-matcher :fail ()
   (lambda (s k q)
     (funcall q s k q)))
 
-(def-matcher :NOT (match)
+(def-matcher :not (match)
   (let ((m (%make-matcher match)))
     (lambda (s k q)
       (funcall m s q k))))
 
-(def-matcher :ANYTHING ()
+(def-matcher :anything ()
   (lambda (s k q)
     (funcall k (copy-state s :matched (target s))
 	     k q)))
@@ -191,7 +191,7 @@ function or a list."
                      (funcall k s k q.)))
         (funcall q s k q))))
 
-(def-matcher :GREEDY-STAR (match)
+(def-matcher :greedy-star (match)
   (make-greedy-star (%make-matcher match)))
 
 ;;;; ** The actual matching operators
@@ -199,7 +199,7 @@ function or a list."
 ;;;; All of the above allow us to build matchers but non of them
 ;;;; actually match anything.
 
-(def-matcher :TEST (predicate)
+(def-matcher :test (predicate)
   "Matches if the current matches satisfies PREDICATE."
   (lambda (s k q)
     (if (funcall predicate (target s))
@@ -207,28 +207,28 @@ function or a list."
 		 k q)
         (funcall q s k q))))
 
-(def-matcher-macro :TEST-NOT (predicate)
-  `(:NOT (:TEST ,predicate)))
+(def-matcher-macro :test-not (predicate)
+  `(:not (:test ,predicate)))
 
-(def-matcher-macro :SATISFIES-P (predicate)
-  `(:TEST ,(lambda (target) (funcall predicate target))))
+(def-matcher-macro :satisfies-p (predicate)
+  `(:test ,(lambda (target) (funcall predicate target))))
 
-(def-matcher-macro :EQ (object)
-  `(:TEST ,(lambda (target) (eq object target))))
+(def-matcher-macro :eq (object)
+  `(:test ,(lambda (target) (eq object target))))
 
-(def-matcher-macro :EQL (object)
-  `(:TEST ,(lambda (target) (eql object target))))
+(def-matcher-macro :eql (object)
+  `(:test ,(lambda (target) (eql object target))))
 
-(def-matcher-macro cl:QUOTE (constant)
-  `(:EQL ,constant))
+(def-matcher-macro cl:quote (constant)
+  `(:eql ,constant))
 
-(def-matcher-macro :EQUAL (object)
-  `(:TEST ,(lambda (target) (equal object target))))
+(def-matcher-macro :equal (object)
+  `(:test ,(lambda (target) (equal object target))))
 
-(def-matcher-macro :EQUALP (object)
-  `(:TEST ,(lambda (target) (equalp object target))))
+(def-matcher-macro :equalp (object)
+  `(:test ,(lambda (target) (equalp object target))))
 
-(def-matcher :CONS (car-spec cdr-spec)
+(def-matcher :cons (car-spec cdr-spec)
   (let ((car (%make-matcher car-spec))
 	(cdr (%make-matcher cdr-spec)))
     (lambda (s k q)
@@ -247,15 +247,15 @@ function or a list."
 		   q)
 	  (funcall q s k q)))))
 
-(def-matcher-macro :LIST (&rest items)
-  `(:LIST* ,@items NIL))
+(def-matcher-macro :list (&rest items)
+  `(:list* ,@items nil))
 
-(def-matcher-macro :LIST* (&rest items)
+(def-matcher-macro :list* (&rest items)
   (case (length items)
     (1 (car items))
-    (2 `(:CONS ,(first items) ,(second items)))
+    (2 `(:cons ,(first items) ,(second items)))
     (t
-     `(:CONS ,(first items) (:LIST* ,@(cdr items))))))
+     `(:cons ,(first items) (:list* ,@(cdr items))))))
 
 ;; Copyright (c) 2002-2005, Edward Marco Baringer
 ;; All rights reserved. 
