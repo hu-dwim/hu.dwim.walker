@@ -11,9 +11,9 @@
   #+openmcl (ccl:quit exit-code)
   #+sbcl (sb-ext:quit :unix-status exit-code)
   #+clisp (ext:quit exit-code)
-  #+cmu (declare (ignore exit-code))
+  #+(or cmu allegro) (declare (ignore exit-code))
   #+cmu (ext:quit)
-  )
+  #+allegro (excl:exit))
 
 ;; Copyright (c) 2002-2003, Edward Marco Baringer
 ;; All rights reserved. 
