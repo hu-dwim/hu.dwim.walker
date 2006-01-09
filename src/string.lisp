@@ -128,7 +128,7 @@ pass that. On SBCL we simply pass the keyword."
 
 ;;;; *** CLISP
 
-#+clisp
+#+(and clisp unicode)
 (progn
   (defun encoding-keyword-to-native (encoding)
     (case encoding
@@ -159,7 +159,7 @@ pass that. On SBCL we simply pass the keyword."
 
 ;;;; *** Default Implementation
 
-#-(or (and sbcl sb-unicode) clisp)
+#-(or (and sbcl sb-unicode) (and clisp unicode))
 (progn
   (defun %string-to-octets (string encoding)
     (declare (ignore encoding))
