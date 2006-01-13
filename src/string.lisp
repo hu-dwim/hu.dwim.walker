@@ -131,12 +131,7 @@ pass that. On SBCL we simply pass the keyword."
 #+(and clisp unicode)
 (progn
   (defun encoding-keyword-to-native (encoding)
-    (case encoding
-      (:utf-8 charset:utf-8)
-      (:utf-16 charset:utf-16)
-      (:us-ascii charset:ascii)
-      (t
-       (intern (string encoding) (find-package :charset)))))
+    (intern (string encoding) (find-package :charset)))
   (defun %string-to-octets (string encoding)
     (ext:convert-string-to-bytes string (encoding-keyword-to-native encoding)))
   (defun %octets-to-string (octets encoding)
