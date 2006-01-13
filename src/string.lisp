@@ -135,7 +135,7 @@ pass that. On SBCL we simply pass the keyword."
   (defun %string-to-octets (string encoding)
     (ext:convert-string-to-bytes string (encoding-keyword-to-native encoding)))
   (defun %octets-to-string (octets encoding)
-    (ext:convert-bytes-to-string octets (encoding-keyword-to-native encoding))))
+    (ext:convert-string-from-bytes octets (encoding-keyword-to-native encoding))))
 
 ;;;; *** SBCL
 
