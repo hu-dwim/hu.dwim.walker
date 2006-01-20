@@ -54,6 +54,7 @@
   :components ((:module :t
 		:components ((:file "accumulation" :depends-on ("suite"))
                              (:file "call-cc" :depends-on ("suite"))
+                             (:file "http" :depends-on ("suite"))
                              (:file "log" :depends-on ("suite"))
                              (:file "matcher" :depends-on ("suite"))
                              (:file "numbers" :depends-on ("suite"))
