@@ -168,7 +168,7 @@ DELETE-ARGS are passed directly to cl:delete."
 			    over-value over-value*))))
 	(return (aref buffer target-length))))))
 
-;; Copyright (c) 2002-2005, Edward Marco Baringer
+;; Copyright (c) 2002-2006, Edward Marco Baringer
 ;; All rights reserved. 
 ;; 
 ;; Redistribution and use in source and binary forms, with or without

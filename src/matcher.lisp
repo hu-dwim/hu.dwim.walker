@@ -257,7 +257,7 @@ function or a list."
     (t
      `(:cons ,(first items) (:list* ,@(cdr items))))))
 
-;; Copyright (c) 2002-2005, Edward Marco Baringer
+;; Copyright (c) 2002-2006, Edward Marco Baringer
 ;; All rights reserved. 
 ;; 
 ;; Redistribution and use in source and binary forms, with or without

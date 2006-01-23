@@ -309,7 +309,7 @@ object wrapping OBJECT."
 #-mopp::have-mop
 (warn "No MOPP implementation available for this lisp implementation.")
 
-;; Copyright (C) 2004-2005 Edward Marco Baringer
+;; Copyright (C) 2004-2006 Edward Marco Baringer
 ;; All rights reserved. 
 ;; 
 ;; Redistribution and use in source and binary forms, with or without
