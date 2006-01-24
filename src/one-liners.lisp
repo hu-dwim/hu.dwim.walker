@@ -5,7 +5,13 @@
 ;;;; * Miscalaneous stuff
 
 (defun intern-concat (string-designators &optional (package *package*))
-  (intern (strcat* string-designators) package))
+  (intern (with-output-to-string (symbol-name)
+            (dolist (designator string-designators)
+              (write-string (etypecase designator
+                              (symbol (symbol-name designator))
+                              (string designator))
+                            symbol-name)))
+          package))
 
 (defmacro with-unique-names ((&rest bindings) &body body)
   "Evaluate BODY with BINDINGS bound to fresh unique symbols.
