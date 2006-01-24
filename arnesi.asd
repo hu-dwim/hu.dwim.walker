@@ -71,7 +71,7 @@
 
 (defmethod perform ((op asdf:test-op) (system (eql (find-system :arnesi))))
   (asdf:oos 'asdf:load-op :arnesi.test)
-  (funcall (intern (string :run!) (string :it.bese.5am))
+  (funcall (intern (string :run!) (string :it.bese.FiveAM))
            :it.bese.arnesi))
 
 ;;;; * Introduction
