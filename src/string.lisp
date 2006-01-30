@@ -142,7 +142,7 @@ pass that. On SBCL we simply pass the keyword."
 #+(and sbcl sb-unicode)
 (progn
   (defun encoding-keyword-to-native (encoding)
-    (ecase encoding
+    (case encoding
       (:utf-8 :utf8)
       (:utf-16 :utf16)
       (:us-ascii :us-ascii)
