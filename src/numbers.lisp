@@ -78,11 +78,11 @@
                    (coerce (* sign (+ integer-part (/ mantissa mantissa-size))) type))))
         (sign)))))
     
-(define-modify-macro mulf (delta)
+(define-modify-macro mulf (B)
   *
   "SETF NUM to the result of (* NUM B).")
 
-(define-modify-macro divf (delta)
+(define-modify-macro divf (B)
   /
   "SETF NUM to the result of (/ NUM B).")
 
