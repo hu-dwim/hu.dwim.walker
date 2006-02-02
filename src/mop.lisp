@@ -2,7 +2,11 @@
 
 (in-package :it.bese.arnesi)
 
-;;;; * Mesing with the MOP
+;;;; * Messing with the MOP
+
+;;;; The code pre-dates Pascal Costanza's closer-mop package. If
+;;;; you're looking for a compatability layer you should probably look
+;;;; there instead.
 
 (defmacro with-class-slots ((object class-name &key except) &body body)
   "Execute BODY as if in a with-slots form containig _all_ the
