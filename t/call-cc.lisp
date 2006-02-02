@@ -1,6 +1,6 @@
 ;;;; -*- lisp -*-
 
-(in-package :it.bese.arnesi)
+(in-package :it.bese.arnesi.test)
 
 (def-suite :it.bese.arnesi.call/cc :in :it.bese.arnesi)
 
@@ -53,10 +53,10 @@
 
 (test call/cc-let/cc
   (let ((k (with-call/cc
-             (let ((a (retk)))
+             (let ((a (arnesi::retk)))
                (+ a 1)))))
-  (is (= 1 (kall k 0)))
-  (is (= 2 (kall k 1)))))
+  (is (= 1 (arnesi::kall k 0)))
+  (is (= 2 (arnesi::kall k 1)))))
 
 (test call/cc-setq
   (is (= 1 (with-call/cc
@@ -165,7 +165,7 @@
     (with-call/cc
       (labels ((rec (x) x))
         #'rec
-        (is (= 1 (funcall #'rec 1) 1))
+        (is (= 1 (funcall #'rec 1)))
         (is (= 1 (apply #'rec (list 1)))))
       (flet ((f () 1))
         (is (= 1 (f)))

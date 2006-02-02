@@ -1,6 +1,6 @@
 ;;;; -*- lisp -*-
 
-(in-package :it.bese.arnesi)
+(in-package :it.bese.arnesi.test)
 
 (def-suite :it.bese.arnesi.sequence :in :it.bese.arnesi)
 

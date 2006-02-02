@@ -1,6 +1,6 @@
 ;;;; -*- lisp -*-
 
-(in-package :it.bese.arnesi)
+(in-package :it.bese.arnesi.test)
 
 (def-suite :it.bese.arnesi.numbers :in :it.bese.arnesi)
 
@@ -10,6 +10,11 @@
   (let ((a 0))
     (is (= 0 (mulf a 10)))
     (is (= 0 a)))
+  (for-all ((a (gen-integer))
+            (b (gen-integer)))
+    (let ((orig-a a))
+      (mulf a b)
+      (is (= a (* orig-a b)))))
 
   (let ((a 1))
     (is (= 4 (mulf a 4)))
