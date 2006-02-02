@@ -260,6 +260,8 @@
    #:quit
 
    #:wrapping-standard
+
+   #:levenshtein-distance
    ))
 
 ;;;; * Colophon
