@@ -44,6 +44,7 @@
                              (:file "sharpl-reader" :depends-on ("packages" "flow-control"))
                              (:file "specials" :depends-on ("packages" "hash"))
                              (:file "string" :depends-on ("packages" "list"))
+                             (:file "time" :depends-on ("packages"))
                              (:file "vector" :depends-on ("packages" "flow-control"))
                              (:file "walk" :depends-on ("packages" "list" "mopp" "lexenv"
                                                         "one-liners")))))
