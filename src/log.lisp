@@ -64,6 +64,9 @@
                   minimize (log.level ancestor))
             (error "Can't determine level for ~S" cat)))))
 
+(defmethod log.level ((cat-name symbol))
+  (log.level (get-logger cat-name)))
+
 (defmethod (setf log.level) (new-level (cat log-category)
                              &optional (recursive t))
   "Change the log level of CAT to NEW-LEVEL. If RECUSIVE is T the
@@ -72,6 +75,9 @@
   (when recursive
     (dolist (child (childer cat))
       (setf (log.level child) new-level))))
+
+(defmethod (setf log.level) (new-level (cat-name symbol) &optional (recursive t))
+  (setf (log.level (get-logger cat-name) recursive) new-level))
 
 ;;;; ** Handling Messages
 
@@ -165,6 +171,8 @@
 	 ,(make-log-helper '#:warn '+warn+)
 	 ,(make-log-helper '#:error '+error+)
 	 ,(make-log-helper '#:fatal '+fatal+)))))
+
+
 
 ;; Copyright (c) 2002-2006, Edward Marco Baringer
 ;; All rights reserved. 
