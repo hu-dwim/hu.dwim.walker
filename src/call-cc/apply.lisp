@@ -109,8 +109,19 @@
     (t
      (evaluate-arguments-then-apply
       (lambda (arguments)
-        (trace-statement "Calling function ~S with arguments ~S" (operator func) arguments)
-        (apply #'kontinue k (multiple-value-list (apply (fdefinition (operator func)) arguments))))
+        (if dyn-env
+            (eval
+             `(let (,@(mapcar (lambda (binding) (list (second binding) (cddr binding))) dyn-env))
+               (declare (special ,@(mapcar 'second dyn-env)))
+               (trace-statement "Calling function ~S with arguments ~S"
+                                (operator ,func) ',arguments)
+               (apply #'kontinue ',k (multiple-value-list
+                                         (apply (fdefinition ',(operator func)) ',arguments)))))
+            (progn
+              (trace-statement "Calling function ~S with arguments ~S"
+                               (operator func) arguments)
+              (apply #'kontinue k (multiple-value-list
+                                      (apply (fdefinition (operator func)) arguments))))))
       (arguments func) '()
       lex-env dyn-env))))
 
