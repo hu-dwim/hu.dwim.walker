@@ -106,16 +106,30 @@
            ,lex-env ,dyn-env ,k)))
       (dolist* ((var . value) evaluated-bindings
                 (evaluate-progn/cc body lex-env dyn-env k))
-        (setf lex-env (register lex-env :let var value)))))
+        (if (special-var-p var (parent (first body)))
+            (setf dyn-env (register dyn-env :let var value))
+            (setf lex-env (register lex-env :let var value))))))
+
+(defun special-var-p (var progn-mixin)
+  (find-if (lambda (declaration)
+             (and (typep declaration 'special-declaration-form)
+                  (eq (name declaration) var)))
+           (declares progn-mixin)))
 
 (defmethod evaluate/cc ((let* let*-form) lex-env dyn-env k)
   (evaluate-let*/cc (binds let*) (body let*) lex-env dyn-env k))
 
 (defk k-for-evaluate-let*/cc (var bindings body lex-env dyn-env k)
     (value)
-  (evaluate-let*/cc bindings body
-                     (register lex-env :let var value) dyn-env
-                     k))
+  (if (special-var-p var (parent (first body)))
+      (evaluate-let*/cc bindings body
+                        lex-env
+                        (register dyn-env :let var value)
+                        k)
+      (evaluate-let*/cc bindings body
+                        (register lex-env :let var value)
+                        dyn-env
+                        k)))
 
 (defun evaluate-let*/cc (bindings body lex-env dyn-env k)
   (if bindings
