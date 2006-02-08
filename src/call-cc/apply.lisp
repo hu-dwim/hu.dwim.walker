@@ -111,7 +111,11 @@
       (lambda (arguments)
         (if dyn-env
             (eval
-             `(let (,@(mapcar (lambda (binding) (list (second binding) (cddr binding))) dyn-env))
+             `(let (,@(mapcar (lambda (binding) (list (second binding) (cddr binding)))
+                              (remove-duplicates dyn-env
+                                                 :test (lambda (x y) (eq (second x)
+                                                                         (second y)))
+                                                 :from-end t)))
                (declare (special ,@(mapcar 'second dyn-env)))
                (trace-statement "Calling function ~S with arguments ~S"
                                 (operator ,func) ',arguments)
