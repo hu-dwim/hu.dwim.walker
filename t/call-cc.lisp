@@ -353,3 +353,84 @@
              (catch 'done
                (throw-something t)
                nil)))))
+
+;; speical variable handling
+(defun/cc lookup-special-in-defun/cc (stop)
+  (declare (special var))
+  (when stop (let/cc k k))
+  var)
+
+(defun lookup-special-in-defun ()
+  (declare (special var))
+  var)
+
+(defun/cc define-and-lookup-special-in-defun/cc (stop)
+  (let ((var 1))
+    (declare (special var))
+    (when stop (let/cc k k))
+    var))
+
+(defun/cc export-special-from-defun/cc-and-lookup-in-defun/cc (stop)
+  (let ((var 1))
+    (declare (special var))
+    (lookup-special-in-defun/cc stop)))
+
+(defun/cc export-special-from-defun/cc-and-lookup-in-defun (stop)
+  (let ((var 1))
+    (declare (special var))
+    (when stop (let/cc k k))
+    (lookup-special-in-defun)))
+
+(defun export-special-from-defun-and-lookup-in-defun/cc (stop)
+  (let ((var 1))
+    (declare (special var))
+    (with-call/cc
+      (lookup-special-in-defun/cc stop))))
+
+#|
+TODO: this one does not compile yet, actually it works
+if you wrap the body of with-call/cc with a (let () ...) form
+(defun export-special-from-defun-and-lookup-in-defun ()
+  (let ((var 1))
+    (declare (special var))
+    (with-call/cc
+      (declare (special var))
+      (let/cc k k)
+      (lookup-special-in-defun))))
+|#
+
+(defun replace-stop (form stop)
+  (cond ((eq form 'stop)
+         stop)
+        ((atom form)
+         form)
+        (t
+         (mapcar (lambda (form) (replace-stop form stop)) form))))
+
+(defmacro test-special/cc (&body body)
+  (let ((body-without-stop (mapcar (lambda (form) (replace-stop form nil)) body))
+        (body-with-stop (mapcar (lambda (form) (replace-stop form t)) body)))
+    `(progn
+      (is (= 1 (with-call/cc ,@body-without-stop)))
+      (signals unbound-variable
+        (with-call/cc ,@body-without-stop (lookup-special-in-defun)))
+      (signals unbound-variable
+        (with-call/cc ,@body-without-stop (lookup-special-in-defun/cc nil)))
+      ;; now stop once
+      (is (= 1 (kall (with-call/cc ,@body-with-stop))))
+      (signals unbound-variable
+        (kall (with-call/cc ,@body-with-stop (lookup-special-in-defun))))
+      (signals unbound-variable
+        (kall (with-call/cc ,@body-with-stop (lookup-special-in-defun/cc nil)))))))
+
+(test special/cc
+  ;; first the simple lookups
+  (test-special/cc (define-and-lookup-special-in-defun/cc stop))
+  (test-special/cc (export-special-from-defun/cc-and-lookup-in-defun/cc stop))
+  (test-special/cc (export-special-from-defun/cc-and-lookup-in-defun stop))
+  ;; TODO: this test fails, because the special variable is not captured
+  ;; within the continuation when stop is t
+  ;(test-special/cc (export-special-from-defun-and-lookup-in-defun/cc stop))
+  ;; TODO: test case does not compile yet, see above
+  ;(is (= 1 (kall (export-special-from-defun-and-lookup-in-defun))))
+)
