@@ -74,7 +74,8 @@
   (setf (slot-value cat 'level) new-level)
   (when recursive
     (dolist (child (childer cat))
-      (setf (log.level child) new-level))))
+      (setf (log.level child) new-level)))
+  new-level)
 
 (defmethod (setf log.level) (new-level (cat-name symbol) &optional (recursive t))
   (setf (log.level (get-logger cat-name) recursive) new-level))
