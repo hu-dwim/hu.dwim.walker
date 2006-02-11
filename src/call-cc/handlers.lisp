@@ -82,16 +82,21 @@
 
 ;;;; LET/LET*
 
-(defmethod evaluate/cc ((let let-form) lex-env dyn-env k)
-  (dolist (declaration (declares let))
+;; returns a dynamic environment that holds the special variables imported for let
+;; these variables are captured from the caller normal lisp code and stored within
+;; the continuation. The mixin might be a binding-form-mixin and implicit-progn-with-declare-mixin.
+(defun import-specials (mixin dyn-env)
+  (dolist (declaration (declares mixin))
     (let ((name (name declaration)))
       (if (and (typep declaration 'special-declaration-form)
-               (not (find name (binds let) :key 'first))
+               (or (not (typep mixin 'binding-form-mixin))
+                   (not (find name (binds mixin) :key 'first)))
                (not (lookup dyn-env :let name)))
-          (setf dyn-env (register dyn-env :let
-                                  name
-                                  (eval `(let () (declare (special ,name)) ,name)))))))
-  (evaluate-let/cc (binds let) nil (body let) lex-env dyn-env k))
+          (setf dyn-env (register dyn-env :let name (symbol-value name))))))
+  dyn-env)
+
+(defmethod evaluate/cc ((let let-form) lex-env dyn-env k)
+  (evaluate-let/cc (binds let) nil (body let) lex-env (import-specials let dyn-env) k))
 
 (defk k-for-evaluate-let/cc (var remaining-bindings evaluated-bindings body lex-env dyn-env k)
     (value)
@@ -118,14 +123,14 @@
             (setf dyn-env (register dyn-env :let var value))
             (setf lex-env (register lex-env :let var value))))))
 
-(defun special-var-p (var let)
+(defun special-var-p (var declares-mixin)
   (find-if (lambda (declaration)
              (and (typep declaration 'special-declaration-form)
                   (eq (name declaration) var)))
-           (declares let)))
+           (declares declares-mixin)))
 
 (defmethod evaluate/cc ((let* let*-form) lex-env dyn-env k)
-  (evaluate-let*/cc (binds let*) (body let*) lex-env dyn-env k))
+  (evaluate-let*/cc (binds let*) (body let*) lex-env (import-specials let* dyn-env) k))
 
 (defk k-for-evaluate-let*/cc (var bindings body lex-env dyn-env k)
     (value)

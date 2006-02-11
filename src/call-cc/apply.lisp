@@ -109,25 +109,31 @@
     (t
      (evaluate-arguments-then-apply
       (lambda (arguments)
-        (if dyn-env
-            (eval
+        (if-bind dyn-env (export-specials dyn-env)
+          (eval
              `(let (,@(mapcar (lambda (binding) (list (second binding) (cddr binding)))
-                              (remove-duplicates dyn-env
-                                                 :test (lambda (x y) (eq (second x)
-                                                                         (second y)))
-                                                 :from-end t)))
+                              (export-specials dyn-env)))
                (declare (special ,@(mapcar 'second dyn-env)))
                (trace-statement "Calling function ~S with arguments ~S"
                                 (operator ,func) ',arguments)
                (apply #'kontinue ',k (multiple-value-list
                                          (apply (fdefinition ',(operator func)) ',arguments)))))
-            (progn
-              (trace-statement "Calling function ~S with arguments ~S"
-                               (operator func) arguments)
-              (apply #'kontinue k (multiple-value-list
-                                      (apply (fdefinition (operator func)) arguments))))))
+          (progn
+            (trace-statement "Calling function ~S with arguments ~S"
+                             (operator func) arguments)
+            (apply #'kontinue k (multiple-value-list
+                                    (apply (fdefinition (operator func)) arguments))))))
       (arguments func) '()
       lex-env dyn-env))))
+
+;; returns a dynamic environment that holds the special variables to be exported
+;; these variable will be visible in normal lisp code called from cc code
+(defun export-specials (dyn-env)
+  ;; TODO: here we could check each special whether it has to be exported or not
+  ;;       this could be based on something like (declare (export var)) in the cc code
+  (remove-duplicates dyn-env
+                     :test (lambda (x y) (eq (second x) (second y)))
+                     :from-end t))
 
 ;;;; apply'ing a local function
 
@@ -180,7 +186,7 @@
     ;; function. PARAMETER refers to the lambda of the closure
     ;; object. we walk down the parameters and put the arguments in
     ;; the environment under the proper names.
-    
+
     ;; first the required arguments
     (loop
        while remaining-parameters
@@ -193,6 +199,9 @@
                         (arguments (code operator)) effective-arguments))
              (pop remaining-parameters))
             (t (return))))
+
+    ;; handle special variables
+    (setf dyn-env (import-specials (code operator) dyn-env))
 
     ;; now we start the chain optional->keyword->evaluate-body. We do
     ;; this because optional and keyword parameters may have default
