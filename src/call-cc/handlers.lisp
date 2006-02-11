@@ -182,11 +182,11 @@
 (defun evaluate-m-v-c (remaining-arguments evaluated-arguments lex-env dyn-env k)
   (if remaining-arguments
       (evaluate/cc (car remaining-arguments) lex-env dyn-env
-                    `(k-for-m-v-c  ,(cdr remaining-arguments) ,evaluated-arguments ,lex-env ,dyn-env ,k))
+                   `(k-for-m-v-c  ,(cdr remaining-arguments) ,evaluated-arguments ,lex-env ,dyn-env ,k))
       (destructuring-bind (function &rest arguments)
           evaluated-arguments
         (etypecase function
-          (closure/cc (apply-lambda/cc function evaluated-arguments dyn-env k))
+          (closure/cc (apply-lambda/cc function arguments dyn-env k))
           (function (apply #'kontinue k (multiple-value-list
                                          (multiple-value-call function (values-list arguments)))))))))
 
