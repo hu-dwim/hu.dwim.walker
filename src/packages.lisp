@@ -159,6 +159,8 @@
    #:get-logger
    #:log-category
    #:stream-log-appender
+   #:brief-stream-log-appender
+   #:verbose-stream-log-appender
    #:make-stream-log-appender
    #:file-log-appender
    #:make-file-log-appender

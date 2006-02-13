@@ -101,35 +101,80 @@
 
 ;;;; *** Stream log appender
 
-(defclass stream-log-appender ()
-  ((stream :initarg :stream :accessor log-stream))
-  (:documentation "Human readable to the console logger."))
+(eval-when (:compile-toplevel :load-toplevel :execute)
+  (defclass stream-log-appender ()
+    ((stream :initarg :stream :accessor log-stream))
+    (:documentation "Human readable to the console logger.")))
 
-(defmethod append-message ((category log-category) (s stream-log-appender)
-                           message level)
+(defmethod make-instance ((class (eql (find-class 'stream-log-appender)))
+                          &rest initargs)
+  (error "STREAM-LOG-APPENDER is an abstract class. You must use either brief-stream-log-appender or verbose-stream-log-appender objects."))
+
+(defclass brief-stream-log-appender (stream-log-appender)
+  ((last-message-year :initform 0)
+   (last-message-month :initform 0)
+   (last-message-day :initform 0))
+  (:documentation "A subclass of stream-log-appender with minimal
+  'overhead' text in log messages. This amounts to: not printing
+  the package names of log categories and log levels and a more
+  compact printing of the current time."))
+
+(defclass verbose-stream-log-appender (stream-log-appender)
+  ()
+  (:documentation "A subclass of stream-log-appender which
+  attempts to be as precise as possible, category names and log
+  level names are printed with a package prefix and the time is
+  printed in long format."))
+
+(defmethod append-message :around ((category log-category) (s stream-log-appender)
+                                   message level)
+  (restart-case
+      (call-next-method)
+    (use-*debug-io* ()
+      :report "Use the current value of *debug-io*"
+      (setf (log-stream s) *debug-io*)
+      (append-message category s message level))
+    (use-*standard-output* ()
+      :report "Use the current value of *standard-output*"
+      (setf (log-stream s) *standard-output*)
+      (append-message category s message level))
+    (silence-logger ()
+      :report "Ignore all future messages to this logger."
+      (setf (log-stream s) (make-broadcast-stream)))))
+
+(defmethod append-message ((category log-category) (s brief-stream-log-appender)
+                            message level)
+  (multiple-value-bind (second minute hour day month year)
+      (decode-universal-time (get-universal-time))
+    (with-slots (last-message-year last-message-month last-message-day)
+        s
+      (unless (and (= year last-message-year)
+                 (= month last-message-month)
+                 (= day last-message-day))
+        (format (log-stream s) "--TIME MARK ~4,'0D-~2,'0D-~2,'0D--~%"
+                year month day)
+        (setf last-message-year year
+              last-message-month month
+              last-message-day day)))
+    (format (log-stream s)
+            "~2,'0D:~2,'0D ~A/~A: "
+            hour minute
+            (symbol-name (name category))
+            (symbol-name level))
+    (format (log-stream s) "~A~%" message)))
+
+(defmethod append-message ((category log-category) (s verbose-stream-log-appender)
+                            message level)
   (multiple-value-bind (second minute hour date month year)
       (decode-universal-time (get-universal-time))
-    (restart-case
-        (progn
-          (format (log-stream s)
-                  "~4,'0D-~2,'0D-~2,'0DT~2,'0D:~2,'0D.~2,'0D ~S ~S: "
-                  year month date hour minute second
-                  level (name category))
-          (format (log-stream s) "~A~%" message))
-      (use-*debug-io* ()
-        :report "Use the current value of *debug-io*"
-        (setf (log-stream s) *debug-io*)
-        (append-message category s message level))
-      (use-*standard-output* ()
-        :report "Use the current value of *standard-output*"
-        (setf (log-stream s) *standard-output*)
-        (append-message category s message level))
-      (silence-logger ()
-        :report "Ignore all future messages to this logger."
-        (setf (log-stream s) (make-broadcast-stream))))))
+    (format (log-stream s)
+            "~4,'0D-~2,'0D-~2,'0DT~2,'0D:~2,'0D.~2,'0D ~S/~S: "
+            year month date hour minute second
+            (name category) level)
+    (format (log-stream s) "~A~%" message)))
 
 (defun make-stream-log-appender (&optional (stream *debug-io*))
-  (make-instance 'stream-log-appender :stream stream))
+  (make-instance 'verbose-stream-log-appender :stream stream))
 
 (defclass file-log-appender (stream-log-appender)
   ((log-file :initarg :log-file :accessor log-file))
