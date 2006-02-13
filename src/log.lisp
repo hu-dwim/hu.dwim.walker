@@ -80,6 +80,10 @@
 (defmethod (setf log.level) (new-level (cat-name symbol) &optional (recursive t))
   (setf (log.level (get-logger cat-name) recursive) new-level))
 
+(defmethod (setf log.level) (new-level (cat-name null) &optional (recursive t))
+  (declare (ignore new-level cat-name recursive))
+  (error "NIL does not specify a category."))
+
 ;;;; ** Handling Messages
 
 (defgeneric handle (category message level))
