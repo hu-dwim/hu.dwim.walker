@@ -353,3 +353,165 @@
              (catch 'done
                (throw-something t)
                nil)))))
+
+(test multiple-value-call
+  (with-call/cc
+      (is (= 1 (multiple-value-call
+                   #'identity
+                 (values 1)))))
+  (with-call/cc
+      (is (= 3 (length (multiple-value-call
+                           #'list
+                         (values 1)
+                         (values 1)
+                         (values 1))))))
+
+  (with-call/cc
+      (is (= 3 (multiple-value-call
+                   (lambda (a b)
+                     (+ a b))
+                 (values 1 2)))))
+
+  (with-call/cc
+      (is (= 3 (multiple-value-call
+                   (lambda (&rest numbers)
+                     (reduce #'+ numbers))
+                 (values -1 1)
+                 (values 1)
+                 (values -1)
+                 (values 1 2))))))
+
+;;; speical variable handling
+(defun/cc lookup-special-in-defun/cc (stop)
+  (declare (special var))
+  (when stop (let/cc k k))
+  var)
+
+(defun/cc lookup-special-in-let/cc (stop)
+  (let ((normal 0))
+    (declare (special var))
+    (when stop (let/cc k k))
+    var))
+
+(defun/cc lookup-special-in-let*/cc (stop)
+  (let* ((normal 0))
+    (declare (special var))
+    (when stop (let/cc k k))
+    var))
+
+(defun lookup-special-in-lisp ()
+  (declare (special var))
+  var)
+
+(defun/cc define-and-lookup-special-in-defun/cc (stop)
+  (let ((var 1))
+    (declare (special var))
+    (when stop (let/cc k k))
+    var))
+
+(defun/cc export-special-from-let/cc-and-lookup-in-defun/cc (stop)
+  (let ((var 1))
+    (declare (special var))
+    (lookup-special-in-defun/cc stop)))
+
+(defun/cc export-special-from-let/cc-and-lookup-in-let/cc (stop)
+  (let ((var 1))
+    (declare (special var))
+    (lookup-special-in-let/cc stop)))
+
+(defun/cc export-special-from-let/cc-and-lookup-in-let*/cc (stop)
+  (let ((var 1))
+    (declare (special var))
+    (lookup-special-in-let*/cc stop)))
+
+(defun/cc export-special-from-let/cc-and-lookup-in-lisp (stop)
+  (let ((var 1))
+    (declare (special var))
+    (when stop (let/cc k k))
+    (lookup-special-in-lisp)))
+
+(defun/cc export-special-from-let*/cc-and-lookup-in-defun/cc (stop)
+  (let* ((var 1))
+    (declare (special var))
+    (lookup-special-in-defun/cc stop)))
+
+(defun/cc export-special-from-let*/cc-and-lookup-in-let/cc (stop)
+  (let* ((var 1))
+    (declare (special var))
+    (lookup-special-in-let/cc stop)))
+
+(defun/cc export-special-from-let*/cc-and-lookup-in-let*/cc (stop)
+  (let* ((var 1))
+    (declare (special var))
+    (lookup-special-in-let*/cc stop)))
+
+(defun/cc export-special-from-let*/cc-and-lookup-in-lisp (stop)
+  (let* ((var 1))
+    (declare (special var))
+    (when stop (let/cc k k))
+    (lookup-special-in-lisp)))
+
+(defun export-special-from-lisp-and-lookup-in-defun/cc (stop)
+  (let ((var 1))
+    (declare (special var))
+    (with-call/cc
+      (lookup-special-in-defun/cc stop))))
+
+(defun export-special-from-lisp-and-lookup-in-let/cc (stop)
+  (let ((var 1))
+    (declare (special var))
+    (with-call/cc
+      (lookup-special-in-let/cc stop))))
+
+(defun export-special-from-lisp-and-lookup-in-let*/cc (stop)
+  (let ((var 1))
+    (declare (special var))
+    (with-call/cc
+      (lookup-special-in-let*/cc stop))))
+
+(defmacro test-special (name)
+  (let ((body-without-stop `(,name nil))
+        (body-with-stop `(,name t)))
+    `(test ,name
+      (is (= 1 (with-call/cc ,body-without-stop)))
+      (signals unbound-variable
+        (with-call/cc ,body-without-stop (lookup-special-in-lisp)))
+      (signals unbound-variable
+        (with-call/cc ,body-without-stop (lookup-special-in-defun/cc nil)))
+      ;; now stop once
+      (is (= 1 (kall (with-call/cc ,body-with-stop))))
+      (signals unbound-variable
+        (kall (with-call/cc ,body-with-stop (lookup-special-in-lisp))))
+      (signals unbound-variable
+        (kall (with-call/cc ,body-with-stop (lookup-special-in-defun/cc nil)))))))
+
+;; export and lookup in the same lexical environment
+(test-special define-and-lookup-special-in-defun/cc)
+
+;; export and lookup in cc code
+(test-special export-special-from-let/cc-and-lookup-in-defun/cc)
+(test-special export-special-from-let/cc-and-lookup-in-let/cc)
+(test-special export-special-from-let/cc-and-lookup-in-let*/cc)
+(test-special export-special-from-let*/cc-and-lookup-in-defun/cc)
+(test-special export-special-from-let*/cc-and-lookup-in-let/cc)
+(test-special export-special-from-let*/cc-and-lookup-in-let*/cc)
+
+;; export from cc code and lookup in lisp code
+(test-special export-special-from-let/cc-and-lookup-in-lisp)
+(test-special export-special-from-let*/cc-and-lookup-in-lisp)
+
+;; export from lisp code and lookup in cc code
+(test-special export-special-from-lisp-and-lookup-in-defun/cc)
+(test-special export-special-from-lisp-and-lookup-in-let/cc)
+(test-special export-special-from-lisp-and-lookup-in-let*/cc)
+
+;; export in lisp code let it go through some cc code and lookup in lisp code after continuing
+(test export-special-from-lisp-and-lookup-in-lisp
+  (is (= 1
+         (kall (let ((var 1))
+                 (declare (special var))
+                 (with-call/cc
+                   (let () ;; TODO: shouldn't we allow declares within with-call/cc?
+                     (declare (special var))
+                     (let/cc k k)
+                     (lookup-special-in-lisp))))))))
