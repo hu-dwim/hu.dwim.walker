@@ -41,7 +41,7 @@ the vector ALPHABET.
   "Concatenate all the strings in STRING-DESIGNATORS."
   (with-output-to-string (strcat)
     (dotree (s string-designators)
-      (princ s strcat))))
+      (when s (princ s strcat)))))
 
 ;;; A "faster" version for string concatenating.
 ;;; Could use just (apply #'concatenate 'string list), but that's quite slow
