@@ -109,16 +109,9 @@
     (t
      (evaluate-arguments-then-apply
       (lambda (arguments)
-        (if-bind dyn-env (export-specials dyn-env)
-          (eval
-             `(let (,@(mapcar (lambda (binding) (list (second binding) (cddr binding)))
-                              (export-specials dyn-env)))
-               (declare (special ,@(mapcar 'second dyn-env)))
-               (trace-statement "Calling function ~S with arguments ~S"
-                                (operator ,func) ',arguments)
-               (apply #'kontinue ',k (multiple-value-list
-                                         (apply (fdefinition ',(operator func)) ',arguments)))))
-          (progn
+        (multiple-value-bind (vars vals)
+            (export-specials dyn-env)
+          (progv vars vals
             (trace-statement "Calling function ~S with arguments ~S"
                              (operator func) arguments)
             (apply #'kontinue k (multiple-value-list
@@ -126,14 +119,16 @@
       (arguments func) '()
       lex-env dyn-env))))
 
-;; returns a dynamic environment that holds the special variables to be exported
-;; these variable will be visible in normal lisp code called from cc code
+;; returns a list of variables and values from the dynamic environment that should be exported
+;; these variables will be visible in normal lisp code that is called from cc code
 (defun export-specials (dyn-env)
   ;; TODO: here we could check each special whether it has to be exported or not
   ;;       this could be based on something like (declare (export var)) in the cc code
-  (remove-duplicates dyn-env
-                     :test (lambda (x y) (eq (second x) (second y)))
-                     :from-end t))
+  (let ((dyn-env (remove-duplicates dyn-env
+                                    :test (lambda (x y) (eq (second x) (second y)))
+                                    :from-end t)))
+    (values (mapcar 'second dyn-env)
+            (mapcar 'cddr dyn-env))))
 
 ;;;; apply'ing a local function
 
@@ -186,7 +181,7 @@
     ;; function. PARAMETER refers to the lambda of the closure
     ;; object. we walk down the parameters and put the arguments in
     ;; the environment under the proper names.
-
+    
     ;; first the required arguments
     (loop
        while remaining-parameters
