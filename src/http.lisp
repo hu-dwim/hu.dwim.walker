@@ -86,6 +86,7 @@
 (defun write-as-html (string &key (stream t) (escape-whitespace nil))
   (loop
      for char across string
+     for code = (char-code char)
      do (cond
           ((char= char #\Space)
            (if escape-whitespace
@@ -93,6 +94,11 @@
                (write-char char stream)))
           ((gethash char *html-entites*)
            (princ (gethash char *html-entites*) stream))
+          ((or (> code 127) (< code 32))
+              (write-char #\& stream)
+              (write-char #\# stream)
+              (princ code stream)
+              (write-char #\; stream))
           (t (write-char char stream)))))
 
 (defun escape-as-html (string &key (escape-whitespace nil))
