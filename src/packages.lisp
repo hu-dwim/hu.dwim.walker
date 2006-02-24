@@ -240,6 +240,13 @@
    #:vector-push-extend*
    #:string-from-array
 
+   #:queue
+   #:enqueue
+   #:dequeue
+   #:peek-queue
+   #:queue-empty-p
+   #:queue-count
+   
    ;; decimal arith
    #:*precision*
    #:with-precision
