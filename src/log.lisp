@@ -108,6 +108,7 @@
 
 (defmethod make-instance ((class (eql (find-class 'stream-log-appender)))
                           &rest initargs)
+  (declare (ignore initargs))
   (error "STREAM-LOG-APPENDER is an abstract class. You must use either brief-stream-log-appender or verbose-stream-log-appender objects."))
 
 (defclass brief-stream-log-appender (stream-log-appender)
@@ -143,14 +144,15 @@
       (setf (log-stream s) (make-broadcast-stream)))))
 
 (defmethod append-message ((category log-category) (s brief-stream-log-appender)
-                            message level)
+                           message level)
   (multiple-value-bind (second minute hour day month year)
       (decode-universal-time (get-universal-time))
+    (declare (ignore second))
     (with-slots (last-message-year last-message-month last-message-day)
         s
       (unless (and (= year last-message-year)
-                 (= month last-message-month)
-                 (= day last-message-day))
+                   (= month last-message-month)
+                   (= day last-message-day))
         (format (log-stream s) "--TIME MARK ~4,'0D-~2,'0D-~2,'0D--~%"
                 year month day)
         (setf last-message-year year
