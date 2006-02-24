@@ -22,7 +22,7 @@
           "Initial size of a queue must be greater than 1.")
   (setf (head-index queue) 0
         (tail-index queue) 0
-        (buffer queue) (make-array size :element-type element-type)))
+        (buffer queue) (make-array (1+ size) :element-type element-type)))
 
 (defmethod enqueue ((queue queue) value)
   (when (queue-full-p queue)
