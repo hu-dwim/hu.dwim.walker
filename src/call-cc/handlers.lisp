@@ -124,10 +124,11 @@
             (setf lex-env (register lex-env :let var value))))))
 
 (defun special-var-p (var declares-mixin)
-  (find-if (lambda (declaration)
-             (and (typep declaration 'special-declaration-form)
-                  (eq (name declaration) var)))
-           (declares declares-mixin)))
+  (or (find-if (lambda (declaration)
+                 (and (typep declaration 'special-declaration-form)
+                      (eq (name declaration) var)))
+               (declares declares-mixin))
+      (boundp var)))
 
 (defmethod evaluate/cc ((let* let*-form) lex-env dyn-env k)
   (evaluate-let*/cc (binds let*) (body let*) lex-env (import-specials let* dyn-env) k))
