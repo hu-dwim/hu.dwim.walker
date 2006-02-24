@@ -38,6 +38,9 @@
           (aref (buffer queue) (tail-index queue))
         (move-tail queue))))
 
+(defmethod peek-queue ((queue queue))
+  (aref (buffer queue) (tail-index queue)))
+
 (defmethod queue-empty-p ((queue queue))
   (= (head-index queue) (tail-index queue)))
 
