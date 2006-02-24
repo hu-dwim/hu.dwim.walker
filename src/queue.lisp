@@ -60,11 +60,11 @@
      (- (+ (length (buffer queue)) (head-index queue))
         (tail-index queue)))))
 
-(defmethod call-for-all-elements ((queue queue) callback)
+(defmethod call-for-all-elements-with-index ((queue queue) callback)
   "Calls CALLBACK passing it each element in QUEUE. The elements
 will be called in the same order thah DEQUEUE would return them."
   (flet ((callback (index)
-           (funcall callback (aref (buffer queue) index))))
+           (funcall callback (aref (buffer queue) index) index)))
     (if (< (head-index queue) (tail-index queue))
         ;; growing from the bottom. conceptualy the new elements need
         ;; to go between tail and head. it's simpler to just move them
@@ -81,14 +81,24 @@ will be called in the same order thah DEQUEUE would return them."
            for index from (tail-index queue) below (head-index queue)
            do (callback index)))))
 
+(defmacro do-all-elements ((element queue &optional index) &body body)
+  (if index
+      `(call-for-all-elements-with-index ,queue
+                                         (lambda (,element ,index)
+                                           ,@body))
+      (let ((index (gensym "do-all-elements-index-")))
+        `(call-for-all-elements ,queue
+                                (lambda (,element ,index)
+                                  (declare (ignore ,index))
+                                  ,@body)))))
+
 (defmethod grow-queue ((queue queue))
   (let ((new-buffer (make-array (* (length (buffer queue)) 2)
                                 :element-type (array-element-type (buffer queue)))))
     (let ((index 0))
-      (call-for-all-elements queue
-                             (lambda (element)
-                               (setf (aref new-buffer index) element)
-                               (incf index)))
+      (do-all-elements (element queue)
+        (setf (aref new-buffer index) element)
+        (incf index))
       (setf (head-index queue) index
             (tail-index queue) 0
             (buffer queue) new-buffer))
@@ -119,3 +129,19 @@ will be called in the same order thah DEQUEUE would return them."
   (when (queue-full-p queue)
     (dequeue queue))
   (call-next-method queue value))
+
+(defmethod enqueue-or-move-to-front ((queue lru-queue) element &key (test #'eql) (key #'identity))
+  "Enqueues ELEMENT, if ELEMENT is already in the queue it is
+  moved to the head.
+
+NB: this method needs a better name."
+  (do-all-elements (e queue index)
+    (when (funcall test element (funcall key e))
+      ;; found the element
+      (rotatef (aref (buffer queue) index)
+               (aref (buffer queue) (1- (if (zerop (head-index queue))
+                                            (length (buffer queue))
+                                            (head-index queue)))))
+      (return-from enqueue-or-move-to-front queue)))
+  ;; if we get here the element wasn't found
+  (enqueue queue element))
