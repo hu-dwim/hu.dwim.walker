@@ -246,6 +246,7 @@
    #:peek-queue
    #:queue-empty-p
    #:queue-count
+   #:lru-queue
    
    ;; decimal arith
    #:*precision*
