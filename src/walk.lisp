@@ -430,6 +430,12 @@
 (defclass function-argument-form (form)
   ((name :accessor name :initarg :name)))
 
+(defmethod print-object ((argument function-argument-form) stream)
+  (print-unreadable-object (argument stream :type t :identity t)
+    (if (slot-boundp argument 'name)
+        (format stream "~S" (name argument))
+        (write-string "#<unbound name>" stream))))
+
 (defclass required-function-argument-form (function-argument-form)
   ())
 
