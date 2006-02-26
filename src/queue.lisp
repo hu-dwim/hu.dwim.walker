@@ -87,10 +87,10 @@ will be called in the same order thah DEQUEUE would return them."
                                          (lambda (,element ,index)
                                            ,@body))
       (let ((index (gensym "do-all-elements-index-")))
-        `(call-for-all-elements ,queue
-                                (lambda (,element ,index)
-                                  (declare (ignore ,index))
-                                  ,@body)))))
+        `(call-for-all-elements-with-index ,queue
+                                           (lambda (,element ,index)
+                                             (declare (ignore ,index))
+                                             ,@body)))))
 
 (defmethod grow-queue ((queue queue))
   (let ((new-buffer (make-array (* (length (buffer queue)) 2)
