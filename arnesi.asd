@@ -46,6 +46,7 @@
                              (:file "specials" :depends-on ("packages" "hash"))
                              (:file "string" :depends-on ("packages" "list"))
                              (:file "time" :depends-on ("packages"))
+			     (:file "unwalk" :depends-on ("packages" "walk"))
                              (:file "vector" :depends-on ("packages" "flow-control"))
                              (:file "walk" :depends-on ("packages" "list" "mopp" "lexenv"
                                                         "one-liners")))))
@@ -63,6 +64,7 @@
                              (:file "queue" :depends-on ("suite"))
                              (:file "string"  :depends-on ("suite"))
                              (:file "sequence" :depends-on ("suite"))
+			     (:file "walk" :depends-on ("suite"))
                              (:file "suite"))))
   :depends-on (:arnesi :FiveAM)
   :in-order-to ((compile-op (load-op :arnesi))))

@@ -81,7 +81,9 @@
    #:the-form
    #:extract-argument-names
    #:walk-lambda-list
-   
+
+   #:unwalk-form
+
    #:to-cps
    #:with-call/cc
    #:kall

@@ -507,7 +507,7 @@
 (defclass allow-other-keys-function-argument-form (function-argument-form)
   ())
 
-(defclass rest-function-argument-form (optional-function-argument-form)
+(defclass rest-function-argument-form (function-argument-form)
   ())
 
 (defun walk-rest-argument (form parent env)
