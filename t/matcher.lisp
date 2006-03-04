@@ -57,4 +57,42 @@
     ((:CONS a b) (is (= 1 a)) (is (= 2 b)))
     (:ANYTHING (fail "For some odd reason we didn't match")))
   (match-case '(1 . 2)
-    ((:LIST* (:BIND :ANYTHING a) (:BIND :ANYTHING b)) (is (= 1 a)) (is (= 2 b))))) 
+	      ((:LIST* (:BIND :ANYTHING a) (:BIND :ANYTHING b)) (is (= 1 a)) (is (= 2 b))))) 
+
+(test and
+  (match-case 3
+	      ((:AND (:TEST numberp) (:TEST oddp))
+	       (pass))
+	      (:ANYTHING (fail)))
+  (match-case 2
+	      ((:AND (:TEST numberp) (:TEST oddp))
+	       (fail))
+	      (:ANYTHING (pass))))
+
+(defclass foo ()
+  ((x :initarg :x :accessor x)
+   (z :initarg :z :accessor z)))
+
+(test accessors
+  (match-case (make-instance 'foo :x 1 :z 2)
+	      ((:ACCESSORS foo x x z z)
+	       (is (= 1 x))
+	       (is (= 2 z)))
+	      (:ANYTHING (fail)))
+  (match-case (make-instance 'foo :x 1 :z 2)
+	      ((:ACCESSORS standard-object x a z b)
+	       (is (= 1 a))
+	       (is (= 2 b)))
+	      (:ANYTHING (fail)))
+  (match-case (make-instance 'foo :x 1 :z 2)
+	      ((:ACCESSORS cons x a z b)
+	       a b			; we won't need them...
+	       (fail))
+	      (:ANYTHING (pass))))
+
+(test plist  
+  (match-case '(:b 2 :a 1)
+	      ((:PLIST :a a :b b)
+	       (is (= 1 a))
+	       (is (= 2 b)))
+	      (:ANYTHING (fail))))

@@ -257,6 +257,59 @@ function or a list."
     (t
      `(:cons ,(first items) (:list* ,@(cdr items))))))
 
+(def-matcher :property (key value-spec)
+  (let ((value (%make-matcher value-spec)))
+    (lambda (s k q)
+      (if (listp (target s))
+	  (aif (getf (target s) key)
+	       (funcall value (copy-state s :target it)		
+			(lambda (s. k. q.)
+			  (declare (ignore k. q.))
+			  (funcall k (copy-state s. :matched (target s))
+				   k q))
+			q)
+	       (funcall q s k q))
+	  (funcall q s k q)))))
+
+(def-matcher :accessor (type accessor value-spec)
+  (let ((value (%make-matcher value-spec)))
+    (lambda (s k q)
+      (if (typep (target s) type)
+	  (funcall value (copy-state s :target (funcall accessor (target s)))		
+		   (lambda (s. k. q.)
+		     (declare (ignore k. q.))
+		     (funcall k (copy-state s. :matched (target s))
+			      k q))
+		   q)
+	  (funcall q s k q)))))
+
+(def-matcher :and (a-spec b-spec)
+  (let ((a (%make-matcher a-spec))
+	(b (%make-matcher b-spec)))
+    (lambda (s k q)
+      (funcall a s
+	       (lambda (s. k. q.)
+		 (declare (ignore k. q.))
+		 (funcall b (copy-state s. :target (target s))
+			  k q))
+	       q))))
+
+(def-matcher-macro :plist (&rest items)
+  (case (length items)
+    (1 (error ":PLIST has been given an odd num of args."))
+    (2 `(:PROPERTY ,(first items) ,(second items)))
+    (t
+     `(:AND (:PROPERTY ,(first items) ,(second items))
+	    (:PLIST ,@(nthcdr 2 items))))))
+
+(def-matcher-macro :accessors (type &rest accs-vals)
+  (case (length accs-vals)
+    (1 (error ":ACCESSORS has been given an odd num of args."))
+    (2 `(:ACCESSOR ,type ,(first accs-vals) ,(second accs-vals)))
+    (t
+     `(:AND (:ACCESSOR ,type ,(first accs-vals) ,(second accs-vals))
+	    (:ACCESSORS ,type ,@(nthcdr 2 accs-vals))))))
+
 ;; Copyright (c) 2002-2006, Edward Marco Baringer
 ;; All rights reserved. 
 ;; 
