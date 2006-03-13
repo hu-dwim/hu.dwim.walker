@@ -46,6 +46,12 @@
               :documentation "This category's log level.")
    (name      :initarg :name :accessor name)))
 
+(defmethod print-object ((category log-category) stream)
+  (print-unreadable-object (category stream :type t :identity t)
+    (if (slot-boundp category 'name)
+        (format stream "~S" (name category))
+        (format stream "#<NO NAME>"))))
+
 (defmethod shared-initialize :after ((l log-category) slot-names
                                      &key ancestors &allow-other-keys)
   (declare (ignore slot-names))
