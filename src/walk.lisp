@@ -181,7 +181,6 @@
 (defclass notinline-declaration-form (function-declaration-form)
   ())
 
-
 (defun parse-declaration (declaration environment parent)
   (let ((declares nil))
     (flet ((funname (form)
@@ -199,7 +198,7 @@
 	  (case type
 	    (dynamic-extent
 	     (extend-env (var arguments)
-			 (mkdecl var 'variable-ignorable-declaration-form) 
+			 (mkdecl var 'dynamic-extent-declaration-form :name var) 
 			 var `(dynamic-extent)))        
 	    (ftype
 	     (extend-env (function-name (cdr arguments))
