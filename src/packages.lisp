@@ -109,6 +109,7 @@
    #:read-string-from-file
    #:write-string-to-file
    #:copy-file
+   #:copy-stream
    #:string-to-octets
    #:octets-to-string
    

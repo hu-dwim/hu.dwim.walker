@@ -44,13 +44,20 @@
    (with-output-to-file  (output to   :element-type element-type
                                       :if-exists if-to-exists))
    (progn
-     (loop
-        with buffer-size = 4096
-        with buffer = (make-array buffer-size :element-type element-type)
-        for bytes-read = (read-sequence buffer input)
-        while (= bytes-read buffer-size)
-        do (write-sequence buffer output)
-        finally (write-sequence buffer output :end bytes-read)))))
+     (copy-stream input output))))
+
+(defun copy-stream (input output &optional (element-type (stream-element-type input)))
+  "Reads data from FROM and writes it to TO. Both FROM and TO
+  must be streams, they will be passed to
+  read-sequence/write-sequence and must have compatable
+  element-types."
+  (loop
+     with buffer-size = 4096
+     with buffer = (make-array buffer-size :element-type element-type)
+     for bytes-read = (read-sequence buffer input)
+     while (= bytes-read buffer-size)
+     do (write-sequence buffer output)
+     finally (write-sequence buffer output :end bytes-read)))
 
 ;; Copyright (c) 2002-2006, Edward Marco Baringer
 ;; All rights reserved. 
