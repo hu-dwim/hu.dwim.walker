@@ -33,7 +33,7 @@
         (mantissa 0)
         (mantissa-size 1)
         (sign 1))
-    (with-input-from-string (float-stream (string-upcase (trim-string float-string)) :start start :end end)
+    (with-input-from-string (float-stream (string-upcase (string-trim '(#\Space #\Tab) float-string)) :start start :end end)
       (labels ((peek () (peek-char nil float-stream nil nil nil))
                (next () (read-char float-stream nil nil nil))
                (sign () ;; reads the (optional) sign of the number

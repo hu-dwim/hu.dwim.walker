@@ -40,5 +40,3 @@
       (let* ((*print-base* 10)
              (*print-radix* nil))
         (is (= float (parse-float (princ-to-string float) :type type)))))))
-
-

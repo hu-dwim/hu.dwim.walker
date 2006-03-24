@@ -227,7 +227,6 @@
    #:parse-csv-string
    #:join-strings
    #:fold-strings
-   #:trim-string
    #:~%
    #:~T
    #:+CR-LF+

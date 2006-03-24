@@ -71,19 +71,6 @@ the vector ALPHABET.
       (push (join-strings (nreverse strings)) result))
     (nreverse result)))
 
-(defun trim-string (string &optional (char '(#\Space #\Tab #\Newline
-                                             #\Return #\Linefeed)))
-  (let ((chars (ensure-list char)))
-    (subseq string 
-	    (loop for index upfrom 0 below (length string)
-		  when (not (member (aref string index) chars)) 
-		    do (return index)
-		  ;; if we get here we're trimming the entire string
-                  finally (return-from trim-string ""))
-	    (loop for index downfrom (length string)
-		  when (not (member (aref string (1- index)) chars))
-		    do (return index)))))
-
 (defvar ~%
   (format nil "~%")
   "A string containing a single newline")
