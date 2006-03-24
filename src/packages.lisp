@@ -265,6 +265,9 @@
 
    #:enable-sharp-l
 
+   #:enable-bracket-reader
+   #:with-package
+
    #:defclass-struct
 
    #:with*
@@ -274,6 +277,7 @@
    #:wrapping-standard
 
    #:levenshtein-distance
+
    ))
 
 ;;;; * Colophon
