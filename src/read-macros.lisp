@@ -4,6 +4,20 @@
 
 (defun |{-reader| (stream char)
   (declare (ignore char))
+  "A utility read macro for modifying the read table.
+
+The syntax is:
+
+  {SPECIFIER ...}
+
+SPECIFIER is either a symbol naming a function (available at read
+time) or a list (SPECIFIER &rest ARGUMENTS). SPECIFIER is applied
+to ARGUMENTS to produce a function, this is then called and
+passed another function which reads until the #\}
+character. During the executen of the function *readtable* is
+bound to a copy of the current read table.
+
+See WITH-PACKAGE for an example of a specifier function."
   (let ((*readtable* (copy-readtable *readtable* nil)))
     (destructuring-bind (specifier &rest arguments)
         (ensure-list (read stream t nil t))
@@ -16,6 +30,15 @@
   (set-syntax-from-char #\} #\) readtable nil))
 
 (defun with-package (package-name)
+  "When used as a specifier for the #\{ reader locally rebinds,
+at read time, the current package to PACKAGE-NAME.
+
+For example, this:
+
+  {(with-package :cl-user) t}
+
+Will always read cl:t, no matter what the current package
+actually is."
   (lambda (reader)
     (let ((*package* (find-package package-name)))
       (funcall reader))))
