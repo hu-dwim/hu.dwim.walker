@@ -41,7 +41,7 @@ Will always read cl:t, no matter what the current package
 actually is."
   (lambda (reader)
     (let ((*package* (find-package package-name)))
-      (funcall reader))))
+      `(progn ,@(funcall reader)))))
 
 ;; Copyright (c) 2006, Edward Marco Baringer
 ;; All rights reserved. 
