@@ -27,7 +27,7 @@ See WITH-PACKAGE for an example of a specifier function."
 
 (defun enable-bracket-reader (&optional (readtable *readtable*))
   (set-macro-character #\{ #'|{-reader| t readtable)
-  (set-syntax-from-char #\} #\) readtable nil))
+  (set-syntax-from-char #\} #\) readtable))
 
 (defun with-package (package-name)
   "When used as a specifier for the #\{ reader locally rebinds,
