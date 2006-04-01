@@ -26,17 +26,17 @@
   (is (test-walk '(+ (* 3 3) (* 4 4)))))
 
 (test walk-lambda-application
-  (is (test-walk '((lambda (x) (x x)) (lambda (x) (x x)))))
+  (is (test-walk '((lambda (x) (x x)) #'(lambda (x) (x x)))))
   (is (test-walk '((lambda (x k) (k x)) (if p x y) id))))
 
 (test walk-lambda-function
-  (is (test-walk '(lambda (x y) (y x))))
-  (is (test-walk '(lambda (x &key y z) (z (y x)))))
-  (is (test-walk '(lambda (&optional port) (close port))))
-  (is (test-walk '(lambda (x &rest args) (apply x args))))
-  (is (test-walk '(lambda (object &key a &allow-other-keys) (values))))
+  (is (test-walk '#'(lambda (x y) (y x))))
+  (is (test-walk '#'(lambda (x &key y z) (z (y x)))))
+  (is (test-walk '#'(lambda (&optional port) (close port))))
+  (is (test-walk '#'(lambda (x &rest args) (apply x args))))
+  (is (test-walk '#'(lambda (object &key a &allow-other-keys) (values))))
   ;; Unwalking argument lists is lax.
-  (is (test-walk '(lambda (&rest args &key a b &optional x &allow-other-keys) 2))))
+  (is (test-walk '#'(lambda (&rest args &key a b &optional x &allow-other-keys) 2))))
 
 (test walk-block
   (is (test-walk '(block label (get-up) (eat-food) (go-to-sleep))))
@@ -108,7 +108,7 @@
 
 (test walk-progn
   (is (test-walk '(progn (f a) (f-tail b) c)))
-  (is (test-walk '(progn (lambda (x) (x x)) 2 'a))))
+  (is (test-walk '(progn #'(lambda (x) (x x)) 2 'a))))
 
 (test walk-progv
   (is (test-walk '(progv '(*x*) '(2) *x*))))
@@ -133,7 +133,7 @@
 		   point-b
 		   (setq val (+ val 8)))))
   (is (test-walk '(tagbody 
-		   (setq n (f2 flag (lambda () (go out))))
+		   (setq n (f2 flag #'(lambda () (go out))))
 		   out
 		   (prin1 n)))))
 

@@ -10,14 +10,12 @@
   (:documentation "Unwalk FORM and return a list representation."))
 
 (defmacro defunwalker-handler (class (&rest slots) &body body)
-  ;; We deliberately catch the variable `form' because sometimes its
-  ;; useful when we need to call a method instead of getting a slot
-  ;; value.
-  `(progn
-     (defmethod unwalk-form ((form ,class))
-       (with-slots ,slots form
-	 ,@body))
-     ',class))
+  (with-unique-names (form)
+    `(progn
+       (defmethod unwalk-form ((,form ,class))
+	 (with-slots ,slots ,form
+	   ,@body))
+       ',class)))
 
 (declaim (inline unwalk-forms))
 (defun unwalk-forms (forms)
@@ -40,12 +38,14 @@
   (cons operator (unwalk-forms arguments)))
 
 (defunwalker-handler lambda-application-form (operator arguments)
-  (cons (unwalk-form operator) (unwalk-forms arguments)))
+  ;; The cadr is for getting rid of (function ...) which we can't have
+  ;; at the beginning of a form.
+  (cons (cadr (unwalk-form operator)) (unwalk-forms arguments)))
 
 ;;;; Functions
 
 (defunwalker-handler lambda-function-form (arguments body)
-  `(lambda ,(unwalk-arguments arguments) ,@(unwalk-forms body)))
+  `(function (lambda ,(unwalk-arguments arguments) ,@(unwalk-forms body))))
 
 (defunwalker-handler function-object-form (name)
   `(function ,name))
@@ -84,7 +84,7 @@
 	  ((and name default-value)
 	   `(,name ,default-value))
 	  (name name)
-	  (t (error "Invalid optional argument ~A" form)))))
+	  (t (error "Invalid optional argument")))))
 
 (defunwalker-handler keyword-function-argument-form (keyword-name name default-value supplied-p-parameter)
   (let ((default-value (unwalk-form default-value)))
@@ -95,7 +95,7 @@
 	  ((and name default-value)
 	   `(,name ,default-value))
 	  (name name)
-	  (t (error "Invalid keyword argument ~A" form)))))
+	  (t (error "Invalid keyword argument")))))
 
 (defunwalker-handler allow-other-keys-function-argument-form ()
   '&allow-other-keys)
@@ -131,11 +131,14 @@
 
 ;;;; FLET/LABELS
 
+;; The cdadr is here to remove (function (lambda ...)) of the function
+;; bindings.
+
 (defunwalker-handler flet-form (binds body)
   (flet ((unwalk-flet (binds)
 	   (mapcar #'(lambda (bind)
 		       (cons (car bind)
-			     (cdr (unwalk-form (cdr bind)))))
+			     (cdadr (unwalk-form (cdr bind)))))
 		   binds)))
     `(flet ,(unwalk-flet binds) ,@(unwalk-forms body))))
 
@@ -143,7 +146,7 @@
   (flet ((unwalk-labels (binds)
 	   (mapcar #'(lambda (bind)
 		       (cons (car bind)
-			     (cdr (unwalk-form (cdr bind)))))
+			     (cdadr (unwalk-form (cdr bind)))))
 		   binds)))
     `(labels ,(unwalk-labels binds) ,@(unwalk-forms body))))
 
@@ -152,16 +155,14 @@
 (defunwalker-handler let-form (binds body)
   (flet ((unwalk-let (binds)
 	   (mapcar #'(lambda (bind)
-		       (list (car bind)
-			     (unwalk-form (cdr bind))))
+		       (list (car bind) (unwalk-form (cdr bind))))
 		   binds)))
     `(let ,(unwalk-let binds) ,@(unwalk-forms body))))
 
 (defunwalker-handler let*-form (binds body)
   (flet ((unwalk-let* (binds)
 	   (mapcar #'(lambda (bind)
-		       (list (car bind)
-			     (unwalk-form (cdr bind))))
+		       (list (car bind) (unwalk-form (cdr bind))))
 		   binds)))
     `(let* ,(unwalk-let* binds) ,@(unwalk-forms body))))
 
