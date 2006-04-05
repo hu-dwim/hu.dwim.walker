@@ -57,20 +57,10 @@
    (source :accessor source :initarg :source)))
 
 (defmethod make-load-form ((object form) &optional env)
-  (let ((slot-names '()))
-    (labels ((push-direct-slots (class)
-               (dolist (slot (mopp:class-slots class))
-                 (push (mopp:slot-definition-name slot) slot-names)))
-             (collect-slot-names (class)
-               (push-direct-slots class)
-               (unless (eql class (find-class 'form))
-                 (dolist (klass (mopp:class-direct-superclasses class))
-                   (collect-slot-names klass)))))
-      (collect-slot-names (class-of object))
-      (setf slot-names (remove-duplicates slot-names :test #'eql))
-      (make-load-form-saving-slots object
-                                   :slot-names slot-names
-                                   :environment env))))
+  (make-load-form-saving-slots object
+                               :slot-names (mapcar #'mopp:slot-definition-name
+                                                   (mopp:class-slots (class-of object)))
+                               :environment nil))
 
 (defmethod print-object ((form form) stream)
   (print-unreadable-object (form stream :type t :identity t)
