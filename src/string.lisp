@@ -118,7 +118,32 @@ pass that. On SBCL we simply pass the keyword."
 #+(and clisp unicode)
 (progn
   (defun encoding-keyword-to-native (encoding)
-    (intern (string encoding) (find-package :charset)))
+    (ext:make-encoding
+     :charset (case encoding
+                (:utf-8    charset:utf-8)
+                (:utf-16   charset:utf-16)
+                (:us-ascii charset:ascii)
+                (t (multiple-value-bind (symbol status)
+                       (find-symbol (string encoding) (find-package :charset))
+                     (if (eq status :external)
+                         (symbol-value symbol)
+                         ;; otherwise, if SYSTEM::*HTTP-ENCODING*
+                         ;; is available, then use it
+                         #+#.(cl:if (cl:find-symbol "*HTTP-ENCODING*" 
+                                                    (cl:find-package "SYSTEM"))
+                                    '(and) '(or))
+                         SYSTEM::*HTTP-ENCODING*
+                         ;; otherwise, use EXT:*MISC-ENCODING*
+                         #+#.(cl:if (cl:find-symbol "*HTTP-ENCODING*" 
+                                                    (cl:find-package "SYSTEM"))
+                                    '(or) '(and))
+                         EXT:*MISC-ENCODING*))))
+     ;; These native encodings will be used for the HTTP protocol, 
+     ;; therefore we set the line-terminator to MS-DOS.
+     ;; Of course, it would be better if this was explicitely requested...
+     :line-terminator :dos
+     :input-error-action #\uFFFD
+     :output-error-action #+debug :error #-debug :ignore))
   (defun %string-to-octets (string encoding)
     (ext:convert-string-to-bytes string (encoding-keyword-to-native encoding)))
   (defun %octets-to-string (octets encoding)
