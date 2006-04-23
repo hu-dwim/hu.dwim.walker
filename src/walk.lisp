@@ -60,7 +60,7 @@
   (make-load-form-saving-slots object
                                :slot-names (mapcar #'mopp:slot-definition-name
                                                    (mopp:class-slots (class-of object)))
-                               :environment nil))
+                               :environment env))
 
 (defmethod print-object ((form form) stream)
   (print-unreadable-object (form stream :type t :identity t)
