@@ -70,6 +70,12 @@ are discarded \(that is, the body is an implicit PROGN)."
                             `(let (,,@temps)
                                ,,@body))))))
 
+(defmacro rebind (bindings &body body)
+  `(let ,(loop
+            for symbol-name in bindings
+            collect (list symbol-name symbol-name))
+     ,@body))
+
 (defmacro with-accessors* (accessor-names object &body body)
   "Just like WITH-ACCESSORS, but if the slot-entry is a symbol
   assume the variable and accessor name are the same."

@@ -189,6 +189,7 @@
    
    #:with-unique-names
    #:rebinding
+   #:rebind
    #:define-constant
 
    #:make-matcher
