@@ -129,13 +129,15 @@ pass that. On SBCL we simply pass the keyword."
                          (symbol-value symbol)
                          ;; otherwise, if SYSTEM::*HTTP-ENCODING*
                          ;; is available, then use it
-                         #+#.(cl:if (cl:find-symbol "*HTTP-ENCODING*" 
-                                                    (cl:find-package "SYSTEM"))
+                         #+#.(cl:if (cl:and (cl:find-package "SYSTEM")
+                                            (cl:find-symbol "*HTTP-ENCODING*" 
+                                                            (cl:find-package "SYSTEM")))
                                     '(and) '(or))
                          SYSTEM::*HTTP-ENCODING*
                          ;; otherwise, use EXT:*MISC-ENCODING*
-                         #+#.(cl:if (cl:find-symbol "*HTTP-ENCODING*" 
-                                                    (cl:find-package "SYSTEM"))
+                         #+#.(cl:if (cl:and (cl:find-package "SYSTEM")
+                                            (cl:find-symbol "*HTTP-ENCODING*" 
+                                                            (cl:find-package "SYSTEM")))
                                     '(or) '(and))
                          EXT:*MISC-ENCODING*))))
      ;; These native encodings will be used for the HTTP protocol, 
