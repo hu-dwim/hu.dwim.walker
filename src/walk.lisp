@@ -364,7 +364,10 @@
                      (make-instance 'local-application-form :code (lookup env :flet op))
                      (if (lookup env :lexical-flet op)
 			 (make-instance 'lexical-application-form)
-			 (make-instance 'free-application-form)))))
+                         (progn
+                           (when (and *warn-undefined* (not (fboundp op)))
+                             (warn 'undefined-function-reference :name op))
+                           (make-instance 'free-application-form))))))
         (setf (operator app) op
               (parent app) parent
               (source app) form
