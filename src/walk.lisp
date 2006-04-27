@@ -6,6 +6,10 @@
 
 ;;;; ** Public Entry Point
 
+(defvar *warn-undefined* nil
+  "When non-NIL any references to undefined functions or
+  variables will signal a warning.")
+
 (defun walk-form (form &optional (parent nil) (env (make-walk-env)))
   "Walk FORM and return a FORM object."
   (funcall (find-walker-handler form) form parent env))
@@ -23,6 +27,26 @@
 ;;;; FORM objects.
 
 (defvar *walker-handlers* (make-hash-table :test 'eq))
+
+(define-condition undefined-reference (warning)
+  ((enclosing-code :accessor enclosing-code :initform nil)
+   (name :accessor name :initarg :name)))
+
+(define-condition undefined-variable-reference (undefined-reference)
+  ()
+  (:report
+   (lambda (c s)
+     (if (enclosing-code c)
+         (format s "Reference to unknown variable ~S in ~S." (name c) (enclosing-code c))
+         (format s "Reference to unknown variable ~S." (name c) (enclosing-code c))))))
+
+(define-condition undefined-function-reference (undefined-reference)
+  ()
+  (:report
+   (lambda (c s)
+     (if (enclosing-code c)
+         (format s "Reference to unknown function ~S in ~S." (name c) (enclosing-code c))
+         (format s "Reference to unknown function ~S." (name c) (enclosing-code c))))))
 
 (defvar +atom-marker+ '+atom-marker+)
 
@@ -241,13 +265,16 @@
     (values environment declares)))
 
 (defun walk-implict-progn (parent forms env &key docstring declare)
-  (multiple-value-bind (body env docstring declarations)
-      (split-body forms env :parent parent :docstring docstring :declare declare)
-    (values (mapcar (lambda (form)
-                      (walk-form form parent env))
-                    body)
-            docstring
-	    declarations)))
+  (handler-bind ((undefined-reference (lambda (condition)
+                                        (unless (enclosing-code condition)
+                                          (setf (enclosing-code condition) `(progn ,@forms))))))
+    (multiple-value-bind (body env docstring declarations)
+        (split-body forms env :parent parent :docstring docstring :declare declare)
+      (values (mapcar (lambda (form)
+                        (walk-form form parent env))
+                      body)
+              docstring
+              declarations))))
 
 ;;;; Atoms
 
@@ -290,6 +317,9 @@
      ;; a globaly defined symbol-macro
      (walk-form (macroexpand-1 form) parent env))
     (t
+     (when (and *warn-undefined*
+                (not (boundp form)))
+       (warn 'undefined-variable-reference :name form))
      (make-instance 'free-variable-reference :name form
                     :parent parent :source form))))
 
