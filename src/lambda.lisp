@@ -28,7 +28,7 @@
             for f in funcs
             for r = (multiple-value-list (apply f args))
                then (multiple-value-list (apply f r))
-            finally (return r)))))))
+            finally (return (values-list r))))))))
 
 (defun conjoin (&rest predicates)
   (case (length predicates)
