@@ -603,8 +603,11 @@
   ((eval-when-times :accessor eval-when-times :initarg :eval-when-times)))
 
 (defwalker-handler eval-when (form parent env)
-  (declare (ignore form parent env))
-  (error "Sorry, EVAL-WHEN not yet implemented."))
+  (destructuring-bind (times &body body)
+      (cdr form)
+    (with-form-object (eval-when eval-when-form :parent parent :source form)
+      (setf (eval-when-times eval-when) times
+            (body eval-when) (walk-implict-progn eval-when body env)))))
 
 ;;;; IF
 
