@@ -127,6 +127,13 @@ are discarded \(that is, the body is an implicit PROGN)."
          (error "Sorry, No value for ~S of type ~S in environment ~S found."
                 name type environment))))
 
+(defmacro remf-keywords (plist &rest keywords)
+  "Creates a copy of PLIST with copy-list and remf's each keyword in KEYWORDS"
+  `(progn
+    (setf ,plist (copy-list ,plist))
+    ,@(loop for el in keywords
+            collect `(remf ,plist ,el))))
+
 ;; Copyright (c) 2002-2006, Edward Marco Baringer
 ;; All rights reserved. 
 ;; 

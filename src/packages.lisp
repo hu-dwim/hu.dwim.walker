@@ -192,6 +192,7 @@
    #:rebinding
    #:rebind
    #:define-constant
+   #:remf-keywords
 
    #:make-matcher
    #:match
