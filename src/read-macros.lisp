@@ -25,9 +25,16 @@ See WITH-PACKAGE for an example of a specifier function."
                (lambda ()
                  (read-delimited-list #\} stream t))))))
 
-(defun enable-bracket-reader (&optional (readtable *readtable*))
-  (set-macro-character #\{ #'|{-reader| t readtable)
-  (set-syntax-from-char #\} #\) readtable))
+(defmacro enable-bracket-reader ()
+  "Enable bracket reader for the rest of the file (being loaded or compiled).
+Be careful when using in different situations, because it modifies *readtable*."
+  ;; The standard sais that *readtable* is restored after loading/compiling a file,
+  ;; so we make a copy and alter that. The effect is that it will be enabled
+  ;; for the rest of the file being processed.
+  `(eval-when (:compile-toplevel)
+    (setf *readtable* (copy-readtable *readtable*))
+    (set-macro-character #\{ #'|{-reader| t *readtable*)
+    (set-syntax-from-char #\} #\) *readtable*)))
 
 (defun with-package (package-name)
   "When used as a specifier for the #\{ reader locally rebinds,
