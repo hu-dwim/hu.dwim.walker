@@ -303,6 +303,10 @@
   (trace-statement "Applying function ~S to ~S" operator effective-arguments)
   (apply #'kontinue k (multiple-value-list (apply operator effective-arguments))))
 
+(defmethod apply-lambda/cc ((operator symbol) effective-arguments dyn-env k)
+  "Method used when we're applying a regular, non cc, function object."
+  (apply-lambda/cc (symbol-function operator) effective-arguments dyn-env k))
+
 ;;;; Small helper function
 
 (defk k-for-evaluate-arguments-then-apply (handler remaining-arguments evaluated-arguments lex-env dyn-env)
