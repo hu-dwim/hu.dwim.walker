@@ -185,7 +185,8 @@
   (make-instance 'verbose-stream-log-appender :stream stream))
 
 (defclass file-log-appender (stream-log-appender)
-  ((log-file :initarg :log-file :accessor log-file))
+  ((log-file :initarg :log-file :accessor log-file
+             :documentation "Name of the file to write log messages to."))
   (:documentation "Logs to a file. the output of the file logger
   is not meant to be read directly by a human."))
 
