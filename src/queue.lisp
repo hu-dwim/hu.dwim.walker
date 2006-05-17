@@ -117,6 +117,12 @@ will be called in the same order thah DEQUEUE would return them."
   (print-unreadable-object (queue stream :type t :identity t)
     (format stream "~D" (queue-count queue))))
 
+(defmethod queue->list ((queue queue))
+  (let ((res nil))
+    (do-all-elements (element queue)
+      (push element res))
+    (nreverse res)))
+
 ;;;; ** LRU Queue
 
 (defclass lru-queue (queue)

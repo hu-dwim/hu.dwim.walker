@@ -251,6 +251,7 @@
    #:peek-queue
    #:queue-empty-p
    #:queue-count
+   #:queue->list
    #:lru-queue
    
    ;; decimal arith
