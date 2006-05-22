@@ -134,7 +134,56 @@ are discarded \(that is, the body is an implicit PROGN)."
     ,@(loop for el in keywords
             collect `(remf ,plist ,el))))
 
+;;;; Eval When
+(defmacro eval-always (&body body)
+  `(eval-when (:compile-toplevel :load-toplevel :execute)
+     ,@body))
+
+;;;; Alias
+(defmacro defalias (function redefinition)
+  `(eval-always
+    (progn
+      (setf (fdefinition ',redefinition) (function ,function))
+      ',redefinition)))
+
+(defmacro defvaralias (variable redefinition)
+  `(eval-always
+    (defvar ,redefinition ,variable)))
+
+(defmacro defmacalias (macro redefinition)
+  (with-unique-names (args)
+    `(eval-always
+       (defmacro ,redefinition (&rest ,args)
+	 `(,',macro ,@,args)))))
+
+;;;; Names
+(defmacalias lambda fun)
+
+(defalias make-instance new)
+
+;;;; Lists
+(defun append1 (list x)
+  (append list (list x)))
+
+(defun last1 (l)
+  (car (last l)))
+
+(defun flatten1 (l)
+  (reduce #'append l))
+
+(defun singlep (list)
+  (and (consp list) (not (cdr list))))
+
+(defun class-name-of (obj)
+  (class-name (class-of obj)))
+
+;;;; Binding
+(defmacro let1 (var val &body body)
+  `(let ((,var ,val))
+     ,@body))
+
 ;; Copyright (c) 2002-2006, Edward Marco Baringer
+;; Copyright (c) 2006,      Hoan Ton-That
 ;; All rights reserved. 
 ;; 
 ;; Redistribution and use in source and binary forms, with or without
@@ -148,9 +197,10 @@ are discarded \(that is, the body is an implicit PROGN)."
 ;;    notice, this list of conditions and the following disclaimer in the
 ;;    documentation and/or other materials provided with the distribution.
 ;;
-;;  - Neither the name of Edward Marco Baringer, nor BESE, nor the names
-;;    of its contributors may be used to endorse or promote products
-;;    derived from this software without specific prior written permission.
+;;  - Neither the name of Edward Marco Baringer, Hoan Ton-That, nor
+;;    BESE, nor the names of its contributors may be used to endorse
+;;    or promote products derived from this software without specific
+;;    prior written permission.
 ;; 
 ;; THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 ;; "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT

@@ -284,6 +284,28 @@
 
    #:getenv
 
+
+   #:lisp1
+   #:with-lisp1
+   #:defun1
+   #:defmethod1
+
+   #:enable-pf-reader
+
+   #:eval-always
+   #:defalias
+   #:defvaralias
+   #:defmacalias
+   #:fun
+   #:set
+   #:listify
+   #:consify
+   #:new
+   #:append1
+   #:last1
+   #:singlep
+   #:class-name-of
+   #:let1
    ))
 
 ;;;; * Colophon

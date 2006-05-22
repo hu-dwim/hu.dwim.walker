@@ -45,29 +45,26 @@
 ;;;; Functions
 
 (defunwalker-handler lambda-function-form (arguments body)
-  `(function (lambda ,(unwalk-arguments arguments) ,@(unwalk-forms body))))
+  `(function (lambda ,(unwalk-lambda-list arguments) ,@(unwalk-forms body))))
 
 (defunwalker-handler function-object-form (name)
   `(function ,name))
 
 ;;;; Arguments
 
-(defun unwalk-arguments (arguments)
+(defun unwalk-lambda-list (arguments)
   (let (optional-p rest-p keyword-p)
-    ;; Darling, what did you do with my monad?  Honey, don't worry too
-    ;; much about lambda-list correctness.  Okay, well stated.
-    (reduce #'append
-	    (mapcar #'(lambda (form)
-			(append
-			 (typecase form
-			   (optional-function-argument-form 
-			    (unless optional-p (setf optional-p t) '(&optional)))
-			   (rest-function-argument-form
-			    (unless rest-p (setf rest-p t) '(&rest)))
-			   (keyword-function-argument-form
-			    (unless keyword-p (setf keyword-p t) '(&key))))
-			 (list (unwalk-form form))))
-		    arguments))))
+    (mapcan #'(lambda (form)
+		(append
+		 (typecase form
+		   (optional-function-argument-form
+		    (unless optional-p (setq optional-p t) '(&optional)))
+		   (rest-function-argument-form
+		    (unless rest-p (setq rest-p t) '(&rest)))
+		   (keyword-function-argument-form
+		    (unless keyword-p (setq keyword-p t) '(&key))))
+		 (list (unwalk-form form))))
+	    arguments)))
 
 (defunwalker-handler required-function-argument-form (name)
   name)
