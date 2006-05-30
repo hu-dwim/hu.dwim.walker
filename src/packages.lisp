@@ -291,6 +291,7 @@
    #:defmethod1
 
    #:enable-pf-reader
+   #:_
 
    #:eval-always
    #:defalias
