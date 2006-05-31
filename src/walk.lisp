@@ -365,7 +365,9 @@
                      (if (lookup env :lexical-flet op)
 			 (make-instance 'lexical-application-form)
                          (progn
-                           (when (and *warn-undefined* (not (fboundp op)))
+                           (when (and *warn-undefined*
+                                      (symbolp op)
+                                      (not (fboundp op)))
                              (warn 'undefined-function-reference :name op))
                            (make-instance 'free-application-form))))))
         (setf (operator app) op
