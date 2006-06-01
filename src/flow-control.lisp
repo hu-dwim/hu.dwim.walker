@@ -41,8 +41,8 @@ ELSE will be executed."
       (destructuring-bind ((test &rest body) &rest others)
           clauses
         `(if-bind ,var ,test
-                  (progn ,@body)
-                  (cond-bind ,var ,@others)))
+           (progn ,@(if body body (list var)))
+           (cond-bind ,var ,@others)))
       nil))
 
 (defmacro acond (&rest clauses)

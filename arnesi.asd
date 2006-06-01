@@ -69,6 +69,7 @@
                              (:file "read-macros" :depends-on ("suite"))
                              (:file "string"  :depends-on ("suite"))
                              (:file "sequence" :depends-on ("suite"))
+                             (:file "flow-control" :depends-on ("suite"))
 			     (:file "walk" :depends-on ("suite"))
                              (:file "suite"))))
   :depends-on (:arnesi :FiveAM)
