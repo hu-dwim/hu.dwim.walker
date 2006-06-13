@@ -19,11 +19,11 @@
 ;;;; Definers
 (defmacro defun1 (name (&rest args) &body body)
   `(defun ,name ,args
-     (with-lisp1 (progn ,@body))))
+     (with-lisp1 (block ,name ,@body))))
 
 (defmacro defmethod1 (name (&rest args) &body body)
   `(defmethod ,name ,args
-     (with-lisp1 (progn ,@body))))
+     (with-lisp1 (block ,name ,@body))))
 
 ;;;; Utils
 (defun lisp1s (forms)
@@ -96,10 +96,25 @@
        :name name
        :body (lisp1s body)))
 
+(deflisp1-walker return-from-form (target-block result)
+  (new 'return-from-form
+       :target-block target-block
+       :result       (lisp1 result)))
+
 (deflisp1-walker catch-form (tag body)
   (new 'catch-form
        :tag  tag
        :body (lisp1s body)))
+
+(deflisp1-walker throw-form (tag value)
+  (new 'throw-form
+       :tag   tag
+       :value (lisp1 value)))
+
+(deflisp1-walker eval-when-form (body eval-when-times)
+  (new 'eval-when-form
+       :eval-when-times eval-when-times
+       :body            (lisp1s body)))
 
 (deflisp1-walker multiple-value-call-form (func arguments)
   (new 'multiple-value-call-form
@@ -127,8 +142,8 @@
 
 (deflisp1-walker unwind-protect-form (protected-form cleanup-form)
   (new 'unwind-protect-form
-       :protected-form (lisp1 protected-form)
-       :cleanup-form   (lisp1 cleanup-form)))
+       :protected-form (lisp1  protected-form)
+       :cleanup-form   (lisp1s cleanup-form)))
 
 ;;;; http://groups.google.com/group/comp.lang.lisp/browse_thread/thread/82994055009163e9
 

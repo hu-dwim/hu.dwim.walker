@@ -118,8 +118,9 @@
 
 ;;;; EVAL-WHEN
 
-(defunwalker-handler eval-when-form ()
-  (error "Sorry, EVAL-WHEN not yet implemented."))
+(defunwalker-handler eval-when-form (body eval-when-times)
+  `(eval-when ,eval-when-times
+     ,@(unwalk-forms body)))
 
 ;;;; IF
 
