@@ -23,9 +23,11 @@
      ,@body))
 
 (defun read-string-from-file (pathname &key (buffer-size 4096)
-                                            (element-type 'character))
+                                            (element-type 'character)
+                                            (external-format :us-ascii))
   "Return the contents of PATHNAME as a string."
-  (with-input-from-file (file-stream pathname)
+  (with-input-from-file (file-stream pathname :external-format
+                                     (encoding-keyword-to-native external-format))
     (with-output-to-string (datum) 
       (let ((buffer (make-array buffer-size :element-type element-type)))
 	(loop for bytes-read = (read-sequence buffer file-stream)
