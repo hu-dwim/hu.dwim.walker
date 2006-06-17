@@ -31,7 +31,7 @@ Be careful when using in different situations, because it modifies *readtable*."
   ;; The standard sais that *readtable* is restored after loading/compiling a file,
   ;; so we make a copy and alter that. The effect is that it will be enabled
   ;; for the rest of the file being processed.
-  `(eval-when (:compile-toplevel)
+  `(eval-when (:compile-toplevel :execute)
     (setf *readtable* (copy-readtable *readtable*))
     (set-macro-character #\{ #'|{-reader| t *readtable*)
     (set-syntax-from-char #\} #\) *readtable*)))
