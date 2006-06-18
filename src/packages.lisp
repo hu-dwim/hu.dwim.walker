@@ -299,8 +299,6 @@
    #:defmacalias
    #:fun
    #:set
-   #:listify
-   #:consify
    #:new
    #:append1
    #:last1
