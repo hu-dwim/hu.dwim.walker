@@ -83,6 +83,18 @@ ELSE will be executed."
 Very useful with functions like GETHASH."
   `(if2-bind it ,test ,then ,else))
 
+;;;; ** Looping
+
+(defmacro while (test &body body)
+  `(loop
+      while ,test
+      do (progn ,@body)))
+
+(defmacro until (test &body body)
+  `(loop
+      until ,test
+      do (progn ,@body)))
+
 ;;;; ** Whichever
 
 (defmacro whichever (&rest possibilities)

@@ -125,6 +125,8 @@
    #:if2-bind
    #:aif2
    #:it
+   #:while
+   #:until
    #:whichever
    #:xor
    #:switch
