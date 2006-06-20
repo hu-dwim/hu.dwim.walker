@@ -122,6 +122,8 @@
    #:acond
    #:aand
    #:and-bind
+   #:if2-bind
+   #:aif2
    #:it
    #:whichever
    #:xor

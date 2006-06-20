@@ -60,6 +60,29 @@ ELSE will be executed."
     (forms (first forms))
     (t 't)))
 
+;;;; ** Multiple value anaphoric conditionals
+
+(defmacro if2-bind (var test &body then/else)
+  "Anaphoric IF control structure for multiple values.
+
+VAR (a symbol) will be bound to the primary value of TEST.  If
+TEST's second value is true then THEN will be executed, otherwise
+ELSE will be executed."
+  (assert (first then/else)
+          (then/else)
+          "IF-BIND missing THEN clause.")
+  (destructuring-bind (then &optional else)
+      then/else
+    (with-unique-names (bool)
+      `(multiple-value-bind (,var ,bool) ,test
+	 (if ,bool ,then ,else)))))
+
+(defmacro aif2 (test then &optional else)
+  "Just like IF-BIND but the var is always IT.
+
+Very useful with functions like GETHASH."
+  `(if2-bind it ,test ,then ,else))
+
 ;;;; ** Whichever
 
 (defmacro whichever (&rest possibilities)
