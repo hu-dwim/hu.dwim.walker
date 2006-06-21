@@ -29,7 +29,7 @@
                              (:file "flow-control" :depends-on ("packages" "one-liners"))
                              (:file "hash" :depends-on ("packages" "list" "one-liners" "string"))
                              (:file "http" :depends-on ("packages" "vector" "string"))
-                             (:file "io" :depends-on ("packages" "flow-control"))
+                             (:file "io" :depends-on ("packages" "flow-control" "string"))
                              (:file "lambda" :depends-on ("packages"))
 			     (:file "lisp1" :depends-on ("packages" "one-liners" "walk" "unwalk"))
                              (:file "lexenv" :depends-on ("packages"))
