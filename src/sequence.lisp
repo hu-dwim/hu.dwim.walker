@@ -109,6 +109,22 @@ DELETE-ARGS are passed directly to cl:delete."
                                        ,@delete-args))
        ,writer-form)))
 
+
+(defun copy-array (array)
+  "Returns a fresh copy of ARRAY. The returned array will have
+  the same dimensions and element-type, will not be displaced and
+  will have the same fill-pointer as ARRAY.
+  
+See http://thread.gmane.org/gmane.lisp.allegro/13 for the
+original implementation and discussion."
+  (let ((dims (array-dimensions array))
+        (fill-pointer (and (array-has-fill-pointer-p array)
+                           (fill-pointer array))))
+    (adjust-array
+     (make-array dims :displaced-to array)
+     dims
+     :fill-pointer fill-pointer)))
+
 ;;;; ** Levenshtein Distance
 
 ;;;; 1) Set n to be the length of s. Set m to be the length of t. If n
