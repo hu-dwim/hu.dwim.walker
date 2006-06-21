@@ -25,9 +25,17 @@
 (defun read-string-from-file (pathname &key (buffer-size 4096)
                                             (element-type 'character)
                                             (external-format :us-ascii))
-  "Return the contents of PATHNAME as a string."
-  (with-input-from-file (file-stream pathname :external-format
-                                     (encoding-keyword-to-native external-format))
+  "Return the contents of PATHNAME as a fresh string.
+
+The file specified by PATHNAME will be read one ELEMENT-TYPE
+element at a time, the EXTERNAL-FORMAT and ELEMENT-TYPEs must be
+compatable. 
+
+The EXTERNAL-FORMAT parameter will be passed to
+ENCODING-KEYWORD-TO-NATIVE, see ENCODING-KEYWORD-TO-NATIVE to
+possible values."
+  (with-input-from-file
+      (file-stream pathname :external-format (encoding-keyword-to-native external-format))
     (with-output-to-string (datum) 
       (let ((buffer (make-array buffer-size :element-type element-type)))
 	(loop for bytes-read = (read-sequence buffer file-stream)
