@@ -221,6 +221,7 @@
    #:read-sequence*
    #:deletef
    #:copy-array
+   #:make-displaced-array
    
    #:+lower-case-ascii-alphabet+
    #:+upper-case-ascii-alphabet+

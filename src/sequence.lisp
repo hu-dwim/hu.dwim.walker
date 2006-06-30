@@ -125,6 +125,12 @@ original implementation and discussion."
      dims
      :fill-pointer fill-pointer)))
 
+(defun make-displaced-array (array &optional (start 0) (end (length array)))
+  (make-array (- end start)
+              :element-type (array-element-type array)
+              :displaced-to array
+              :displaced-index-offset start))
+
 ;;;; ** Levenshtein Distance
 
 ;;;; 1) Set n to be the length of s. Set m to be the length of t. If n
