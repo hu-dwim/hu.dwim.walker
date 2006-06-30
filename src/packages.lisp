@@ -113,6 +113,7 @@
    #:copy-stream
    #:string-to-octets
    #:octets-to-string
+   #:encoding-keyword-to-native
    
    #:if-bind
    #:aif
