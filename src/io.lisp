@@ -18,7 +18,10 @@
   (remf-keywords args :external-format)
   `(with-open-file (,stream-name ,file-name :direction :input
                     ,@(when external-format
-                        `(:external-format ,(encoding-keyword-to-native external-format)))
+                        `(:external-format
+                          ,(if (keywordp external-format)
+                               `(encoding-keyword-to-native ,external-format)
+                               external-format)))
                     ,@args)
      ,@body))
 
@@ -36,7 +39,10 @@
   (remf-keywords args :external-format)
   `(with-open-file (,stream-name ,file-name :direction :output
                     ,@(when external-format
-                        `(:external-format ,(encoding-keyword-to-native external-format)))
+                        `(:external-format
+                          ,(if (keywordp external-format)
+                               `(encoding-keyword-to-native ,external-format)
+                               external-format)))
                     ,@args)
      ,@body))
 
@@ -47,24 +53,30 @@
 
 The file specified by PATHNAME will be read one ELEMENT-TYPE
 element at a time, the EXTERNAL-FORMAT and ELEMENT-TYPEs must be
-compatable. 
+compatible.
 
 The EXTERNAL-FORMAT parameter will be passed to
 ENCODING-KEYWORD-TO-NATIVE, see ENCODING-KEYWORD-TO-NATIVE to
 possible values."
   (with-input-from-file
-      (file-stream pathname :external-format external-format)
+      (file-stream pathname :external-format (encoding-keyword-to-native external-format))
     (with-output-to-string (datum) 
       (let ((buffer (make-array buffer-size :element-type element-type)))
 	(loop for bytes-read = (read-sequence buffer file-stream)
 	      do (write-sequence buffer datum :start 0 :end bytes-read)
 	      while (= bytes-read buffer-size))))))
 
-(defun write-string-to-file (string pathname &key (if-exists :error) (if-does-not-exist :error)
-                                    (external-format :us-ascii))
-  "Write STRING to PATHNAME."
-  (with-output-to-file (file-stream pathname :if-exists if-exists :if-does-not-exist if-does-not-exist
-                                    :external-format external-format)
+(defun write-string-to-file (string pathname &key (if-exists :error)
+                                                  (if-does-not-exist :error)
+                                                  (external-format :us-ascii))
+  "Write STRING to PATHNAME.
+
+The EXTERNAL-FORMAT parameter will be passed to
+ENCODING-KEYWORD-TO-NATIVE, see ENCODING-KEYWORD-TO-NATIVE to
+possible values."
+  (with-output-to-file (file-stream pathname :if-exists if-exists
+                                    :if-does-not-exist if-does-not-exist
+                                    :external-format (encoding-keyword-to-native external-format))
     (write-sequence string file-stream)))
 
 (defun copy-file (from to &key (if-to-exists :supersede)
