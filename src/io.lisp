@@ -4,22 +4,40 @@
 
 ;;;; * Utilites for file system I/O
 
-(defmacro with-input-from-file ((stream-name file-name &rest args) &body body)
+(defmacro with-input-from-file ((stream-name file-name &rest args &key
+                                             (direction nil direction-provided-p)
+                                             external-format
+                                             &allow-other-keys)
+                                &body body)
   "Evaluate BODY with STREAM-NAME bound to an
   input-stream from file FILE-NAME. ARGS is passed
   directly to open."
-  (when (member :direction args)
+  (declare (ignore direction))
+  (when direction-provided-p
     (error "Can't specifiy :DIRECTION in WITH-INPUT-FILE."))
-  `(with-open-file (,stream-name ,file-name :direction :input ,@args)
+  (remf-keywords args :external-format)
+  `(with-open-file (,stream-name ,file-name :direction :input
+                    ,@(when external-format
+                        `(:external-format ,(encoding-keyword-to-native external-format)))
+                    ,@args)
      ,@body))
 
-(defmacro with-output-to-file ((stream-name file-name &rest args) &body body)
+(defmacro with-output-to-file ((stream-name file-name &rest args &key
+                                             (direction nil direction-provided-p)
+                                             external-format
+                                             &allow-other-keys)
+                               &body body)
   "Evaluate BODY with STREAM-NAME to an output stream
   on the file named FILE-NAME. ARGS is sent as is to
   the call te open."
-  (when (member :direction args)
+  (declare (ignore direction))
+  (when direction-provided-p
     (error "Can't specifiy :DIRECTION in WITH-OUTPUT-FILE."))
-  `(with-open-file (,stream-name ,file-name :direction :output ,@args)
+  (remf-keywords args :external-format)
+  `(with-open-file (,stream-name ,file-name :direction :output
+                    ,@(when external-format
+                        `(:external-format ,(encoding-keyword-to-native external-format)))
+                    ,@args)
      ,@body))
 
 (defun read-string-from-file (pathname &key (buffer-size 4096)
@@ -35,16 +53,18 @@ The EXTERNAL-FORMAT parameter will be passed to
 ENCODING-KEYWORD-TO-NATIVE, see ENCODING-KEYWORD-TO-NATIVE to
 possible values."
   (with-input-from-file
-      (file-stream pathname :external-format (encoding-keyword-to-native external-format))
+      (file-stream pathname :external-format external-format)
     (with-output-to-string (datum) 
       (let ((buffer (make-array buffer-size :element-type element-type)))
 	(loop for bytes-read = (read-sequence buffer file-stream)
 	      do (write-sequence buffer datum :start 0 :end bytes-read)
 	      while (= bytes-read buffer-size))))))
 
-(defun write-string-to-file (string pathname &key (if-exists :error) (if-does-not-exist :error))
+(defun write-string-to-file (string pathname &key (if-exists :error) (if-does-not-exist :error)
+                                    (external-format :us-ascii))
   "Write STRING to PATHNAME."
-  (with-output-to-file (file-stream pathname :if-exists if-exists :if-does-not-exist if-does-not-exist)
+  (with-output-to-file (file-stream pathname :if-exists if-exists :if-does-not-exist if-does-not-exist
+                                    :external-format external-format)
     (write-sequence string file-stream)))
 
 (defun copy-file (from to &key (if-to-exists :supersede)
