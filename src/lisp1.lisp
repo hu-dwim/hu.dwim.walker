@@ -128,7 +128,7 @@ This is just like DEFMETHOD."
 
 (deflisp1-walker progv-form (vars-form values-form)
   (new 'progv-form
-       :vars-form   (lisp1s vars-form)
+       :vars-form   vars-form
        :values-form (lisp1s values-form)))
 
 (deflisp1-walker block-form (name body)
