@@ -151,10 +151,17 @@ are discarded \(that is, the body is an implicit PROGN)."
     (defvar ,redefinition ,variable)))
 
 (defmacro defmacalias (macro redefinition)
+  #-allegro
   (with-unique-names (args)
     `(eval-always
-       (defmacro ,redefinition (&rest ,args)
-	 `(,',macro ,@,args)))))
+      (defmacro ,redefinition (&rest ,args)
+        `(,',macro ,@,args))))
+  #+allegro ;; with-unique-names is undefined in allegro, why? This is a quick fix.
+  (let ((args (gensym)))
+    `(eval-always
+      (defmacro ,redefinition (&rest ,args)
+        `(,',macro ,@,args)))))
+
 
 ;;;; Names
 (defmacalias lambda fun)
