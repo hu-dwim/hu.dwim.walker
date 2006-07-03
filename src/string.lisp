@@ -97,6 +97,7 @@ the vector ALPHABET.
 
 ;;;; ** Converting strings to/from foreign encodings
 
+(declaim (inline string-to-octets))
 (defun string-to-octets (string encoding)
   "Convert STRING, a list string, a vector of bytes according to ENCODING.
 
@@ -110,14 +111,25 @@ On CLISP we intern the ENCODING symbol in the CHARSET package and
 pass that. On SBCL we simply pass the keyword."
   (%string-to-octets string encoding))
 
+(declaim (inline octets-to-string))
 (defun octets-to-string (octets encoding)
   (%octets-to-string octets encoding))
+
+(declaim (inline encoding-keyword-to-native))
+(defun encoding-keyword-to-native (encoding)
+  "Convert ENCODING, a keyword, to an object the native list
+accepts as an encoding.
+
+ENCODING can be: :UTF-8, :UTF-16, or :US-ASCII and specify the
+corresponding encodings. Any other keyword is passed, as is, to
+the underlying lisp."
+  (%encoding-keyword-to-native encoding))
 
 ;;;; *** CLISP
 
 #+(and clisp unicode)
 (progn
-  (defun encoding-keyword-to-native (encoding)
+  (defun %encoding-keyword-to-native (encoding)
     (ext:make-encoding
      :charset (case encoding
                 (:utf-8    charset:utf-8)
@@ -155,7 +167,7 @@ pass that. On SBCL we simply pass the keyword."
 
 #+(and sbcl sb-unicode)
 (progn
-  (defun encoding-keyword-to-native (encoding)
+  (defun %encoding-keyword-to-native (encoding)
     (case encoding
       (:utf-8 :utf8)
       (:utf-16 :utf16)
@@ -170,6 +182,9 @@ pass that. On SBCL we simply pass the keyword."
 
 #-(or (and sbcl sb-unicode) (and clisp unicode))
 (progn
+  (defun %encoding-keyword-to-native (encoding)
+    encoding)
+  
   (defun %string-to-octets (string encoding)
     (declare (ignore encoding))
     (map-into (make-array (length string) :element-type 'unsigned-byte)
