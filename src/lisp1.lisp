@@ -1,31 +1,43 @@
-;; -*- lisp -*-
+;;;; -*- lisp -*-
 
 (in-package :it.bese.arnesi)
 
-;;;; * Lisp-1 support
+;;;; * Entry point
 
-;;;; Entry point
 (defgeneric lisp1 (form)
   (:documentation "Translate FORM from Lisp-1 to Lisp-2"))
 
-(defmacro with-lisp1 (form)
+(defmethod lisp1 (form)
   (unwalk-form (lisp1 (walk-form form))))
+
+(defmacro with-lisp1 (form)
+  (lisp1 form))
 
 (defmacro deflisp1-walker (class (&rest slots) &body body)
   `(defmethod lisp1 ((form ,class))
      (with-slots ,slots form
        ,@body)))
 
-;;;; Definers
+;;;; * Special Variables
+
+(defvar *bound-vars* nil)
+
+;;;; * Definers
+
 (defmacro defun1 (name (&rest args) &body body)
-  `(defun ,name ,args
-     (with-lisp1 (block ,name ,@body))))
+  (let1 *bound-vars*
+      (append *bound-vars* (extract-argument-names args :allow-specializers nil))
+    `(defun ,name ,args
+       ,(lisp1 `(block ,name ,@body)))))
 
 (defmacro defmethod1 (name (&rest args) &body body)
-  `(defmethod ,name ,args
-     (with-lisp1 (block ,name ,@body))))
+  (let1 *bound-vars*
+      (append *bound-vars* (extract-argument-names args :allow-specializers t))
+    `(defmethod ,name ,args
+       ,(lisp1 `(block ,name ,@body)))))
 
-;;;; Utils
+;;;; * Utils
+
 (defun lisp1s (forms)
   (mapcar #'lisp1 forms))
 
@@ -35,9 +47,8 @@
 		  (lisp1 (cdr bind))))
 	  binds))
 
-(defvar *bound-vars* nil)
+;;;; * Walkers
 
-;;;; Walker
 (deflisp1-walker form ()
   form)
 
