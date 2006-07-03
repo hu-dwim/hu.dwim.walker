@@ -45,7 +45,7 @@
    (level     :initform +debug+ :initarg :level :accessor level
               :documentation "This category's log level.")
    (compile-time-level
-              :initform +debug+ :initarg :compile-time-level :accessor compile-time-level
+              :initform +dribble+ :initarg :compile-time-level :accessor compile-time-level
               :documentation "This category's compile time log level. Any log expression below this level will macro-expand to NIL.")
    (name      :initarg :name :accessor name)))
 
@@ -95,7 +95,7 @@
   (error "NIL does not specify a category."))
 
 ;;; Compile time levels
-(defmethod compiled-time-enabled-p ((cat log-category) level)
+(defmethod compile-time-enabled-p ((cat log-category) level)
   (>= level (log.compile-time-level cat)))
 
 (defmethod log.compile-time-level ((cat log-category))
@@ -251,7 +251,7 @@
     (flet ((make-log-helper (suffix level)
 	     `(defmacro ,(intern (strcat name "." suffix)) (message-control &rest message-args)
                 ;; first check at compile time
-                (if (compiled-time-enabled-p (get-logger ',name) ,level)
+                (if (compile-time-enabled-p (get-logger ',name) ,level)
                     ;; then check at runtime
                     `(when (enabled-p (get-logger ',',name) ,',level)
                        ,(if message-args
@@ -259,12 +259,15 @@
                             `(handle (get-logger ',',name) ,message-control ',',level)))
                     (values)))))
       `(progn
-	 (setf (get-logger ',name) (make-instance 'log-category
-						  :name ',name
-						  :level ,level
-                                                  :compile-time-level ,compile-time-level
-						  :appenders (list ,@appenders)
-						  :ancestors (list ,@ancestors)))
+         (eval-always
+           (setf (get-logger ',name) (make-instance 'log-category
+                                                    :name ',name
+                                                    ,@(when level
+                                                        `(:level ,level))
+                                                    ,@(when compile-time-level
+                                                        `(:compile-time-level ,compile-time-level))
+                                                    :appenders (list ,@appenders)
+                                                    :ancestors (list ,@ancestors))))
 	 ,(make-log-helper '#:dribble '+dribble+)
 	 ,(make-log-helper '#:debug '+debug+)
 	 ,(make-log-helper '#:info '+info+)
