@@ -44,6 +44,9 @@
               :documentation "A list of appender objects this category sholud send messages to.")
    (level     :initform +debug+ :initarg :level :accessor level
               :documentation "This category's log level.")
+   (compile-time-level
+              :initform +debug+ :initarg :compile-time-level :accessor compile-time-level
+              :documentation "This category's compile time log level. Any log expression below this level will macro-expand to NIL.")
    (name      :initarg :name :accessor name)))
 
 (defmethod print-object ((category log-category) stream)
@@ -59,6 +62,7 @@
     (pushnew l (childer anc) :test (lambda (a b)
 				     (eql (name a) (name b))))))
 
+;;; Runtime levels
 (defmethod enabled-p ((cat log-category) level)
   (>= level (log.level cat)))
 
@@ -87,6 +91,38 @@
   (setf (log.level (get-logger cat-name) recursive) new-level))
 
 (defmethod (setf log.level) (new-level (cat-name null) &optional (recursive t))
+  (declare (ignore new-level cat-name recursive))
+  (error "NIL does not specify a category."))
+
+;;; Compile time levels
+(defmethod compiled-time-enabled-p ((cat log-category) level)
+  (>= level (log.compile-time-level cat)))
+
+(defmethod log.compile-time-level ((cat log-category))
+  (with-slots (compile-time-level) cat
+    (or compile-time-level
+        (if (ancestors cat)
+            (loop for ancestor in (ancestors cat)
+                  minimize (log.compile-time-level ancestor))
+            (error "Can't determine compile time level for ~S" cat)))))
+
+(defmethod log.compile-time-level ((cat-name symbol))
+  (log.compile-time-level (get-logger cat-name)))
+
+(defmethod (setf log.compile-time-level) (new-level (cat log-category)
+                                          &optional (recursive t))
+  "Change the compile time log level of CAT to NEW-LEVEL. If RECUSIVE is T the
+  setting is also applied to the sub categories of CAT."
+  (setf (slot-value cat 'compile-time-level) new-level)
+  (when recursive
+    (dolist (child (childer cat))
+      (setf (log.compile-time-level child) new-level)))
+  new-level)
+
+(defmethod (setf log.compile-time-level) (new-level (cat-name symbol) &optional (recursive t))
+  (setf (log.compile-time-level (get-logger cat-name) recursive) new-level))
+
+(defmethod (setf log.compile-time-level) (new-level (cat-name null) &optional (recursive t))
   (declare (ignore new-level cat-name recursive))
   (error "NIL does not specify a category."))
 
@@ -203,7 +239,7 @@
 
 ;;;; ** Creating Loggers
 
-(defmacro deflogger (name ancestors &key level appender appenders documentation)
+(defmacro deflogger (name ancestors &key compile-time-level level appender appenders documentation)
   (declare (ignore documentation))
   (when appender
     (setf appenders (append appenders (list appender))))
@@ -215,7 +251,7 @@
     (flet ((make-log-helper (suffix level)
 	     `(defmacro ,(intern (strcat name "." suffix)) (message-control &rest message-args)
                 ;; first check at compile time
-                (if (enabled-p (get-logger ',name) ,level)
+                (if (compiled-time-enabled-p (get-logger ',name) ,level)
                     ;; then check at runtime
                     `(when (enabled-p (get-logger ',',name) ,',level)
                        ,(if message-args
@@ -226,6 +262,7 @@
 	 (setf (get-logger ',name) (make-instance 'log-category
 						  :name ',name
 						  :level ,level
+                                                  :compile-time-level ,compile-time-level
 						  :appenders (list ,@appenders)
 						  :ancestors (list ,@ancestors)))
 	 ,(make-log-helper '#:dribble '+dribble+)

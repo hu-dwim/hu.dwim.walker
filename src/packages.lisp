@@ -179,6 +179,7 @@
    #:log.fatal
    #:deflogger
    #:log.level
+   #:log.compile-time-level
    #:+dribble+
    #:+debug+
    #:+info+
