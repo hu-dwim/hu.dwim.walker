@@ -214,10 +214,14 @@
 			   ancestors)))
     (flet ((make-log-helper (suffix level)
 	     `(defmacro ,(intern (strcat name "." suffix)) (message-control &rest message-args)
-		`(when (enabled-p (get-logger ',',name) ,',level)
-		   ,(if message-args
-			`(handle (get-logger ',',name) (format nil ,message-control ,@message-args) ',',level)
-			`(handle (get-logger ',',name) ,message-control ',',level))))))
+                ;; first check at compile time
+                (if (enabled-p (get-logger ',name) ,level)
+                    ;; then check at runtime
+                    `(when (enabled-p (get-logger ',',name) ,',level)
+                       ,(if message-args
+                            `(handle (get-logger ',',name) (format nil ,message-control ,@message-args) ',',level)
+                            `(handle (get-logger ',',name) ,message-control ',',level)))
+                    (values)))))
       `(progn
 	 (setf (get-logger ',name) (make-instance 'log-category
 						  :name ',name
