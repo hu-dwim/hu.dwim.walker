@@ -22,7 +22,7 @@
                                            (:file "generic-functions")
                                            (:file "common-lisp-cc"))
                               :serial t
-                              :depends-on ("packages" "walk" "flow-control" "list" "string" "defclass-struct"))
+                              :depends-on ("packages" "walk" "flow-control" "lambda-list" "list" "string" "defclass-struct"))
 			     (:file "debug" :depends-on ("accumulation"))
                              (:file "decimal-arithmetic" :depends-on ("packages"))
                              (:file "defclass-struct" :depends-on ("packages" "list"))
@@ -31,7 +31,8 @@
                              (:file "http" :depends-on ("packages" "vector" "string"))
                              (:file "io" :depends-on ("packages" "flow-control" "string"))
                              (:file "lambda" :depends-on ("packages"))
-			     (:file "lisp1" :depends-on ("packages" "one-liners" "walk" "unwalk"))
+			     (:file "lambda-list" :depends-on ("packages" "walk"))
+			     (:file "lisp1" :depends-on ("packages" "lambda-list" "one-liners" "walk" "unwalk"))
                              (:file "lexenv" :depends-on ("packages"))
                              (:file "list" :depends-on ("packages" "one-liners" "accumulation" "flow-control"))
                              (:file "log" :depends-on ("packages" "numbers" "hash" "io"))
@@ -52,8 +53,7 @@
                              (:file "time" :depends-on ("packages"))
 			     (:file "unwalk" :depends-on ("packages" "walk"))
                              (:file "vector" :depends-on ("packages" "flow-control"))
-                             (:file "walk" :depends-on ("packages" "list" "mopp" "lexenv"
-                                                        "one-liners")))))
+                             (:file "walk" :depends-on ("packages" "list" "mopp" "lexenv" "one-liners")))))
   :properties ((:features "v1.4.0" "v1.4.1" "v1.4.2" "cc-interpreter"
                           "join-strings-return-value" "getenv")))
 

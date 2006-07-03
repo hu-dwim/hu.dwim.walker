@@ -42,7 +42,7 @@
 				   '()))
 	 (defmethod ,name ,@qlist ,arguments
            ,(when arguments 
-	     `(declare (ignorable ,@(extract-argument-names arguments))))
+	     `(declare (ignorable ,@(extract-argument-names arguments :allow-specializers t))))
 	   ,@(when (stringp (first body))
               (list (pop body)))
 	   (make-instance 'closure/cc
@@ -116,60 +116,6 @@
       (when around
 	(setf form (primary-wrap around form)))
       form)))
-
-;;;; Helper
-
-(defun extract-argument-names (lambda-list)
-  "Returns a list of symbols representing the names of the
-  variables bound by the lambda list LAMBDA-LIST."
-  (delete-if #'null
-             (mapcar (lambda (argument)
-                       (and (slot-exists-p argument 'name)
-                            (slot-boundp argument 'name)
-                            (slot-value argument 'name)))
-                     (walk-lambda-list lambda-list nil '() :allow-specializers t))))
-
-(defun convert-to-generic-lambda-list (defmethod-lambda-list)
-  (loop
-     with generic-lambda-list = '()
-     for arg in (walk-lambda-list defmethod-lambda-list
-                                  nil nil
-                                  :allow-specializers t)
-     do (etypecase arg
-          ((or required-function-argument-form
-               specialized-function-argument-form)
-           (push (name arg) generic-lambda-list))
-          (keyword-function-argument-form
-           (pushnew '&key generic-lambda-list)
-           (if (keyword-name arg)
-               (push (list (list (keyword-name arg)
-                                 (name arg)))
-                     generic-lambda-list)
-               (push (list (name arg)) generic-lambda-list)))
-          (rest-function-argument-form
-           (push '&rest generic-lambda-list)
-           (push (name arg) generic-lambda-list))
-          (optional-function-argument-form
-           (pushnew '&optional generic-lambda-list)
-           (push (name arg) generic-lambda-list))
-          (allow-other-keys-function-argument-form
-           (unless (member '&key generic-lambda-list)
-             (push '&key generic-lambda-list))
-           (push '&allow-other-keys generic-lambda-list)))
-     finally (return (nreverse generic-lambda-list))))
-
-(defun clean-argument-list (lambda-list)
-  (loop
-     for head on lambda-list
-     for argument = (car head)
-     if (member argument '(&optional &key &rest &allow-other-keys))
-       return (append cleaned head)
-     else
-       collect (if (listp argument)
-                   (first argument)
-                   argument)
-       into cleaned
-     finally (return cleaned)))
 
 ;; Copyright (c) 2002-2006, Edward Marco Baringer
 ;; All rights reserved. 
