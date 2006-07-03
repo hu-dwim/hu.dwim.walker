@@ -5,32 +5,49 @@
 ;;;; * Entry point
 
 (defgeneric lisp1 (form)
-  (:documentation "Translate FORM from Lisp-1 to Lisp-2"))
+  (:documentation "Translate FORM from Lisp-1 to Lisp-2.
+
+Define methods on this generic function with DEFLISP1-WALKER."))
 
 (defmethod lisp1 (form)
+  "If FORM isn't a FORM object, we'll convert it to one, apply
+the transformation and convert it back."
   (unwalk-form (lisp1 (walk-form form))))
 
 (defmacro with-lisp1 (form)
+  "Execute FORM as if it were run in a Lisp-1."
   (lisp1 form))
 
 (defmacro deflisp1-walker (class (&rest slots) &body body)
+  "Define a Lisp-1 to Lisp-2 walker.
+
+It takes the class of a CL form object, and its slots as
+arguments.  It also captures the variable FORM for convenience."
   `(defmethod lisp1 ((form ,class))
      (with-slots ,slots form
        ,@body)))
 
 ;;;; * Special Variables
 
-(defvar *bound-vars* nil)
+(defvar *bound-vars* nil
+  "When walking code, this variable contains a list of
+variables (represented by symbols) which have been bound.")
 
 ;;;; * Definers
 
 (defmacro defun1 (name (&rest args) &body body)
+  "Define a function with BODY written in Lisp-1 style.
+
+This is just like DEFUN."
   (let1 *bound-vars*
       (append *bound-vars* (extract-argument-names args :allow-specializers nil))
     `(defun ,name ,args
        ,(lisp1 `(block ,name ,@body)))))
 
 (defmacro defmethod1 (name (&rest args) &body body)
+  "Define a function with BODY written in Lisp-1 style.
+
+This is just like DEFMETHOD."
   (let1 *bound-vars*
       (append *bound-vars* (extract-argument-names args :allow-specializers t))
     `(defmethod ,name ,args
@@ -39,9 +56,11 @@
 ;;;; * Utils
 
 (defun lisp1s (forms)
+  "Convert a list of forms to Lisp-1 style."
   (mapcar #'lisp1 forms))
 
 (defun lisp1b (binds)
+  "Convert an alist of (VAR . FORM) to Lisp-1 style."
   (mapcar (lambda (bind)
 	    (cons (car bind)
 		  (lisp1 (cdr bind))))
@@ -50,15 +69,19 @@
 ;;;; * Walkers
 
 (deflisp1-walker form ()
+  ;; By default all forms will stay the same.
   form)
 
 (deflisp1-walker if-form (consequent then else)
+  ;; Transform the test and branches recursively.
   (new 'if-form
        :consequent (lisp1 consequent)
        :then       (lisp1 then)
        :else       (lisp1 else)))
 
 (deflisp1-walker lambda-function-form (arguments body)
+  ;; For any function-form (ie lambda), we just transform the body.
+  ;; We also must add the parameters to the list of bound variables.
   (let1 *bound-vars*
       (append (mapcar #'name arguments) *bound-vars*)
     (new 'lambda-function-form
@@ -66,11 +89,17 @@
 	 :body      (lisp1s body))))
 
 (deflisp1-walker free-variable-reference (name)
+  ;; If a free variable is bound in the toplevel, *and* not bound by
+  ;; an enclosing lambda, then we'll return that function.  We take
+  ;; advantage of the fact that the `name' slot is shared.
   (if (and (fboundp name) (not (member name *bound-vars*)))
       (change-class form 'free-function-object-form)
       form))
 
 (deflisp1-walker application-form (operator arguments)
+  ;; We transform all applications so they use explicit funcall.  We
+  ;; also must take into account ((a b) c ...) which must also
+  ;; transform the operator accordingly.
   (new 'free-application-form
        :operator  'funcall
        :arguments (cons (if (not (typep operator 'form))
@@ -129,12 +158,12 @@
 
 (deflisp1-walker multiple-value-call-form (func arguments)
   (new 'multiple-value-call-form
-       :func      (lisp1 func)
+       :func      (lisp1  func)
        :arguments (lisp1s arguments)))
 
 (deflisp1-walker multiple-value-prog1-form (first-form other-forms)
   (new 'multiple-value-prog1-form
-       :first-form  (lisp1 first-form)
+       :first-form  (lisp1  first-form)
        :other-forms (lisp1s other-forms)))
 
 (deflisp1-walker symbol-macrolet-form (binds body)
