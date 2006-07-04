@@ -114,6 +114,7 @@
    #:string-to-octets
    #:octets-to-string
    #:encoding-keyword-to-native
+   #:defprint-object
    
    #:if-bind
    #:aif
