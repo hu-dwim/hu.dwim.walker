@@ -10,9 +10,10 @@
   (mapcan (lambda (argument)
 	    (let1 vars '()
 	      (dolist (slot-name '(name supplied-p-parameter))
-		(when (and (slot-exists-p argument slot-name)
-			   (slot-boundp   argument slot-name))
-		 (push (slot-value argument slot-name) vars)))
+		(awhen (and (slot-exists-p argument slot-name)
+			    (slot-boundp   argument slot-name)
+			    (slot-value    argument slot-name))
+		  (push it vars)))
 	      (nreverse vars)))
 	  (walk-lambda-list lambda-list nil '() :allow-specializers allow-specializers)))
 
