@@ -101,7 +101,8 @@ possible values."
      do (write-sequence buffer output)
      finally (write-sequence buffer output :end bytes-read)))
 
-(defmacro defprint-object ((self class-name) &body body)
+(defmacro defprint-object ((self class-name &key (identity t) (type t))
+                           &body body)
   "Define a print-object method using print-unreadable-object.
   An example:
   (defprint-object (self parenscript-dispatcher)
@@ -111,7 +112,7 @@ possible values."
     (princ (parenscript-file self)))"
   (with-unique-names (stream)
     `(defmethod print-object ((,self ,class-name) ,stream)
-      (print-unreadable-object (,self ,stream :type (class-of ,self) :identity t)
+      (print-unreadable-object (,self ,stream :type ,type :identity ,identity)
         (let ((*standard-output* ,stream))
           ,@body)))))
 
