@@ -24,6 +24,7 @@
    #:with-collector
    #:with-collectors
 
+   #:form
    #:walk-form
    #:make-walk-env
    #:*walk-handlers*
@@ -82,8 +83,46 @@
    #:the-form
    #:extract-argument-names
    #:walk-lambda-list
+   #:walk-implicit-progn
+   #:arguments
+   #:binds
+   #:body
+   #:cleanup-form
+   #:code
+   #:consequent
+   #:declares
+   #:default-value
+;; #:else ; iterate
+   #:enclosing-tagbody
+   #:eval-when-times
+   #:first-form
+   #:func
+   #:keyword-name
+   #:name
+   #:operator
+   #:optimize-spec
+   #:other-forms
+   #:parent
+   #:protected-form
+   #:read-only-p
+   #:result
+   #:source
+;; #:specializer ; closer-mop
+   #:supplied-p-parameter
+   #:tag
+   #:target-block
+   #:target-progn
+   #:then
+   #:type-form
+   #:value
+   #:values-form
+   #:var
+   #:vars-form
 
+   #:defunwalker-handler
    #:unwalk-form
+   #:unwalk-forms
+   #:unwalk-lambda-list
 
    #:to-cps
    #:with-call/cc
@@ -126,9 +165,9 @@
    #:and-bind
    #:if2-bind
    #:aif2
-;; #:while ;; iterate
+;; #:while ; iterate
    #:awhile
-;; #:until ;; iterate
+;; #:until ; iterate
    #:it
    #:whichever
    #:xor
