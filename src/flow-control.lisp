@@ -86,14 +86,34 @@ Very useful with functions like GETHASH."
 ;;;; ** Looping
 
 (defmacro while (test &body body)
-  `(loop
-      while ,test
-      do (progn ,@body)))
+  "Repeat BODY while TEST is true.
+
+You may exit the loop with (RETURN-FROM WHILE)."
+  `(block while
+     (loop
+	(if ,test
+	    (progn ,@body)
+	    (return-from while)))))
+
+(defmacro awhile (test &body body)
+  "Just like WHILE, but the result of TEST is bound to IT.
+
+You may exit the loop with (RETURN-FROM AWHILE)."
+  `(block awhile
+     (loop
+	(aif ,test
+	     (progn ,@body)
+	     (return-from awhile)))))
 
 (defmacro until (test &body body)
-  `(loop
-      until ,test
-      do (progn ,@body)))
+  "Repeat BODY until TEST is false.
+
+You may exit the loop with (RETURN-FROM UNTIL)."
+  `(block until
+     (loop
+	(if (not ,test)
+	    (progn ,@body)
+	    (return-from until)))))
 
 ;;;; ** Whichever
 

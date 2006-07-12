@@ -126,6 +126,9 @@
    #:and-bind
    #:if2-bind
    #:aif2
+;; #:while ;; iterate
+   #:awhile
+;; #:until ;; iterate
    #:it
    #:whichever
    #:xor
