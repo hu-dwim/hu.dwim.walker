@@ -176,9 +176,11 @@
 
 ;;;; MACROLET
 
-(defunwalker-handler macrolet-form ()
-  ;; We can't unwalk macrolet because, it contains closure objects.
-  (error "Sorry, MACROLET not yet implemented."))
+(defunwalker-handler macrolet-form (body binds)
+  ;; We ignore the binds, because the expansion has already taken
+  ;; place at walk-time.
+  (declare (ignore binds))
+  `(progn ,@(unwalk-forms body)))
 
 ;;;; MULTIPLE-VALUE-CALL
 
