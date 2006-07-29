@@ -209,10 +209,11 @@
 
 ;;;; SYMBOL-MACROLET
 
-(defunwalker-handler symbol-macrolet-form ()
-  ;; We can't unwalk macrolet because, it modifies the body
-  ;; expression, when its created.
-  (error "Sorry, MACROLET not yet implemented."))
+(defunwalker-handler symbol-macrolet-form (body binds)
+  ;; We ignore the binds, because the expansion has already taken
+  ;; place at walk-time.
+  (declare (ignore binds))
+  `(progn ,@(unwalk-forms body)))
 
 ;;;; TAGBODY/GO
 
