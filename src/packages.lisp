@@ -29,6 +29,10 @@
    #:make-walk-env
    #:*walk-handlers*
    #:*warn-undefined*
+   #:undefined-reference
+   #:undefined-variable-reference
+   #:undefined-function-reference
+   #:return-from-unknown-block
    #:defwalker-handler
    #:implicit-progn-mixin
    #:implicit-progn-with-declare-mixin
@@ -81,9 +85,10 @@
    #:go-tag-form
    #:go-form
    #:the-form
+   #:unwind-protect-form
    #:extract-argument-names
    #:walk-lambda-list
-   #:walk-implicit-progn
+   #:walk-implict-progn
    #:arguments
    #:binds
    #:body
