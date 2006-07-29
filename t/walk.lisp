@@ -96,6 +96,27 @@
 (test walk-locally
   (is (test-walk '(locally (setq *global* (whoops))))))
 
+(test walk-macrolet
+  (is (unwalk-form
+       (walk-form
+	'(macrolet ((+ (&body body)
+		     (reverse body)))
+	  (+ 1 2 3 -))))
+      '(progn (- 3 2 1)))
+  (is (unwalk-form
+       (walk-form
+	'(macrolet ())))
+      '(progn))
+  (is (unwalk-form
+       (walk-form
+	'(macrolet ((+ (&body body)
+		     (reverse body)))
+	  (princ "1111")
+	  (+ 1 2 3 -))))
+      '(progn
+	(princ "1111")
+	(- 3 2 1))))
+
 (test walk-multiple-value-call
   (is (test-walk '(multiple-value-call #'list 1 '/ (values 2 3) '/ (values) '/ (floor 2.5))))
   (is (test-walk '(multiple-value-call #'+ (floor 5 3) (floor 19 4)))))
@@ -116,6 +137,26 @@
 (test walk-setq
   (is (test-walk '(setq x '(2 #(3 5 7) 11 "13" '17))))
   (is (test-walk '(setq *global* 'symbol))))
+
+(test walk-symbol-macrolet
+  (is (unwalk-form
+       (walk-form
+	'(symbol-macrolet ((a (slot-value obj 'a))
+			   (b (slot-value obj 'b)))
+	  (+ a b))))
+      '(progn (+ (slot-value obj 'a) (slot-value obj 'b))))
+  (is (unwalk-form
+       (walk-form
+	'(symbol-macrolet ())))
+      '(progn))
+  (is (unwalk-form
+       (walk-form
+	'(symbol-macrolet ((a (slot-value obj 'a)))
+	  (double! a)
+	  (/ a 2))))
+      '(progn
+	(double! (slot-value obj 'a))
+	(/ (slot-value obj 'a) 2))))
 
 (test walk-tagbody
   (is (test-walk '(tagbody
