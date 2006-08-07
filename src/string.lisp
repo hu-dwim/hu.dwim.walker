@@ -178,6 +178,21 @@ the underlying lisp."
   (defun %octets-to-string (octets encoding)
     (sb-ext:octets-to-string octets :external-format (encoding-keyword-to-native encoding))))
 
+;;;; *** Allegro
+
+#+allegro
+(progn
+  (defun %encoding-keyword-to-native (encoding)
+    (case encoding
+      (:utf-8 :utf8)
+      (:utf-16 :unicode)
+      (:us-ascii :ascii)
+      (t encoding)))
+  (defun %string-to-octets (string encoding)
+    (excl:string-to-octets string :external-format (encoding-keyword-to-native encoding)))
+  (defun %octets-to-string (octets encoding)
+    (excl:octets-to-string octets :external-format (encoding-keyword-to-native encoding))))
+
 ;;;; *** Default Implementation
 
 #-(or (and sbcl sb-unicode) (and clisp unicode))
