@@ -185,21 +185,6 @@ the underlying lisp."
   (defun %encoding-keyword-to-native (encoding)
     (case encoding
       (:utf-8 :utf8)
-      (:utf-16 :unicode)
-      (:us-ascii :ascii)
-      (t encoding)))
-  (defun %string-to-octets (string encoding)
-    (excl:string-to-octets string :external-format (encoding-keyword-to-native encoding)))
-  (defun %octets-to-string (octets encoding)
-    (excl:octets-to-string octets :external-format (encoding-keyword-to-native encoding))))
-
-;;;; *** ALLEGRO
-
-#+allegro
-(progn
-  (defun %encoding-keyword-to-native (encoding)
-    (case encoding
-      (:utf-8 :utf8)
       (:iso-8859-1 :iso8859-1)
       (:utf-16 :unicode)
       (:us-ascii :ascii)
