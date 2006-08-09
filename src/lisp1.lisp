@@ -29,36 +29,36 @@ arguments.  It also captures the variable FORM for convenience."
 
 ;;;; * Special Variables
 
-(defvar *vars-bound* nil
+(defvar *bound-vars* nil
   "When walking code, this variable contains a list of
 variables (represented by symbols) which have been bound in
 the variable namespace.
 
 In essence these variables do not have to be sharp-quoted.")
 
-(defvar *funs-bound* nil
+(defvar *bound-funs* nil
   "When walking code, this variable contains a list of
 variables (represented by symbols) which have been bound in
 the function namespace.
 
 In essence these variables must be sharp-quoted.")
 
-(defmacro with-vars-bound (vars &body body)
+(defmacro with-bound-vars (vars &body body)
   "Execute BODY with VARS added to the variable namespace and
 VARS removed from the function namespace.
 
 This should only be used when code-walking."
-  `(let ((*vars-bound* (append         *vars-bound* ,vars))
-	 (*funs-bound* (set-difference *funs-bound* ,vars)))
+  `(let ((*bound-vars* (append         *bound-vars* ,vars))
+	 (*bound-funs* (set-difference *bound-funs* ,vars)))
      ,@body))
 
-(defmacro with-funs-bound (funs &body body)
+(defmacro with-bound-funs (funs &body body)
   "Execute BODY with FUNS added to the function namespace and
 FUNS removed from the variable namespace.
 
 This should only be used when code-walking."  
-  `(let ((*funs-bound* (append         *funs-bound* ,funs))
-	 (*vars-bound* (set-difference *vars-bound* ,funs)))
+  `(let ((*bound-funs* (append         *bound-funs* ,funs))
+	 (*bound-vars* (set-difference *bound-vars* ,funs)))
      ,@body))
 
 ;;;; * Definers
@@ -67,7 +67,7 @@ This should only be used when code-walking."
   "Define a function with BODY written in Lisp-1 style.
 
 This is just like DEFUN."
-  (with-vars-bound (extract-argument-names args :allow-specializers nil)
+  (with-bound-vars (extract-argument-names args :allow-specializers nil)
     `(defun ,name ,args
        ,(lisp1 `(block ,name ,@body)))))
 
@@ -75,7 +75,7 @@ This is just like DEFUN."
   "Define a method with BODY written in Lisp-1 style.
 
 This is just like DEFMETHOD."
-  (with-vars-bound (extract-argument-names args :allow-specializers t)
+  (with-bound-vars (extract-argument-names args :allow-specializers t)
     `(defmethod ,name ,args
        ,(lisp1 `(block ,name ,@body)))))
 
@@ -109,7 +109,7 @@ This is just like DEFMETHOD."
   ;; For any function-form (ie lambda), we just transform the body.
   ;; We also must add the parameters to the variable namespace, and
   ;; remove the parameters from the function namespace.
-  (with-vars-bound (mapcar #'name arguments)
+  (with-bound-vars (mapcar #'name arguments)
     (new 'lambda-function-form
 	 :arguments arguments
 	 :body      (lisp1s body))))
@@ -120,8 +120,8 @@ This is just like DEFMETHOD."
   ;; the variable has been bound by an enclosing function binding form
   ;; then we'll return that function.  We take advantage of the fact
   ;; that the `name' slot is shared.
-  (if (or (and (fboundp name) (not (member name *vars-bound*)))
-	  (member name *funs-bound*))
+  (if (or (and (fboundp name) (not (member name *bound-vars*)))
+	  (member name *bound-funs*))
       (change-class form 'free-function-object-form)
       form))
 
@@ -139,7 +139,7 @@ This is just like DEFMETHOD."
 (deflisp1-walker function-binding-form (binds body)
   ;; Add all the bindings to the function namespace to be sharp
   ;; quoted.
-  (with-funs-bound (mapcar #'car binds)
+  (with-bound-funs (mapcar #'car binds)
     (new (class-name-of form)
 	 :binds (lisp1b binds)
 	 :body  (lisp1s body))))
@@ -147,7 +147,7 @@ This is just like DEFMETHOD."
 (deflisp1-walker variable-binding-form (binds body)
   ;; Add all the bindings to the variable namespace so they aren't
   ;; sharp-quoted.
-  (with-vars-bound (mapcar #'car binds)
+  (with-bound-vars (mapcar #'car binds)
     (new (class-name-of form)
 	 :binds (lisp1b binds)
 	 :body  (lisp1s body))))
