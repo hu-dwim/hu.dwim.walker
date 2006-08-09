@@ -44,8 +44,11 @@
 
 ;;;; Functions
 
-(defunwalker-handler lambda-function-form (arguments body)
-  `(function (lambda ,(unwalk-lambda-list arguments) ,@(unwalk-forms body))))
+(defunwalker-handler lambda-function-form (arguments body declares)
+  `(function
+    (lambda ,(unwalk-lambda-list arguments)
+     ,@(unwalk-declarations declares)
+     ,@(unwalk-forms body))))
 
 (defunwalker-handler function-object-form (name)
   `(function ,name))
@@ -100,6 +103,38 @@
 (defunwalker-handler rest-function-argument-form (name)
   name)
 
+;;;; Declarations
+
+(defun unwalk-declarations (decls)
+  ;; Return a list so declarations can be easily spliced.
+  (if (null decls)
+      nil
+      (list `(declare ,@(unwalk-forms decls)))))
+
+(defunwalker-handler optimize-declaration-form (optimize-spec)
+  `(optimize ,optimize-spec))
+
+(defunwalker-handler dynamic-extent-declaration-form (name)
+  `(dynamic-extent ,name))
+
+(defunwalker-handler variable-ignorable-declaration-form (name)
+  `(ignorable ,name))
+
+(defunwalker-handler function-ignorable-declaration-form (name)
+  `(ignorable (function ,name)))
+
+(defunwalker-handler special-declaration-form (name)
+  `(special ,name))
+
+(defunwalker-handler type-declaration-form (type-form name)
+  `(type ,type-form ,name))
+
+(defunwalker-handler ftype-declaration-form (type-form name)
+  `(ftype ,type-form ,name))
+
+(defunwalker-handler notinline-declaration-form (name)
+  `(notinline ,name))
+
 ;;;; BLOCK/RETURN-FROM
 
 (defunwalker-handler block-form (name body)
@@ -132,37 +167,45 @@
 ;; The cdadr is here to remove (function (lambda ...)) of the function
 ;; bindings.
 
-(defunwalker-handler flet-form (binds body)
+(defunwalker-handler flet-form (binds body declares)
   (flet ((unwalk-flet (binds)
 	   (mapcar #'(lambda (bind)
 		       (cons (car bind)
 			     (cdadr (unwalk-form (cdr bind)))))
 		   binds)))
-    `(flet ,(unwalk-flet binds) ,@(unwalk-forms body))))
+    `(flet ,(unwalk-flet binds)
+       ,@(unwalk-declarations declares)
+       ,@(unwalk-forms body))))
 
-(defunwalker-handler labels-form (binds body)
+(defunwalker-handler labels-form (binds body declares)
   (flet ((unwalk-labels (binds)
 	   (mapcar #'(lambda (bind)
 		       (cons (car bind)
 			     (cdadr (unwalk-form (cdr bind)))))
 		   binds)))
-    `(labels ,(unwalk-labels binds) ,@(unwalk-forms body))))
+    `(labels ,(unwalk-labels binds)
+       ,@(unwalk-declarations declares)
+       ,@(unwalk-forms body))))
 
 ;;;; LET/LET*
 
-(defunwalker-handler let-form (binds body)
+(defunwalker-handler let-form (binds body declares)
   (flet ((unwalk-let (binds)
 	   (mapcar #'(lambda (bind)
 		       (list (car bind) (unwalk-form (cdr bind))))
 		   binds)))
-    `(let ,(unwalk-let binds) ,@(unwalk-forms body))))
+    `(let ,(unwalk-let binds)
+       ,@(unwalk-declarations declares)
+       ,@(unwalk-forms body))))
 
-(defunwalker-handler let*-form (binds body)
+(defunwalker-handler let*-form (binds body declares)
   (flet ((unwalk-let* (binds)
 	   (mapcar #'(lambda (bind)
 		       (list (car bind) (unwalk-form (cdr bind))))
 		   binds)))
-    `(let* ,(unwalk-let* binds) ,@(unwalk-forms body))))
+    `(let* ,(unwalk-let* binds)
+       ,@(unwalk-declarations declares)
+       ,@(unwalk-forms body))))
 
 ;;;; LOAD-TIME-VALUE
 
@@ -171,16 +214,17 @@
 
 ;;;; LOCALLY
 
-(defunwalker-handler locally-form (body)
-  `(locally ,@(unwalk-forms body)))
+(defunwalker-handler locally-form (body declares)
+  `(locally ,@(unwalk-declarations declares)
+     ,@(unwalk-forms body)))
 
 ;;;; MACROLET
 
-(defunwalker-handler macrolet-form (body binds)
+(defunwalker-handler macrolet-form (body binds declares)
   ;; We ignore the binds, because the expansion has already taken
   ;; place at walk-time.
   (declare (ignore binds))
-  `(progn ,@(unwalk-forms body)))
+  `(locally ,@(unwalk-declarations declares) ,@(unwalk-forms body)))
 
 ;;;; MULTIPLE-VALUE-CALL
 
@@ -209,11 +253,11 @@
 
 ;;;; SYMBOL-MACROLET
 
-(defunwalker-handler symbol-macrolet-form (body binds)
+(defunwalker-handler symbol-macrolet-form (body binds declares)
   ;; We ignore the binds, because the expansion has already taken
   ;; place at walk-time.
   (declare (ignore binds))
-  `(progn ,@(unwalk-forms body)))
+  `(locally ,@(unwalk-declarations declares) ,@(unwalk-forms body)))
 
 ;;;; TAGBODY/GO
 

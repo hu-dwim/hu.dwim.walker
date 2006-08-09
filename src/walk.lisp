@@ -128,7 +128,7 @@
 	(newdecls nil)
 	(decls nil))
     (flet ((done ()
-             (return-from split-body (values body env documentation decls))))
+             (return-from split-body (values body env documentation (nreverse decls)))))
       (loop
          for form = (car body)
          while body
@@ -858,8 +858,9 @@
     (dolist* ((symbol expansion) (second form))
       (extend env :symbol-macrolet symbol expansion)
       (push (cons symbol expansion) (binds symbol-macrolet)))
-    (setf (binds symbol-macrolet) (nreverse (binds symbol-macrolet))
-          (body symbol-macrolet) (walk-implict-progn parent (cddr form) env))))
+    (setf (binds symbol-macrolet) (nreverse (binds symbol-macrolet)))
+    (multiple-value-setf ((body symbol-macrolet) nil (declares symbol-macrolet))
+      (walk-implict-progn symbol-macrolet (cddr form) env :declare t))))
 
 ;;;; TAGBODY/GO
 

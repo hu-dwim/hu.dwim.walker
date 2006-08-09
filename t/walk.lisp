@@ -102,18 +102,18 @@
 	'(macrolet ((+ (&body body)
 		     (reverse body)))
 	  (+ 1 2 3 -))))
-      '(progn (- 3 2 1)))
+      '(locally (- 3 2 1)))
   (is (unwalk-form
        (walk-form
 	'(macrolet ())))
-      '(progn))
+      '(locally ()))
   (is (unwalk-form
        (walk-form
 	'(macrolet ((+ (&body body)
 		     (reverse body)))
 	  (princ "1111")
 	  (+ 1 2 3 -))))
-      '(progn
+      '(locally
 	(princ "1111")
 	(- 3 2 1))))
 
@@ -144,17 +144,18 @@
 	'(symbol-macrolet ((a (slot-value obj 'a))
 			   (b (slot-value obj 'b)))
 	  (+ a b))))
-      '(progn (+ (slot-value obj 'a) (slot-value obj 'b))))
+      '(locally
+	(+ (slot-value obj 'a) (slot-value obj 'b))))
   (is (unwalk-form
        (walk-form
 	'(symbol-macrolet ())))
-      '(progn))
+      '(locally))
   (is (unwalk-form
        (walk-form
 	'(symbol-macrolet ((a (slot-value obj 'a)))
 	  (double! a)
 	  (/ a 2))))
-      '(progn
+      '(locally
 	(double! (slot-value obj 'a))
 	(/ (slot-value obj 'a) 2))))
 
