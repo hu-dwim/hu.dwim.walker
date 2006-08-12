@@ -358,6 +358,7 @@
    #:last1
    #:singlep
    #:class-name-of
+   #:circularize
    #:let1
    ))
 

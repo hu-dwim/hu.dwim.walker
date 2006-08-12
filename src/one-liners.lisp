@@ -134,12 +134,10 @@ are discarded \(that is, the body is an implicit PROGN)."
     ,@(loop for el in keywords
             collect `(remf ,plist ,el))))
 
-;;;; Eval When
 (defmacro eval-always (&body body)
   `(eval-when (:compile-toplevel :load-toplevel :execute)
      ,@body))
 
-;;;; Alias
 (defmacro defalias (function redefinition)
   `(eval-always
     (progn
@@ -163,12 +161,10 @@ are discarded \(that is, the body is an implicit PROGN)."
         `(,',macro ,@,args)))))
 
 
-;;;; Names
 (defmacalias lambda fun)
 
 (defalias make-instance new)
 
-;;;; Lists
 (defun append1 (list x)
   (append list (list x)))
 
@@ -184,7 +180,10 @@ are discarded \(that is, the body is an implicit PROGN)."
 (defun class-name-of (obj)
   (class-name (class-of obj)))
 
-;;;; Binding
+(defun circularize (&rest items)
+  (let ((items (copy-list items)))
+    (nconc items items)))
+
 (defmacro let1 (var val &body body)
   `(let ((,var ,val))
      ,@body))
