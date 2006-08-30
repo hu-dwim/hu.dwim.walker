@@ -246,7 +246,8 @@
     (system::map-over-environment-variables
      (lambda (symbol type rest)
        (declare (ignore rest))
-       (when (eq type :lexical)
+       (when (and (eq type :lexical)
+                  (sys:variable-information symbol env))
 	 (push symbol fns)))
      env)
     fns))
@@ -256,7 +257,8 @@
   (let (fns)
     (system::map-over-environment-functions
      (lambda (name type rest)
-       (when (eq type :function)
+       (when (and (eq type :function)
+                  (sys:function-information name env))
 	 (push name fns)))
      env)
     fns))
