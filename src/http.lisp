@@ -35,24 +35,60 @@
 
 (defvar *unescape-table* (make-escaped-table))
 
-(defun nunescape-as-uri (string &rest args)
-  (apply #'unescape-as-uri string args))
+(defun unescape-as-uri (string)
+  (declare (inline))
+  (%unescape-as-uri string nil))
 
-(defun unescape-as-uri (string &optional (external-format :iso-8859-1))
-  (let* ((length (- (length string)
-                    (* 2 (count #\% string :test #'char=))))
-         (result (make-array length :element-type '(unsigned-byte 8))))
-    (loop
-       for index1 upfrom 0
-       for index2 upfrom 0
-       while (< index1 (length string))
-       do (setf (aref result index2)
-                (case (aref string index1)
-                  (#\% (+ (ash (digit-char-p (aref string (incf index1)) 16) 4)
-                          (digit-char-p (aref string (incf index1)) 16)))
-                  (#\+ #.(char-code #\space))
-                  (t (char-code (aref string index1))))))
-    (octets-to-string result external-format))) 
+(defun nunescape-as-uri (string)
+  (declare (inline))
+  (%unescape-as-uri string t))
+
+(defun %unescape-as-uri (input may-modify-input-p)
+  (declare (type vector input)
+           (optimize (speed 3) (debug 0)))
+  (let* ((input-length (length input))
+         (input-index 0)
+         (output (if may-modify-input-p
+                     input
+                     (make-array input-length :element-type 'character :adjustable t)))
+         (output-index 0))
+    (declare (type fixnum input-index output-index))
+    (labels ((fail ()
+               (error "Parse error in unescape-as-uri for string ~S" input))
+             (read-next-char (&optional must-exists-p)
+               (when (>= input-index input-length)
+                 (if must-exists-p
+                     (fail)
+                     (return-from %unescape-as-uri (adjust-array output output-index))))
+               (prog1 (aref input input-index)
+                 (incf input-index)))
+             (write-next-char (char)
+               (setf (aref output output-index) char)
+               (incf output-index))
+             (char-to-int (char)
+               (let ((result (digit-char-p char 16)))
+                 (unless result
+                   (fail))
+                 result))
+             (parse ()
+               (let ((next-char (read-next-char)))
+                 (case next-char
+                   (#\% (char%))
+                   (#\+ (char+))
+                   (t (write-next-char next-char)))
+                 (parse)))
+             (char% ()
+               (let ((next-char (read-next-char t)))
+                 (write-next-char (code-char (case next-char
+                                               (#\u (+ (ash (char-to-int (read-next-char t)) 12)
+                                                       (ash (char-to-int (read-next-char t)) 8)
+                                                       (ash (char-to-int (read-next-char t)) 4)
+                                                       (char-to-int (read-next-char t))))
+                                               (t (+ (ash (char-to-int next-char) 4)
+                                                     (char-to-int (read-next-char t)))))))))
+             (char+ ()
+               (write-next-char #\space)))
+      (parse))))
 
 ;;;; ** HTML
 
