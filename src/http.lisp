@@ -6,10 +6,14 @@
 
 ;;;; ** URIs/URLs
 
-(defvar *ok-set*
-  "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789.,"
-  "The list of characters which don't need to be escaped when
-  writing URIs.")
+(eval-always
+  (defvar *uri-escaping-ok-table* (make-array 256
+                                              :element-type 'boolean
+                                              :initial-element nil))
+  (loop
+      ;; The list of characters which don't need to be escaped when writing URIs.
+      for ok-char across "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789.," do
+      (setf (aref *uri-escaping-ok-table* (char-code ok-char)) t)))
 
 (defun escape-as-uri (string)
   "Escapes all non alphanumeric characters in STRING following
@@ -18,22 +22,20 @@
     (write-as-uri string escaped)))
 
 (defun write-as-uri (string stream)
+  (declare (type vector string)
+           (type stream stream)
+           (optimize (speed 3) (debug 0)))
   (loop
-     for char across string
-     if (find char *ok-set* :test #'char=)
-       do (write-char char stream)
-     else do (format stream "%~2,'0X" (char-code char))))
-
-(defun make-escaped-table ()
-  (let ((table (make-array '(16 16)
-                           :element-type 'character
-                           :initial-element #\\)))
-    (dotimes (i 16)
-      (dotimes (j 16)
-        (setf (aref table i j) (code-char (+ (* i 16) j)))))
-    table))
-
-(defvar *unescape-table* (make-escaped-table))
+      for char across string
+      for char-code = (char-code char) do
+      (assert (<= char-code #16rffff))
+      (cond ((and (< char-code 256)
+                  (aref #.*uri-escaping-ok-table* char-code))
+             (write-char char stream))
+            ((< char-code 256)
+             (format stream "%~2,'0X" char-code))
+            (t
+             (format stream "%u~4,'0X" char-code)))))
 
 (defun unescape-as-uri (string)
   (declare (inline))
