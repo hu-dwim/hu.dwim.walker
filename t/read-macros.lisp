@@ -4,9 +4,8 @@
 
 (in-suite :it.bese.arnesi)
 
-(arnesi::enable-bracket-reader)
-
 (test bracket-reader
+  (enable-bracket-reader)
   (is (= 7 (read-from-string "{(constantly 7)}")))  
   (destructuring-bind (progn a b c)
       (let ((*package* (find-package :common-lisp-user)))
