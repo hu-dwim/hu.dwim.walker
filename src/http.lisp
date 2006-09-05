@@ -55,9 +55,7 @@
            (output (if (and may-modify-input-p
                             (adjustable-array-p input))
                        input
-                       (progn
-                         (format t "Creating new array of length ~S~%" input-length)
-                         (make-array input-length :element-type 'character :adjustable t))))
+                       (make-array input-length :element-type 'character :adjustable t)))
            (output-index 0))
       (declare (type fixnum input-index output-index))
       (labels ((fail ()
@@ -66,9 +64,7 @@
                  (when (>= input-index input-length)
                    (if must-exists-p
                        (fail)
-                       (progn
-                         (format t "Adjusting array to length ~S~%" output-index)
-                         (return-from %unescape-as-uri (adjust-array output output-index)))))
+                       (return-from %unescape-as-uri (adjust-array output output-index))))
                  (prog1 (aref input input-index)
                    (incf input-index)))
                (write-next-char (char)
