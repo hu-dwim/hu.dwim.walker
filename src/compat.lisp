@@ -13,6 +13,7 @@
   #+clisp (ext:quit exit-code)
   #+(or cmu allegro) (declare (ignore exit-code))
   #+cmu (ext:quit)
+  #+lispworks (lispworks:quit :status exit-code)
   #+allegro (excl:exit))
 
 ;; Copyright (c) 2002-2003, Edward Marco Baringer

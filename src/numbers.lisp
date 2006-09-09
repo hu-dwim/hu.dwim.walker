@@ -21,7 +21,9 @@
   (make-array radix
               :displaced-to "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ"
               :displaced-index-offset 0
-              :element-type 'character))
+              :element-type 
+              #+lispworks 'base-char
+              #-lispworks 'character))
 
 (defun parse-float (float-string
                     &key (start 0) (end nil) (radix 10)

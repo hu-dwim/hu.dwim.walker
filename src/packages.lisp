@@ -193,6 +193,7 @@
    #:write-as-html
    #:escape-as-html
    #:unescape-as-html
+   #:html-entity->char
    
    #:compose
    #:conjoin

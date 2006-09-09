@@ -102,7 +102,7 @@
 ;;;; escaping library (there are a couple to choose from).
 
 (defun make-html-entities ()
-  (let ((ht (make-hash-table :test 'equal)))
+  (let ((ht (make-hash-table :test 'equalp)))
     (flet ((add-mapping (char escaped)
              (setf (gethash char ht) escaped
                    (gethash escaped ht) char)))
@@ -110,6 +110,7 @@
       (add-mapping #\> "&gt;")
       (add-mapping #\& "&amp;")
       (add-mapping #\" "&quot;")
+      (add-mapping #\space "&nbsp;")
       (add-mapping "a`" "&#224;")
       (add-mapping "a'" "&#225;")
       (add-mapping "e`" "&#232;")
@@ -123,6 +124,14 @@
     ht))
 
 (defparameter *html-entites* (make-html-entities))
+
+(defun html-entity->char (entity &optional (default #\?))
+  (let ((res (gethash entity *html-entites*)))
+    (if res
+        (if (stringp res)
+            (char res 0)
+            res)
+        default)))
 
 (defun write-as-html (string &key (stream t) (escape-whitespace nil))
   (loop

@@ -31,7 +31,7 @@
   "Returns the first HOW-MANY elements of SEQ."
   (let ((seq-length (length seq)))
     (cond
-      ((<= 0 how-many (length seq))
+      ((<= 0 how-many seq-length)
        (subseq seq 0 how-many))
       ((< seq-length how-many)
        (copy-seq seq))
