@@ -128,7 +128,17 @@
 
 ;;;; ** Handling Messages
 
+(defmacro with-logging-io (&body body)
+  `(let ((*print-right-margin* most-positive-fixnum)
+         (*print-readably* nil))
+    ,@body))
+
 (defgeneric handle (category message level))
+
+(defmethod handle :around ((cat log-category) message level)
+  ;; turn off line wrapping for the entire time while inside the loggers
+  (with-logging-io
+    (call-next-method)))
 
 (defmethod handle ((cat log-category) message level)
   (if (appenders cat)
@@ -255,7 +265,9 @@
                     ;; then check at runtime
                     `(when (enabled-p (get-logger ',',name) ,',level)
                        ,(if message-args
-                            `(handle (get-logger ',',name) (format nil ,message-control ,@message-args) ',',level)
+                            `(handle (get-logger ',',name) (with-logging-io
+                                                             (format nil ,message-control ,@message-args))
+                                     ',',level)
                             `(handle (get-logger ',',name) ,message-control ',',level)))
                     (values)))))
       `(progn
