@@ -1,6 +1,4 @@
 ;;; -*- lisp -*-
-;;
-;; Time-stamp: <2006/04/12 15:18:53 CEST luca@gismo.pca.it>
 
 
 (in-package :it.bese.arnesi)
