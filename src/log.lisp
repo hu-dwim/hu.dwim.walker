@@ -241,7 +241,7 @@
   (with-output-to-file (log-file (log-file appender)
 				 :if-exists :append
 				 :if-does-not-exist :create)
-    (let ((*package* (find-package :it.bese.arnesi)))
+    (let ((*package* #.(find-package :it.bese.arnesi)))
       (format log-file "(~S ~D ~S ~S)~%" level (get-universal-time) (name category) message))))
 
 (defun make-file-log-appender (file-name)
@@ -250,7 +250,13 @@
 ;;;; ** Creating Loggers
 
 (defmacro deflogger (name ancestors &key compile-time-level level appender appenders documentation)
-  (declare (ignore documentation))
+  (declare (ignore documentation)
+           (type symbol name))
+  (unless (eq (symbol-package name) *package*)
+    (warn "When defining a logger named ~A the home package of the symbol is not *package* (not (eq ~A ~A)) "
+          (let ((*package* (find-package "KEYWORD")))
+            (format nil "~S" name))
+          (symbol-package name) *package*))
   (when appender
     (setf appenders (append appenders (list appender))))
   (let ((ancestors (mapcar (lambda (ancestor-name)
@@ -285,7 +291,8 @@
 	 ,(make-log-helper '#:info '+info+)
 	 ,(make-log-helper '#:warn '+warn+)
 	 ,(make-log-helper '#:error '+error+)
-	 ,(make-log-helper '#:fatal '+fatal+)))))
+	 ,(make-log-helper '#:fatal '+fatal+)
+        (values)))))
 
 
 
