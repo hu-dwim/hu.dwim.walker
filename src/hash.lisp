@@ -16,6 +16,7 @@
                (reader (make-lookup-name name "GET-" name))
                (writer (make-lookup-name name "GET-" name))
                (rem-er (make-lookup-name name "REM-" name))
+               (at-redefinition :warn)
                (documentation
                 (format nil "Global var for the ~S lookup table" name))
                (test 'eql)
@@ -43,6 +44,14 @@
      (defun ,reader (key &optional default)
        (gethash key ,var default))
      (defun (setf ,writer) (value key)
+       ,(when at-redefinition
+          `(when (gethash key ,var)
+             ,(case at-redefinition
+                (:warn `(warn "Redefining ~A in deflookup-table named ~S"
+                         (let ((*package* (find-package "KEYWORD")))
+                           (format nil "~A" key))
+                         ',name))
+                (t at-redefinition))))
        (setf (gethash key ,var) value))
      (defun ,rem-er (key)
        (remhash key ,var))
