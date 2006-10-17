@@ -245,6 +245,7 @@
    #:rebinding
    #:rebind
    #:define-constant
+   #:remove-keywords
    #:remf-keywords
 
    #:make-matcher

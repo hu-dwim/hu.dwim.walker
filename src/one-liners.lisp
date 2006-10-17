@@ -127,12 +127,19 @@ are discarded \(that is, the body is an implicit PROGN)."
          (error "Sorry, No value for ~S of type ~S in environment ~S found."
                 name type environment))))
 
-(defmacro remf-keywords (plist &rest keywords)
-  "Creates a copy of PLIST with copy-list and remf's each keyword in KEYWORDS"
-  `(progn
-    (setf ,plist (copy-list ,plist))
-    ,@(loop for el in keywords
-            collect `(remf ,plist ,el))))
+(defun remove-keywords (plist &rest keywords)
+  "Creates a copy of PLIST without the listed KEYWORDS."
+  (declare (optimize (speed 3)))
+  (loop for cell = plist :then (cddr cell)
+        for el = (car cell)
+        while cell
+        unless (member el keywords :test #'eq)
+        collect el
+        and collect (cadr cell)
+        and do (assert (cdr cell) () "Not a proper plist")))
+
+(define-modify-macro remf-keywords (&rest keywords) remove-keywords
+  "Creates a copy of PLIST without the properties identified by KEYWORDS.")
 
 (defmacro eval-always (&body body)
   `(eval-when (:compile-toplevel :load-toplevel :execute)
