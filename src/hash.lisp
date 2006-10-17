@@ -49,7 +49,7 @@
              ,(case at-redefinition
                 (:warn `(warn "Redefining ~A in deflookup-table named ~S"
                          (let ((*package* (find-package "KEYWORD")))
-                           (format nil "~A" key))
+                           (format nil "~S" key))
                          ',name))
                 (t at-redefinition))))
        (setf (gethash key ,var) value))

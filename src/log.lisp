@@ -277,7 +277,7 @@
                             `(handle (get-logger ',',name) ,message-control ',',level)))
                     (values)))))
       `(progn
-         (eval-always
+         (eval-when (:load-toplevel :execute)
            (setf (get-logger ',name) (make-instance 'log-category
                                                     :name ',name
                                                     ,@(when level
