@@ -291,7 +291,7 @@ object wrapping OBJECT."
    clisp
    allegro)
 (eval-when (:compile-toplevel :load-toplevel :execute)
-  (push 'mopp::have-mop *features*))
+  (pushnew 'mopp::have-mop *features*))
 
 #+mopp::have-mop
 (let ((external-symbols '()))
