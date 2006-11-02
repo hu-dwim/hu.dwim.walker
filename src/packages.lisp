@@ -220,12 +220,6 @@
    #:make-stream-log-appender
    #:file-log-appender
    #:make-file-log-appender
-   #:log.dribble
-   #:log.debug
-   #:log.info
-   #:log.warn
-   #:log.error
-   #:log.fatal
    #:deflogger
    #:log.level
    #:log.compile-time-level
