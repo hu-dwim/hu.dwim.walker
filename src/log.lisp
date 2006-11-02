@@ -130,7 +130,8 @@
 
 (defmacro with-logging-io (&body body)
   `(let ((*print-right-margin* most-positive-fixnum)
-         (*print-readably* nil))
+         (*print-readably* nil)
+         (*package* #.(find-package "KEYWORD")))
     ,@body))
 
 (defgeneric handle (category message level))
