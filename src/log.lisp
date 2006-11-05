@@ -131,7 +131,7 @@
 (defmacro with-logging-io (&body body)
   `(let ((*print-right-margin* most-positive-fixnum)
          (*print-readably* nil)
-         (*package* #.(find-package "KEYWORD")))
+         (*package* #.(find-package "COMMON-LISP")))
     ,@body))
 
 (defgeneric handle (category message level))
