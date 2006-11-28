@@ -45,6 +45,20 @@
   (declare (inline))
   (%unescape-as-uri string t))
 
+(define-condition uri-parse-error (error)
+  ((what :initarg :what :reader uri-parse-error.what)))
+
+(define-condition expected-digit-uri-parse-error (uri-parse-error) ())
+
+(defun continue-as-is (c)
+  (declare (ignore c))
+  (awhen (find-restart 'continue-as-is)
+    (invoke-restart it)))
+
+(defun unescape-as-uri-non-strict (string)
+  (handler-bind ((expected-digit-uri-parse-error #'continue-as-is))
+    (unescape-as-uri string)))
+
 (defun %unescape-as-uri (input may-modify-input-p)
   (declare (type string input)
            (optimize (speed 3) (debug 0)))
@@ -57,13 +71,11 @@
                        input
                        (make-array input-length :element-type 'character :adjustable t)))
            (output-index 0))
-      (declare (type fixnum input-index output-index))
-      (labels ((fail ()
-                 (error "Parse error in unescape-as-uri for string ~S" input))
-               (read-next-char (&optional must-exists-p)
+      (declare (type fixnum input-length input-index output-index))
+      (labels ((read-next-char (must-exists-p)
                  (when (>= input-index input-length)
                    (if must-exists-p
-                       (fail)
+                       (error 'uri-parse-error :what input)
                        (return-from %unescape-as-uri (adjust-array output output-index))))
                  (prog1 (aref input input-index)
                    (incf input-index)))
@@ -73,24 +85,32 @@
                (char-to-int (char)
                  (let ((result (digit-char-p char 16)))
                    (unless result
-                     (fail))
+                     (error 'expected-digit-uri-parse-error :what char))
                    result))
                (parse ()
-                 (let ((next-char (read-next-char)))
+                 (let ((next-char (read-next-char nil)))
                    (case next-char
-                     (#\% (char%))
-                     (#\+ (char+))
-                     (t (write-next-char next-char)))
+                         (#\% (char%))
+                         (#\+ (char+))
+                         (t (write-next-char next-char)))
                    (parse)))
                (char% ()
-                 (let ((next-char (read-next-char t)))
-                   (write-next-char (code-char (case next-char
-                                                 (#\u (+ (ash (char-to-int (read-next-char t)) 12)
-                                                         (ash (char-to-int (read-next-char t)) 8)
-                                                         (ash (char-to-int (read-next-char t)) 4)
-                                                         (char-to-int (read-next-char t))))
-                                                 (t (+ (ash (char-to-int next-char) 4)
-                                                       (char-to-int (read-next-char t)))))))))
+                 (let* ((restart-input-index input-index)
+                        (restart-output-index output-index)
+                        (next-char (read-next-char t)))
+                   (restart-case
+                       (write-next-char (code-char (case next-char
+                                                     (#\u (+ (ash (char-to-int (read-next-char t)) 12)
+                                                             (ash (char-to-int (read-next-char t)) 8)
+                                                             (ash (char-to-int (read-next-char t)) 4)
+                                                             (char-to-int (read-next-char t))))
+                                                     (t (+ (ash (char-to-int next-char) 4)
+                                                           (char-to-int (read-next-char t)))))))
+                     (continue-as-is ()
+                       :report "Continue reading uri without attempting to convert the escaped-code to a char."
+                       (setf input-index restart-input-index
+                             output-index restart-output-index)
+                       (write-next-char #\%)))))
                (char+ ()
                  (write-next-char #\space)))
         (parse)))))
