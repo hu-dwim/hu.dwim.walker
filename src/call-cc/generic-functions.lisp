@@ -20,9 +20,11 @@
 
 (defmacro defgeneric/cc (name args &rest options)
   "Trivial wrapper around defgeneric designed to alert readers that these methods are cc methods."
-  `(defgeneric ,name ,args
-     ,@options
-     (:method-combination cc-standard)))
+  `(progn
+     (defgeneric ,name ,args
+       ,@options
+       (:method-combination cc-standard))
+     (setf (fdefinition/cc ',name 'defmethod/cc) t)))
 
 ;;;; DEFMETHOD/CC
 
@@ -36,10 +38,11 @@
     (let ((arguments (car args))
 	  (body (cdr args)))
       `(progn
-	 (setf (fdefinition/cc ',name 'defmethod/cc) t)
-         (defgeneric/cc ,name ,(if arguments 
-				   (convert-to-generic-lambda-list arguments)
-				   '()))
+	 (unless (eq 'defmethod/cc (second (multiple-value-list (fdefinition/cc ',name))))
+           (setf (fdefinition/cc ',name 'defmethod/cc) t)
+           (defgeneric/cc ,name ,(if arguments 
+                                     (convert-to-generic-lambda-list arguments)
+                                     '())))
 	 (defmethod ,name ,@qlist ,arguments
            ,(when arguments 
 	     `(declare (ignorable ,@(extract-argument-names arguments :allow-specializers t))))
