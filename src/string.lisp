@@ -200,9 +200,53 @@ the underlying lisp."
           (excl:octets-to-string octets :external-format (encoding-keyword-to-native encoding))))))
 
 
+;;;; *** LispWorks
+
+;; TODO this is partial. someone with a lispworks at hand should finish it.
+;; see this as an example:
+;;     (defun encode-lisp-string (string)
+;;       (translate-string-via-fli string :utf-8 :latin-1))
+;; 
+;;     (defun decode-external-string (string)
+;;       (translate-string-via-fli string :latin-1 :utf-8))
+;; 
+;;     ;; Note that a :utf-8 encoding of a null in a latin-1 string is
+;;     ;; also null, and vice versa.  So don't have to worry about
+;;     ;; null-termination or length. (If we were translating to/from
+;;     ;; :unicode, this would become an issue.)
+;; 
+;;     (defun translate-string-via-fli (string from to)
+;;       (fli:with-foreign-string (ptr elements bytes :external-format from)
+;; 	  string
+;; 	(declare (ignore elements bytes))
+;; 	(fli:convert-from-foreign-string ptr :external-format to)))
+
+#+lispworks
+(progn
+  (defun %encoding-keyword-to-native (encoding)
+    (case encoding
+      (:utf-8 :utf-8)
+      (:iso-8859-1 :latin-1)
+      (:utf-16 :unicode)
+      (:us-ascii :ascii)
+      (t encoding)))
+  
+  (defun %string-to-octets (string encoding)
+    (declare (ignore encoding))
+    ;; TODO
+    (map-into (make-array (length string) :element-type 'unsigned-byte)
+              #'char-code string))
+  
+  (defun %octets-to-string (octets encoding)
+    (declare (ignore encoding))
+    ;; TODO
+    (map-into (make-array (length octets) :element-type 'character)
+              #'code-char octets)))
+
+
 ;;;; *** Default Implementation
 
-#-(or (and sbcl sb-unicode) (and clisp unicode) allegro)
+#-(or (and sbcl sb-unicode) (and clisp unicode) allegro lispworks)
 (progn
   (defun %encoding-keyword-to-native (encoding)
     encoding)
