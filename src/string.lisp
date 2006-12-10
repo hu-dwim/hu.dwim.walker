@@ -97,34 +97,6 @@ the vector ALPHABET.
 
 ;;;; ** Converting strings to/from foreign encodings
 
-(declaim (inline string-to-octets))
-(defun string-to-octets (string encoding)
-  "Convert STRING, a list string, a vector of bytes according to ENCODING.
-
-ENCODING is a keyword representing the desired character
-encoding. We gurantee that :UTF-8, :UTF-16 and :ISO-8859-1 will
-work as expected. Any other values are simply passed to the
-underlying lisp's function and the results are implementation
-dependant.
-
-On CLISP we intern the ENCODING symbol in the CHARSET package and
-pass that. On SBCL we simply pass the keyword."
-  (%string-to-octets string encoding))
-
-(declaim (inline octets-to-string))
-(defun octets-to-string (octets encoding)
-  (%octets-to-string octets encoding))
-
-(declaim (inline encoding-keyword-to-native))
-(defun encoding-keyword-to-native (encoding)
-  "Convert ENCODING, a keyword, to an object the native list
-accepts as an encoding.
-
-ENCODING can be: :UTF-8, :UTF-16, or :US-ASCII and specify the
-corresponding encodings. Any other keyword is passed, as is, to
-the underlying lisp."
-  (%encoding-keyword-to-native encoding))
-
 ;;;; *** CLISP
 
 #+(and clisp unicode)
@@ -261,6 +233,33 @@ the underlying lisp."
     (map-into (make-array (length octets) :element-type 'character)
               #'code-char octets)))
 
+(declaim (inline string-to-octets %string-to-octets))
+(defun string-to-octets (string encoding)
+  "Convert STRING, a list string, a vector of bytes according to ENCODING.
+
+ENCODING is a keyword representing the desired character
+encoding. We gurantee that :UTF-8, :UTF-16 and :ISO-8859-1 will
+work as expected. Any other values are simply passed to the
+underlying lisp's function and the results are implementation
+dependant.
+
+On CLISP we intern the ENCODING symbol in the CHARSET package and
+pass that. On SBCL we simply pass the keyword."
+  (%string-to-octets string encoding))
+
+(declaim (inline octets-to-string %octets-to-string))
+(defun octets-to-string (octets encoding)
+  (%octets-to-string octets encoding))
+
+(declaim (inline encoding-keyword-to-native))
+(defun encoding-keyword-to-native (encoding)
+  "Convert ENCODING, a keyword, to an object the native list
+accepts as an encoding.
+
+ENCODING can be: :UTF-8, :UTF-16, or :US-ASCII and specify the
+corresponding encodings. Any other keyword is passed, as is, to
+the underlying lisp."
+  (%encoding-keyword-to-native encoding))
 
 ;; Copyright (c) 2002-2006, Edward Marco Baringer
 ;; All rights reserved. 
