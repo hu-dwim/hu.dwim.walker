@@ -154,7 +154,7 @@
 
 ;;;; *** Stream log appender
 
-(eval-when (:compile-toplevel :load-toplevel :execute)
+(eval-always
   (defclass stream-log-appender ()
     ((stream :initarg :stream :accessor log-stream))
     (:documentation "Human readable to the console logger.")))
