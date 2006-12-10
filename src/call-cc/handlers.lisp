@@ -128,7 +128,16 @@
                  (and (typep declaration 'special-declaration-form)
                       (eq (name declaration) var)))
                (declares declares-mixin))
-      (boundp var)))
+      (boundp var)
+      ;; This is the only portable way to check if a symbol is
+      ;; declared special, without being boundp, i.e. (defvar 'foo).
+      ;; Maybe we should make it optional with a compile-time flag?
+      #+nil(eval `((lambda ()
+                (flet ((func ()
+                         (symbol-value ',var)))
+                  (let ((,var t))
+                    (declare (ignorable ,var))
+                    (ignore-errors (func)))))))))
 
 (defmethod evaluate/cc ((let* let*-form) lex-env dyn-env k)
   (evaluate-let*/cc (binds let*) (body let*) lex-env (import-specials let* dyn-env) k))
