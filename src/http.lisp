@@ -13,7 +13,8 @@
   (loop
       ;; The list of characters which don't need to be escaped when writing URIs.
       for ok-char across "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789.," do
-      (setf (aref *uri-escaping-ok-table* (char-code ok-char)) t)))
+      (setf (aref *uri-escaping-ok-table* (char-code ok-char)) t))
+  (setf *uri-escaping-ok-table* (coerce *uri-escaping-ok-table* '(simple-array boolean (256)))))
 
 (defun escape-as-uri (string)
   "Escapes all non alphanumeric characters in STRING following
@@ -26,24 +27,11 @@
            (type stream stream)
            (optimize (speed 3) (debug 0)))
   (loop
-      for char across string
-      for char-code = (char-code char) do
-      (assert (<= char-code #16rffff))
-      (cond ((and (< char-code 256)
-                  (aref #.*uri-escaping-ok-table* char-code))
-             (write-char char stream))
-            ((< char-code 256)
-             (format stream "%~2,'0X" char-code))
-            (t
-             (format stream "%u~4,'0X" char-code)))))
-
-(defun unescape-as-uri (string)
-  (declare (inline))
-  (%unescape-as-uri string nil))
-
-(defun nunescape-as-uri (string)
-  (declare (inline))
-  (%unescape-as-uri string t))
+      for char-code :of-type (unsigned-byte 8) :across (the (vector (unsigned-byte 8))
+                                                         (string-to-octets string :utf-8)) do
+      (if (aref (the (simple-array boolean (256)) (load-time-value *uri-escaping-ok-table* t)) char-code)
+          (write-char (code-char char-code) stream)
+          (format stream "%~2,'0X" char-code))))
 
 (define-condition uri-parse-error (error)
   ((what :initarg :what :reader uri-parse-error.what)))
@@ -59,29 +47,25 @@
   (handler-bind ((expected-digit-uri-parse-error #'continue-as-is))
     (unescape-as-uri string)))
 
-(defun %unescape-as-uri (input may-modify-input-p)
+(defun %unescape-as-uri (input)
+  "URI unescape based on http://www.ietf.org/rfc/rfc2396.txt"
   (declare (type string input)
            (optimize (speed 3) (debug 0)))
   (let ((input-length (length input)))
     (when (zerop input-length)
       (return-from %unescape-as-uri ""))
     (let* ((input-index 0)
-           (output (if (and may-modify-input-p
-                            (adjustable-array-p input))
-                       input
-                       (make-array input-length :element-type 'character :adjustable t)))
-           (output-index 0))
-      (declare (type fixnum input-length input-index output-index))
+           (output (make-array input-length :element-type '(unsigned-byte 8) :adjustable t :fill-pointer 0)))
+      (declare (type fixnum input-length input-index))
       (labels ((read-next-char (must-exists-p)
                  (when (>= input-index input-length)
                    (if must-exists-p
                        (error 'uri-parse-error :what input)
-                       (return-from %unescape-as-uri (adjust-array output output-index))))
+                       (return-from %unescape-as-uri (octets-to-string output :utf-8))))
                  (prog1 (aref input input-index)
                    (incf input-index)))
-               (write-next-char (char)
-                 (setf (aref output output-index) char)
-                 (incf output-index))
+               (write-next-byte (byte)
+                 (vector-push-extend  byte output))
                (char-to-int (char)
                  (let ((result (digit-char-p char 16)))
                    (unless result
@@ -90,30 +74,35 @@
                (parse ()
                  (let ((next-char (read-next-char nil)))
                    (case next-char
-                         (#\% (char%))
-                         (#\+ (char+))
-                         (t (write-next-char next-char)))
+                     (#\% (char%))
+                     ;;(#\+ (char+)) TODO what was this? delme eventually...
+                     (t (write-next-byte (char-code next-char))))
                    (parse)))
                (char% ()
                  (let* ((restart-input-index input-index)
-                        (restart-output-index output-index)
                         (next-char (read-next-char t)))
                    (restart-case
-                       (write-next-char (code-char (case next-char
-                                                     (#\u (+ (ash (char-to-int (read-next-char t)) 12)
-                                                             (ash (char-to-int (read-next-char t)) 8)
-                                                             (ash (char-to-int (read-next-char t)) 4)
-                                                             (char-to-int (read-next-char t))))
-                                                     (t (+ (ash (char-to-int next-char) 4)
-                                                           (char-to-int (read-next-char t)))))))
-                     (continue-as-is ()
-                       :report "Continue reading uri without attempting to convert the escaped-code to a char."
-                       (setf input-index restart-input-index
-                             output-index restart-output-index)
-                       (write-next-char #\%)))))
-               (char+ ()
-                 (write-next-char #\space)))
+                    (write-next-byte (+ (ash (char-to-int next-char) 4)
+                                        (char-to-int (read-next-char t))))
+                    (continue-as-is ()
+                                    :report "Continue reading uri without attempting to convert the escaped-code to a char."
+                                    (setf input-index restart-input-index)
+                                    (write-next-byte #.(char-code #\%)))))
+                 (values))
+               ;; TODO what was this? delme eventually...
+               #+nil(char+ ()
+                      (write-next-char #\space)))
         (parse)))))
+
+(declaim (inline unescape-as-uri))
+(defun unescape-as-uri (string)
+  (%unescape-as-uri string))
+
+(declaim (inline nunescape-as-uri))
+(defun nunescape-as-uri (string)
+  (%unescape-as-uri string))
+
+
 
 ;;;; ** HTML
 
