@@ -260,13 +260,13 @@ You may want to add this to your init.el to speed up cursor movement in the repl
   (when (swank::default-connection)
     (swank::with-connection ((swank::default-connection))
       (multiple-value-bind (second minute hour day month year)
-                (decode-universal-time (get-universal-time))
-              (declare (ignore second day month year))
-              (swank::present-in-emacs (format nil
-                                               "~2,'0D:~2,'0D ~A/~A: "
-                                               hour minute
-                                               (symbol-name (name category))
-                                               (symbol-name level))))
+          (decode-universal-time (get-universal-time))
+        (declare (ignore second day month year))
+        (swank::present-in-emacs (format nil
+                                         "~2,'0D:~2,'0D ~A/~A: "
+                                         hour minute
+                                         (symbol-name (name category))
+                                         (symbol-name level))))
       (if (consp message)
           (let ((format-control (when (stringp (first message))
                                   (first message)))
@@ -276,7 +276,8 @@ You may want to add this to your init.el to speed up cursor movement in the repl
             (when format-control
               (setf message (apply #'format nil format-control args)))
             (swank::present-in-emacs message)
-            (awhen (and (> (verbosity-of appender) 1)
+            (awhen (and format-control
+                        (> (verbosity-of appender) 1)
                         (remove-if (lambda (el)
                                      (or (stringp el)
                                          (null el)))
