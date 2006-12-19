@@ -55,7 +55,8 @@
                              (:file "vector" :depends-on ("packages" "flow-control"))
                              (:file "walk" :depends-on ("packages" "list" "mopp" "lexenv" "one-liners")))))
   :properties ((:features "v1.4.0" "v1.4.1" "v1.4.2" "cc-interpreter"
-                          "join-strings-return-value" "getenv")))
+                          "join-strings-return-value" "getenv"))
+  :depends-on (:swank))
 
 (defsystem :arnesi.test
   :components ((:module :t

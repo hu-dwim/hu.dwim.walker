@@ -134,7 +134,8 @@
          (*package* #.(find-package "COMMON-LISP")))
     ,@body))
 
-(defgeneric handle (category message level))
+(defgeneric handle (category message level)
+  (:documentation "Message is either a string or a list. When it's a list and the first element is a string then it's processed as args to cl:format."))
 
 (defmethod handle :around ((cat log-category) message level)
   ;; turn off line wrapping for the entire time while inside the loggers
@@ -155,7 +156,10 @@
 ;;;; *** Stream log appender
 
 (eval-always
-  (defclass stream-log-appender ()
+  (defclass appender ()
+    ((verbosity :initform 2 :initarg :verbosity :accessor verbosity-of)))
+  
+  (defclass stream-log-appender (appender)
     ((stream :initarg :stream :accessor log-stream))
     (:documentation "Human readable to the console logger.")))
 
@@ -163,6 +167,9 @@
                           &rest initargs)
   (declare (ignore initargs))
   (error "STREAM-LOG-APPENDER is an abstract class. You must use either brief-stream-log-appender or verbose-stream-log-appender objects."))
+
+(defmethod append-message :around (category (appender stream-log-appender) (message cons) level)
+  (append-message category appender (apply #'format nil message) level))
 
 (defclass brief-stream-log-appender (stream-log-appender)
   ((last-message-year :initform 0)
@@ -228,8 +235,61 @@
             (name category) level)
     (format (log-stream s) "~A~%" message)))
 
-(defun make-stream-log-appender (&optional (stream *debug-io*))
-  (make-instance 'verbose-stream-log-appender :stream stream))
+(defun make-stream-log-appender (&rest args &key (stream *debug-io*) (verbosity 2) &allow-other-keys)
+  (remf-keywords args :stream :verbosity)
+  (apply #'make-instance (case verbosity
+                           ((0 1) 'brief-stream-log-appender)
+                           (t 'verbose-stream-log-appender))
+         :stream stream
+         :verbosity verbosity
+         args))
+
+(defclass slime-repl-log-appender (appender)
+  ()
+  (:documentation "Logs to the slime repl when there's a valid swank::*emacs-connection* bound. Arguments are presented ready for inspection.
+
+You may want to add this to your init.el to speed up cursor movement in the repl buffer with many presentations:
+
+\(add-hook 'slime-repl-mode-hook
+          (lambda ()
+            (setf parse-sexp-lookup-properties nil)))
+"))
+
+(defmethod append-message ((category log-category) (appender slime-repl-log-appender)
+                           message level)
+  (when (swank::default-connection)
+    (swank::with-connection ((swank::default-connection))
+      (multiple-value-bind (second minute hour day month year)
+                (decode-universal-time (get-universal-time))
+              (declare (ignore second day month year))
+              (swank::present-in-emacs (format nil
+                                               "~2,'0D:~2,'0D ~A/~A: "
+                                               hour minute
+                                               (symbol-name (name category))
+                                               (symbol-name level))))
+      (if (consp message)
+          (let ((format-control (when (stringp (first message))
+                                  (first message)))
+                (args (if (stringp (first message))
+                          (rest message)
+                          message)))
+            (when format-control
+              (setf message (apply #'format nil format-control args)))
+            (swank::present-in-emacs message)
+            (awhen (and (> (verbosity-of appender) 1)
+                        (remove-if (lambda (el)
+                                     (or (stringp el)
+                                         (null el)))
+                                   args))
+              (swank::present-in-emacs " (")
+              (swank::present-in-emacs it)
+              (swank::present-in-emacs ")")))
+          (swank::present-in-emacs message))
+      (swank::present-in-emacs #.(string #\Newline)))))
+
+(defun make-slime-repl-log-appender (&rest args &key (verbosity 2))
+  (remf-keywords args :verbosity)
+  (apply #'make-instance 'slime-repl-log-appender :verbosity verbosity args))
 
 (defclass file-log-appender (stream-log-appender)
   ((log-file :initarg :log-file :accessor log-file
@@ -242,8 +302,7 @@
   (with-output-to-file (log-file (log-file appender)
 				 :if-exists :append
 				 :if-does-not-exist :create)
-    (let ((*package* #.(find-package :it.bese.arnesi)))
-      (format log-file "(~S ~D ~S ~S)~%" level (get-universal-time) (name category) message))))
+    (format log-file "(~S ~D ~S ~S)~%" level (get-universal-time) (name category) message)))
 
 (defun make-file-log-appender (file-name)
   (make-instance 'file-log-appender :log-file file-name))
@@ -270,12 +329,13 @@
                 ;; first check at compile time
                 (if (compile-time-enabled-p (get-logger ',name) ,level)
                     ;; then check at runtime
-                    `(when (enabled-p (get-logger ',',name) ,',level)
-                       ,(if message-args
-                            `(handle (get-logger ',',name) (with-logging-io
-                                                             (format nil ,message-control ,@message-args))
-                                     ',',level)
-                            `(handle (get-logger ',',name) ,message-control ',',level)))
+                    `(progn
+                      (when (enabled-p (get-logger ',',name) ,',level)
+                        ,(if message-args
+                             `(handle (get-logger ',',name) (list ,message-control ,@message-args)
+                               ',',level)
+                             `(handle (get-logger ',',name) ,message-control ',',level)))
+                      (values))
                     (values)))))
       `(progn
          (eval-when (:load-toplevel :execute)
