@@ -288,6 +288,17 @@ You may want to add this to your init.el to speed up cursor movement in the repl
           (swank::present-in-emacs message))
       (swank::present-in-emacs #.(string #\Newline)))))
 
+(defun arnesi-logger-inspector-lookup-hook (form)
+  (when (symbolp form)
+    (if-bind logger (get-logger form)
+      (values logger t)
+      (when-bind logger-name (get form 'logger)
+        (when-bind logger (get-logger logger-name)
+          (values logger t))))))
+
+(awhen (find-symbol (symbol-name '#:*inspector-dwim-lookup-hooks*) :swank)
+  (pushnew 'arnesi-logger-inspector-lookup-hook (symbol-value it)))
+
 (defun make-slime-repl-log-appender (&rest args &key (verbosity 2))
   (remf-keywords args :verbosity)
   (apply #'make-instance 'slime-repl-log-appender :verbosity verbosity args))
@@ -326,18 +337,21 @@ You may want to add this to your init.el to speed up cursor movement in the repl
 					 ',ancestor-name)))
 			   ancestors)))
     (flet ((make-log-helper (suffix level)
-	     `(defmacro ,(intern (strcat name "." suffix)) (message-control &rest message-args)
-                ;; first check at compile time
-                (if (compile-time-enabled-p (get-logger ',name) ,level)
-                    ;; then check at runtime
-                    `(progn
-                      (when (enabled-p (get-logger ',',name) ,',level)
-                        ,(if message-args
-                             `(handle (get-logger ',',name) (list ,message-control ,@message-args)
-                               ',',level)
-                             `(handle (get-logger ',',name) ,message-control ',',level)))
-                      (values))
-                    (values)))))
+	     (let ((logger-macro-name (intern (strcat name "." suffix))))
+               `(progn
+                 (setf (get ',logger-macro-name 'logger) ',name)
+                 (defmacro ,logger-macro-name (message-control &rest message-args)
+                     ;; first check at compile time
+                     (if (compile-time-enabled-p (get-logger ',name) ,level)
+                         ;; then check at runtime
+                         `(progn
+                           (when (enabled-p (get-logger ',',name) ,',level)
+                             ,(if message-args
+                                  `(handle (get-logger ',',name) (list ,message-control ,@message-args)
+                                    ',',level)
+                                  `(handle (get-logger ',',name) ,message-control ',',level)))
+                           (values))
+                         (values)))))))
       `(progn
          (eval-when (:load-toplevel :execute)
            (setf (get-logger ',name) (make-instance 'log-category
