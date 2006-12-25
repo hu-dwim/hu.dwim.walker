@@ -23,7 +23,7 @@
 
 ;;;; ** Log Levels
 
-(eval-when (:compile-toplevel :load-toplevel :execute)
+(eval-always
   (defconstant +dribble+ 0)
   (defconstant +debug+   1)
   (defconstant +info+    2)
@@ -31,7 +31,14 @@
   (defconstant +error+   4)
   (defconstant +fatal+   5)
 
+  (defparameter *log-level-names* (coerce '(+dribble+ +debug+ +info+ +warn+ +error+ +fatal+)
+                                          'simple-vector))
   (deflookup-table logger))
+
+(defun log-level-name-of (level)
+  (when (not (<= 0 level #.(1- (length *log-level-names*))))
+    (error "~S is an invalid log level" level))
+  (aref *log-level-names* level))
 
 ;;;; ** Log Categories
 
@@ -43,9 +50,11 @@
    (appenders :initform '()     :accessor appenders :initarg :appenders
               :documentation "A list of appender objects this category sholud send messages to.")
    (level     :initform +debug+ :initarg :level :accessor level
+              :type integer
               :documentation "This category's log level.")
    (compile-time-level
               :initform +dribble+ :initarg :compile-time-level :accessor compile-time-level
+              :type integer
               :documentation "This category's compile time log level. Any log expression below this level will macro-expand to NIL.")
    (name      :initarg :name :accessor name)))
 
@@ -61,6 +70,45 @@
   (dolist (anc ancestors)
     (pushnew l (childer anc) :test (lambda (a b)
 				     (eql (name a) (name b))))))
+
+(defun log-level-setter-inspector-action-for (prompt current-level setter)
+  (lambda ()
+    (with-simple-restart
+        (abort "Abort setting log level")
+      (let ((value-string (swank::eval-in-emacs
+                           `(condition-case c
+                             (let ((arnesi-log-levels '(,@(mapcar #'string-downcase (coerce *log-level-names* 'list)))))
+                               (slime-read-object ,prompt :history (cons 'arnesi-log-levels ,(1+ current-level))
+                                                  :initial-value ,(string-downcase (log-level-name-of current-level))))
+                             (quit nil)))))
+        (when (and value-string
+                   (not (string= value-string "")))
+          (funcall setter (eval (let ((*package* #.(find-package :arnesi)))
+                                  (read-from-string value-string)))))))))
+
+(defmethod swank:inspect-for-emacs ((category log-category) inspector)
+  (let ((class (class-of category)))
+    (values "A log-category."
+            `("Class: " (:value ,class) (:newline)
+              "Runtime level: " (:value ,(log.level category)
+                                 ,(string (log-level-name-of (log.level category))))
+              " "
+              (:action "[set level]" ,(log-level-setter-inspector-action-for
+                                       "Set runtime log level to (evaluated): "
+                                       (log.level category)
+                                       (lambda (value)
+                                         (setf (log.level category) value))))
+              (:newline)
+              "Compile-time level: " (:value ,(log.compile-time-level category)
+                                      ,(string (log-level-name-of (log.compile-time-level category))))
+               " "
+              (:action "[set level]" ,(log-level-setter-inspector-action-for
+                                       "Set compile-time log level to (evaluated): "
+                                       (log.compile-time-level category)
+                                       (lambda (value)
+                                         (setf (log.compile-time-level category) value))))
+              (:newline)
+              ,@(swank::all-slots-for-inspector category inspector)))))
 
 ;;; Runtime levels
 (defmethod enabled-p ((cat log-category) level)
