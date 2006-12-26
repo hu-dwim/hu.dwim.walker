@@ -20,8 +20,29 @@
       (dolist (var (lexical-variables lexical-env))
         (extend walk-env :lexical-let var t))
       (dolist (fun (lexical-functions lexical-env))
-	(extend walk-env :lexical-flet fun t)))
-    walk-env))
+	(extend walk-env :lexical-flet fun t))
+      (dolist (mac (lexical-macros lexical-env))
+	(extend walk-env :macrolet (car mac) (cdr mac)))
+      (dolist (symmac (lexical-symbol-macros lexical-env))
+	(extend walk-env :symbol-macrolet (car symmac) (cdr symmac))))
+    (cons walk-env lexical-env)))
+
+(defun register-walk-env (env type name datum &rest other-datum)
+  (let ((walk-env (register (car env) type name datum))
+	(lexenv (case type
+		  (:let (augment-with-variable (cdr env) name))
+		  (:macrolet (augment-with-macro (cdr env) name datum))
+		  (:flet (augment-with-function (cdr env) name))
+		  (:symbol-macrolet (augment-with-symbol-macro (cdr env) name datum))
+		  ;;TODO: :declare
+		  (t (cdr env)))))
+    (cons walk-env lexenv)))
+
+(defmacro extend-walk-env (env type name datum &rest other-datum)
+  `(setf ,env (register-walk-env ,env ,type ,name ,datum ,@other-datum)))
+
+(defun lookup-walk-env (env type name &key (error-p nil) (default-value nil))
+  (lookup (car env) type name :error-p error-p :default-value default-value))
 
 ;;;; This takes a Common Lisp form and transforms it into a tree of
 ;;;; FORM objects.
@@ -206,7 +227,7 @@
 		 (extend-env ((var list) newdeclare &rest datum)
 		   `(dolist (,var ,list)
 		      (when ,newdeclare (push ,newdeclare declares))
-                      (extend environment :declare ,@datum))))
+                      (extend-walk-env environment :declare ,@datum))))
 	(destructuring-bind (type &rest arguments)
 	    declaration
 	  (case type
@@ -294,7 +315,7 @@
 (defclass local-lexical-variable-reference (local-variable-reference)
   ()
   (:documentation "A reference to a local variable defined in the
-  lexical envorinment outside of the form passed to walk-form."))
+  lexical environment outside of the form passed to walk-form."))
 
 (defclass free-variable-reference (variable-reference)
   ())
@@ -305,14 +326,14 @@
     ((not (or (symbolp form) (consp form)))
      (make-instance 'constant-form :value form
                     :parent parent :source form))
-    ((lookup env :let form)
+    ((lookup-walk-env env :let form)
      (make-instance 'local-variable-reference :name form
                     :parent parent :source form))
-    ((lookup env :lexical-let form)
+    ((lookup-walk-env env :lexical-let form)
      (make-instance 'local-lexical-variable-reference :name form
                     :parent parent :source form))
-    ((lookup env :symbol-macrolet form)
-     (walk-form (lookup env :symbol-macrolet form) parent env))
+    ((lookup-walk-env env :symbol-macrolet form)
+     (walk-form (lookup-walk-env env :symbol-macrolet form) parent env))
     ((nth-value 1 (macroexpand-1 form))
      ;; a globaly defined symbol-macro
      (walk-form (macroexpand-1 form) parent env))
@@ -353,16 +374,16 @@
                   (arguments application) (mapcar (lambda (form)
                                                     (walk-form form application env))
                                                   args)))))
-      (when (lookup env :macrolet op)
-        (return (walk-form (apply (lookup env :macrolet op) args) parent env)))
+      (when (lookup-walk-env env :macrolet op)
+        (return (walk-form (funcall (lookup-walk-env env :macrolet op) form (cdr env)) parent env)))
       (when (and (symbolp op) (macro-function op))
 	(multiple-value-bind (expansion expanded)
-	    (macroexpand-1 form nil)
+	    (macroexpand-1 form (cdr env))
 	  (when expanded
 	    (return (walk-form expansion parent env)))))
-      (let ((app (if (lookup env :flet op)
-                     (make-instance 'local-application-form :code (lookup env :flet op))
-                     (if (lookup env :lexical-flet op)
+      (let ((app (if (lookup-walk-env env :flet op)
+                     (make-instance 'local-application-form :code (lookup-walk-env env :flet op))
+                     (if (lookup-walk-env env :lexical-flet op)
 			 (make-instance 'lexical-application-form)
                          (progn
                            (when (and *warn-undefined*
@@ -404,9 +425,9 @@
       ;; (function (lambda ...))
       (walk-lambda (second form) parent env)
       ;; (function foo)
-      (make-instance (if (lookup env :flet (second form))
+      (make-instance (if (lookup-walk-env env :flet (second form))
                          'local-function-object-form
-                         (if (lookup env :lexical-flet (second form))
+                         (if (lookup-walk-env env :lexical-flet (second form))
 			     'lexical-function-object-form
 			     'free-function-object-form))
                      :name (second form)
@@ -425,10 +446,10 @@
     ;; all done
     func))
 
-(defun walk-lambda-list (lambda-list parent env &key allow-specializers)
+(defun walk-lambda-list (lambda-list parent env &key allow-specializers macro-p)
   (flet ((extend-env (argument)
            (unless (typep argument 'allow-other-keys-function-argument-form)
-             (extend env :let (name argument) argument))))
+             (extend-walk-env env :let (name argument) argument))))
     (let ((state :required)
           (arguments '()))
       (dolist (argument lambda-list)
@@ -556,7 +577,7 @@
                        :name block-name)
       (setf (body block) (walk-implict-progn block
                                              body
-                                             (register env :block block-name block))))))
+                                             (register-walk-env env :block block-name block))))))
 
 (define-condition return-from-unknown-block (error)
   ((block-name :accessor block-name :initarg :block-name))
@@ -566,15 +587,15 @@
 (defwalker-handler return-from (form parent env)
   (destructuring-bind (block-name &optional (value '(values)))
       (cdr form)
-    (if (lookup env :block block-name)
+    (if (lookup-walk-env env :block block-name)
         (with-form-object (return-from return-from-form :parent parent :source form
-                           :target-block (lookup env :block block-name))
+                           :target-block (lookup-walk-env env :block block-name))
           (setf (result return-from) (walk-form value return-from env)))
         (restart-case
             (error 'return-from-unknown-block :block-name block-name)
           (add-block ()
             :report "Add this block and continue."
-            (walk-form form parent (register env :block block-name :unknown-block)))))))
+            (walk-form form parent (register-walk-env env :block block-name :unknown-block)))))))
 
 ;;;; CATCH/THROW
 
@@ -651,7 +672,7 @@
 					       (loop
 						  with env = env
 						  for (name . lambda) in (binds flet)
-						  do (extend env :flet name lambda)
+						  do (extend-walk-env env :flet name lambda)
 						  finally (return env))
 					       :declare t)))))
 
@@ -671,7 +692,7 @@
                                      :parent labels
                                      :source (list* name arguments body))
          do (push (cons name lambda) (binds labels))
-         do (extend env :flet name lambda))
+         do (extend-walk-env env :flet name lambda))
       (setf (binds labels) (nreverse (binds labels)))
       (loop
          for form in binds
@@ -707,7 +728,7 @@
         (if (not (find-if (lambda (declaration)
                             (and (typep declaration 'special-declaration-form)
                                  (eq var (name declaration)))) declarations))
-            (extend env :let var :dummy)))
+            (extend-walk-env env :let var :dummy)))
       (multiple-value-setf ((body let) nil (declares let))
                            (walk-implict-progn let (cddr form) env :declare t)))))
 
@@ -718,7 +739,7 @@
   (with-form-object (let* let*-form :parent parent :source form :binds '())
     (dolist* ((var &optional initial-value) (mapcar #'ensure-list (second form)))
       (push (cons var (walk-form initial-value let* env)) (binds let*))
-      (extend env :let var :dummy))
+      (extend-walk-env env :let var :dummy))
     (setf (binds let*) (nreverse (binds let*)))
     (multiple-value-setf ((body let*) nil (declares let*)) (walk-implict-progn let* (cddr form) env :declare t))))
 
@@ -752,15 +773,8 @@
   (with-form-object (macrolet macrolet-form :parent parent :source form
                               :binds '())
     (dolist* ((name args &body body) (second form))
-      (let ((handler (eval
-                      ;; NB: macrolet arguments are a
-                      ;; destructuring-bind list, not a lambda list
-                      (with-unique-names (handler-args)
-                        `(lambda (&rest ,handler-args)
-                           (destructuring-bind ,args
-                               ,handler-args
-                             ,@body))))))
-        (extend env :macrolet name handler)
+      (let ((handler (parse-macro-definition name args body (cdr env))))
+        (extend-walk-env env :macrolet name handler)
         (push (cons name handler) (binds macrolet))))
     (setf (binds macrolet) (nreverse (binds macrolet)))
     (multiple-value-setf ((body macrolet) nil (declares macrolet))
@@ -830,8 +844,8 @@
   (let ((effective-code '()))
     (loop
        for (name value) on (cdr form) by #'cddr
-       if (lookup env :symbol-macrolet name)
-         do (push `(setf ,(lookup env :symbol-macrolet name) ,value) effective-code)
+       if (lookup-walk-env env :symbol-macrolet name)
+         do (push `(setf ,(lookup-walk-env env :symbol-macrolet name) ,value) effective-code)
        else
          do (push `(setq ,name ,value) effective-code))
     (if (= 1 (length effective-code))
@@ -856,7 +870,7 @@
   (with-form-object (symbol-macrolet symbol-macrolet-form :parent parent :source form
                                      :binds '())
     (dolist* ((symbol expansion) (second form))
-      (extend env :symbol-macrolet symbol expansion)
+      (extend-walk-env env :symbol-macrolet symbol expansion)
       (push (cons symbol expansion) (binds symbol-macrolet)))
     (setf (binds symbol-macrolet) (nreverse (binds symbol-macrolet)))
     (multiple-value-setf ((body symbol-macrolet) nil (declares symbol-macrolet))
@@ -876,7 +890,7 @@
 
 (defwalker-handler tagbody (form parent env)
   (with-form-object (tagbody tagbody-form :parent parent :source form :body (cdr form))
-    (extend env :tagbody 'enclosing-tagbody tagbody)
+    (extend-walk-env env :tagbody 'enclosing-tagbody tagbody)
     (flet ((go-tag-p (form)
              (or (symbolp form) (integerp form))))
       ;; the loop below destructuivly modifies the body of tagbody,
@@ -885,7 +899,7 @@
       (loop
          for part on (body tagbody)
          if (go-tag-p (car part))
-           do (extend env :tag (car part) (cdr part)))
+           do (extend-walk-env env :tag (car part) (cdr part)))
       (loop
          for part on (body tagbody)
          if (go-tag-p (car part))
@@ -905,8 +919,8 @@
                  :parent parent
                  :source form
                  :name (second form)
-                 :target-progn (lookup env :tag (second form))
-                 :enclosing-tagbody (lookup env :tagbody 'enclosing-tagbody)))
+                 :target-progn (lookup-walk-env env :tag (second form))
+                 :enclosing-tagbody (lookup-walk-env env :tagbody 'enclosing-tagbody)))
 
 ;;;; THE
 

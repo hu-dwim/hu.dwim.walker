@@ -9,13 +9,24 @@
 ;;;; eliminate the 'boilerplate' LAMBDA and concentrate on the body of
 ;;;; the lambda.
 
+(defmacro sharpl-expander (body min-args &environment env)
+  (let* ((form body)
+         (lambda-args (loop
+                         for i upfrom 1 upto (max (or min-args 0)
+                                                  (highest-bang-var form env))
+                         collect (make-sharpl-arg i))))
+    `(lambda ,lambda-args
+       , (when lambda-args
+           `(declare (ignorable ,@lambda-args)))
+       ,form)))
+
 (defun sharpL-reader (stream subchar min-args)
   "Reader macro for simple lambdas.
 
 This read macro reads exactly one form and serves to eliminate
 the 'boiler' plate text from such lambdas and write only the body
 of the lambda itself. If the form contains any references to
-varibales named !1, !2, !3, !n etc. these are bound to the Nth
+variables named !1, !2, !3, !n etc. these are bound to the Nth
 parameter of the lambda.
 
 Examples:
@@ -36,17 +47,18 @@ We can specify exactly how many arguments to take by using the
 read macro's prefix parameter. NB: this is only neccessary if the
 lambda needs to accept N arguments but only uses N - 1. Example:
 
-#2L(foo !1) ==> (lambda (!1 !2) (declare (ignore !2)) (foo !1))"
+#2L(foo !1) ==> (lambda (!1 !2) (declare (ignore !2)) (foo !1))
+
+When #l forms are nested, !X variables are bound to the innermost 
+form. Example:
+
+#l#l(+ !1 !2)
+
+returns a function that takes no arguments and returns a function
+that adds its two arguments."
   (declare (ignore subchar))
-  (let* ((form (read stream t nil t))
-         (lambda-args (loop
-                         for i upfrom 1 upto (max (or min-args 0)
-                                                  (highest-bang-var form))
-                         collect (make-sharpl-arg i))))
-    `(lambda ,lambda-args
-       , (when lambda-args
-           `(declare (ignorable ,@lambda-args)))
-       ,form)))
+  (let ((body (read stream t nil t)))
+    `(sharpl-expander ,body ,min-args)))
 
 (defun enable-sharp-l ()
   "Bind SHARPL-READER to the macro character #L.
@@ -54,16 +66,34 @@ lambda needs to accept N arguments but only uses N - 1. Example:
 This function overrides (and forgets) and previous value of #L."
   (set-dispatch-macro-character #\# #\L #'sharpL-reader))
 
-(defun highest-bang-var (form)
-  (acond
-   ((consp form) (max (highest-bang-var (car form))
-                      (highest-bang-var (cdr form))))
-   ((bang-var-p form) it)
-   (t 0)))
+(defun find-var-references (input-form)
+  (typecase input-form
+    (cons 
+      (append (find-var-references (car input-form))
+	      (find-var-references (cdr input-form))))
+
+    (arnesi:free-variable-reference (list (slot-value input-form 'arnesi:name)))
+    (arnesi:local-lexical-variable-reference (list (slot-value input-form 'arnesi:name)))
+      
+    (arnesi:form
+     (loop for slot-name in (mapcar #'it.bese.arnesi.mopp:slot-definition-name 
+				    (it.bese.arnesi.mopp::class-slots (class-of input-form)))
+	   if (not (member slot-name '(parent target-progn enclosing-tagbody target-block)))
+	   append (find-var-references (slot-value input-form slot-name))))
+
+    (t nil)))
+
+(defun highest-bang-var (form env)
+  (let ((*warn-undefined* nil))
+    (declare (special *warn-undefined*))
+    (or
+     (loop for var in (find-var-references (walk-form form nil (make-walk-env env)))
+	   if (bang-var-p var)
+	   maximize (bang-var-p var))
+     0)))
 
 (defun bang-var-p (form)
-  (and (symbolp form)
-       (char= #\! (aref (symbol-name form) 0))
+  (and (char= #\! (aref (symbol-name form) 0))
        (parse-integer (subseq (symbol-name form) 1) :junk-allowed t)))
 
 (defun make-sharpl-arg (number)

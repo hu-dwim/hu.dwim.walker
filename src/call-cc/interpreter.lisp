@@ -31,7 +31,7 @@
   call/cc form. "
   (let ((walk-env (make-walk-env e))
         (evaluate-env nil))
-    (dolist* ((type name &rest data) walk-env)
+    (dolist* ((type name &rest data) (car walk-env))
       (declare (ignore data))
       (when (eql :lexical-let type)
         (push (list 'list
