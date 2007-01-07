@@ -75,7 +75,7 @@
                  (let ((next-char (read-next-char nil)))
                    (case next-char
                      (#\% (char%))
-                     ;;(#\+ (char+)) TODO what was this? delme eventually...
+                     (#\+ (char+))
                      (t (write-next-byte (char-code next-char))))
                    (parse)))
                (char% ()
@@ -89,9 +89,8 @@
                                     (setf input-index restart-input-index)
                                     (write-next-byte #.(char-code #\%)))))
                  (values))
-               ;; TODO what was this? delme eventually...
-               #+nil(char+ ()
-                      (write-next-char #\space)))
+               (char+ ()
+                 (write-next-byte #.(char-code #\Space))))
         (parse)))))
 
 (declaim (inline unescape-as-uri))
