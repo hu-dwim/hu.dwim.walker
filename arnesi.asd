@@ -87,6 +87,9 @@
   (funcall (intern (string :run!) (string :it.bese.FiveAM))
            :it.bese.arnesi))
 
+(defmethod operation-done-p ((op test-op) (system (eql (find-system :arnesi))))
+  nil)
+
 ;;;; * Introduction
 
 ;;;; A collection of various common lisp utilites.
