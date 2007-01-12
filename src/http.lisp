@@ -65,7 +65,8 @@
                  (prog1 (aref input input-index)
                    (incf input-index)))
                (write-next-byte (byte)
-                 (vector-push-extend  byte output))
+                 (vector-push-extend  byte output)
+                 (values))
                (char-to-int (char)
                  (let ((result (digit-char-p char 16)))
                    (unless result
@@ -79,15 +80,9 @@
                      (t (write-next-byte (char-code next-char))))
                    (parse)))
                (char% ()
-                 (let* ((restart-input-index input-index)
-                        (next-char (read-next-char t)))
-                   (restart-case
-                    (write-next-byte (+ (ash (char-to-int next-char) 4)
-                                        (char-to-int (read-next-char t))))
-                    (continue-as-is ()
-                                    :report "Continue reading uri without attempting to convert the escaped-code to a char."
-                                    (setf input-index restart-input-index)
-                                    (write-next-byte #.(char-code #\%)))))
+                 (let ((next-char (read-next-char t)))
+                   (write-next-byte (+ (ash (char-to-int next-char) 4)
+                                       (char-to-int (read-next-char t)))))
                  (values))
                (char+ ()
                  (write-next-byte #.(char-code #\Space))))
