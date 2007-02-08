@@ -200,7 +200,7 @@ the vector ALPHABET.
       (:utf-8 :utf-8)
       (:iso-8859-1 :latin-1)
       (:utf-16 :unicode)
-      (:us-ascii :ascii)
+      (:us-ascii :us-ascii)
       (t encoding)))
   
   (defun %string-to-octets (string encoding)
