@@ -73,6 +73,7 @@
 			     (:file "sharpl" :depends-on ("suite"))
                              (:file "flow-control" :depends-on ("suite"))
 			     (:file "walk" :depends-on ("suite"))
+			     (:file "csv" :depends-on ("suite"))
                              (:file "suite"))))
   :depends-on (:arnesi :FiveAM)
   :in-order-to ((compile-op (load-op :arnesi))))
