@@ -15,6 +15,9 @@
 	     (arnesi:parse-csv-string "1;'2;';3" :separator #\; :quote #\'))))
 
 (test csv.2
+  ;; this corresponds to the quoting used in princ-csv
   (is (equal '("1" "2'" "3")
-	     (arnesi:parse-csv-string "1;'2''';3" :separator #\; :quote #\'))))
+	     (arnesi:parse-csv-string "1;'2''';3" :separator #\; :quote #\')))
+  (is (equal '("1" "2'" "3")
+	     (arnesi:parse-csv-string "1;'2''';'3'" :separator #\; :quote #\'))))
 

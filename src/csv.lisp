@@ -73,7 +73,13 @@
          ((char= quote (aref line offset))
           (ecase state
             (:in-string
-             (setf state :read-word))
+             (let ((offset+1 (1+ offset)))
+	       (cond
+		 ((and (/= offset+1 (length line))
+		       (char= quote (aref line offset+1)))
+		  (vector-push-extend quote current-word)
+		  (incf offset))
+		 (t (setf state :read-word)))))
             (:read-word
              (setf state :in-string))))
          (t
