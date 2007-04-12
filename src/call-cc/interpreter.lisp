@@ -169,8 +169,6 @@ evaluating and what it returns.")
   (when *debug-evaluate/cc*
     (print-debug-step form lex-env dyn-env k)))
 
-(defvar *k*)
-
 (defun toplevel-k ()
   (klambda (value other-values)
     (throw 'done (values-list (cons value other-values)))))
