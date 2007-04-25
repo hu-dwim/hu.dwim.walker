@@ -179,6 +179,7 @@
 (defmacro with-logging-io (&body body)
   `(let ((*print-right-margin* most-positive-fixnum)
          (*print-readably* nil)
+         (*print-length* 64)
          (*package* #.(find-package "COMMON-LISP")))
     ,@body))
 
