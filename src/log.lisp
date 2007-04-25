@@ -49,8 +49,8 @@
               :documentation "The log categories which inherit from this category.")
    (appenders :initform '()     :accessor appenders :initarg :appenders
               :documentation "A list of appender objects this category sholud send messages to.")
-   (level     :initform +debug+ :initarg :level :accessor level
-              :type integer
+   (level     :initform nil :initarg :level :accessor level
+              :type (or null integer)
               :documentation "This category's log level.")
    (compile-time-level
               :initform +dribble+ :initarg :compile-time-level :accessor compile-time-level
@@ -115,12 +115,11 @@
   (>= level (log.level cat)))
 
 (defmethod log.level ((cat log-category))
-  (with-slots (level) cat
-    (or level
-        (if (ancestors cat)
-            (loop for ancestor in (ancestors cat)
-                  minimize (log.level ancestor))
-            (error "Can't determine level for ~S" cat)))))
+  (or (level cat)
+      (if (ancestors cat)
+          (loop for ancestor in (ancestors cat)
+                minimize (log.level ancestor))
+          (error "Can't determine level for ~S" cat))))
 
 (defmethod log.level ((cat-name symbol))
   (log.level (get-logger cat-name)))
@@ -147,12 +146,11 @@
   (>= level (log.compile-time-level cat)))
 
 (defmethod log.compile-time-level ((cat log-category))
-  (with-slots (compile-time-level) cat
-    (or compile-time-level
-        (if (ancestors cat)
-            (loop for ancestor in (ancestors cat)
-                  minimize (log.compile-time-level ancestor))
-            (error "Can't determine compile time level for ~S" cat)))))
+  (or (compile-time-level cat)
+      (if (ancestors cat)
+          (loop for ancestor in (ancestors cat)
+                minimize (log.compile-time-level ancestor))
+          (error "Can't determine compile time level for ~S" cat))))
 
 (defmethod log.compile-time-level ((cat-name symbol))
   (log.compile-time-level (get-logger cat-name)))
@@ -424,8 +422,11 @@ You may want to add this to your init.el to speed up cursor movement in the repl
          (eval-when (:load-toplevel :execute)
            (setf (get-logger ',name) (make-instance 'log-category
                                                     :name ',name
-                                                    ,@(when level
-                                                        `(:level ,level))
+                                                    ,@(cond (level
+                                                             `(:level ,level))
+                                                            ((not ancestors)
+                                                             `(:level +debug+))
+                                                            (t '()))
                                                     ,@(when compile-time-level
                                                         `(:compile-time-level ,compile-time-level))
                                                     :appenders (list ,@appenders)
