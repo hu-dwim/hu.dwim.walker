@@ -45,7 +45,7 @@
 (defclass log-category ()
   ((ancestors :initform '()     :accessor ancestors :initarg :ancestors
               :documentation "The log categories this category inherits from.")
-   (childer   :initform '()     :accessor childer   :initarg :childer
+   (children  :initform '()     :accessor children  :initarg :children
               :documentation "The log categories which inherit from this category.")
    (appenders :initform '()     :accessor appenders :initarg :appenders
               :documentation "A list of appender objects this category sholud send messages to.")
@@ -68,7 +68,7 @@
                                      &key ancestors &allow-other-keys)
   (declare (ignore slot-names))
   (dolist (anc ancestors)
-    (pushnew l (childer anc) :test (lambda (a b)
+    (pushnew l (children anc) :test (lambda (a b)
 				     (eql (name a) (name b))))))
 
 (defun log-level-setter-inspector-action-for (prompt current-level setter)
@@ -131,7 +131,7 @@
   setting is also applied to the sub categories of CAT."
   (setf (slot-value cat 'level) new-level)
   (when recursive
-    (dolist (child (childer cat))
+    (dolist (child (children cat))
       (setf (log.level child) new-level)))
   new-level)
 
@@ -163,7 +163,7 @@
   setting is also applied to the sub categories of CAT."
   (setf (slot-value cat 'compile-time-level) new-level)
   (when recursive
-    (dolist (child (childer cat))
+    (dolist (child (children cat))
       (setf (log.compile-time-level child) new-level)))
   new-level)
 
