@@ -174,6 +174,25 @@
   (declare (ignore new-level cat-name recursive))
   (error "NIL does not specify a category."))
 
+(defmacro with-logger-level (logger-name new-level &body body)
+  "Set the level of the listed logger(s) to NEW-LEVEL and restore the original value in an unwind-protect."
+  (cond ((consp logger-name)
+         `(with-logger-level ,(pop logger-name) ,new-level
+           ,(if logger-name
+                `(with-logger-level ,logger-name ,new-level
+                  ,@body)
+                `(progn
+                  ,@body))))
+        ((symbolp logger-name)
+         (with-unique-names (logger old-level)
+           `(let* ((,logger (get-logger ',logger-name))
+                   (,old-level (level ,logger)))
+             (setf (level ,logger) ,new-level)
+             (unwind-protect
+                  (progn ,@body)
+               (setf (level ,logger) ,old-level)))))
+        (t (error "Don't know how to interpret ~S as a logger name" logger-name))))
+
 ;;;; ** Handling Messages
 
 (defmacro with-logging-io (&body body)

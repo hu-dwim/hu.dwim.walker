@@ -226,6 +226,7 @@
    #:file-log-appender
    #:make-file-log-appender
    #:deflogger
+   #:with-logger-level
    #:log.level
    #:log.compile-time-level
    #:+dribble+
