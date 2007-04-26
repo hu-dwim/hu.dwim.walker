@@ -9,12 +9,12 @@
 ;;;; eliminate the 'boilerplate' LAMBDA and concentrate on the body of
 ;;;; the lambda.
 
-(defmacro sharpl-expander (body min-args &environment env)
+(defmacro sharpl-expander (package body min-args &environment env)
   (let* ((form body)
          (lambda-args (loop
                          for i upfrom 1 upto (max (or min-args 0)
                                                   (highest-bang-var form env))
-                         collect (make-sharpl-arg i))))
+                         collect (make-sharpl-arg package i))))
     `(lambda ,lambda-args
        , (when lambda-args
            `(declare (ignorable ,@lambda-args)))
@@ -58,13 +58,13 @@ returns a function that takes no arguments and returns a function
 that adds its two arguments."
   (declare (ignore subchar))
   (let ((body (read stream t nil t)))
-    `(sharpl-expander ,body ,min-args)))
+    `(sharpl-expander ,*package* ,body ,min-args)))
 
 (defun enable-sharp-l ()
   "Bind SHARPL-READER to the macro character #L.
 
 This function overrides (and forgets) and previous value of #L."
-  (set-dispatch-macro-character #\# #\L #'sharpL-reader))
+  (set-dispatch-macro-character #\# #\L 'sharpL-reader))
 
 (defun find-var-references (input-form)
   (typecase input-form
@@ -85,7 +85,6 @@ This function overrides (and forgets) and previous value of #L."
 
 (defun highest-bang-var (form env)
   (let ((*warn-undefined* nil))
-    (declare (special *warn-undefined*))
     (or
      (loop for var in (find-var-references (walk-form form nil (make-walk-env env)))
 	   if (bang-var-p var)
@@ -96,8 +95,8 @@ This function overrides (and forgets) and previous value of #L."
   (and (char= #\! (aref (symbol-name form) 0))
        (parse-integer (subseq (symbol-name form) 1) :junk-allowed t)))
 
-(defun make-sharpl-arg (number)
-  (intern (format nil "!~D" number)))
+(defun make-sharpl-arg (package number)
+  (intern (format nil "!~D" number) package))
 
 ;; Copyright (c) 2002-2006, Edward Marco Baringer
 ;; All rights reserved. 
