@@ -5,9 +5,24 @@
 ;;;; * A partial application syntax
 
 ;;;; Reader
-(defun enable-pf-reader (&optional (readtable *readtable*))
-  (set-macro-character  #\[ #'|[-reader| t readtable)
-  (set-syntax-from-char #\] #\) readtable))
+(defmacro enable-pf-syntax (&optional (open-character #\[) (close-character #\]))
+  "Enable bracket reader for the rest of the file (being loaded or compiled).
+Be careful when using in different situations, because it modifies *readtable*."
+  ;; The standard sais that *readtable* is restored after loading/compiling a file,
+  ;; so we make a copy and alter that. The effect is that it will be enabled
+  ;; for the rest of the file being processed.
+  `(eval-when (:compile-toplevel :execute)
+    (setf *readtable* (copy-readtable *readtable*))
+    (%enable-pf-reader ,open-character ,close-character)))
+
+(defun %enable-pf-reader (&optional (open-character #\[) (close-character #\]))
+  (set-macro-character  open-character #'|[-reader| t *readtable*)
+  (set-syntax-from-char close-character #\) *readtable*))
+
+(defun enable-pf-reader ()
+  "TODO Obsolete, to be removed. Use the enable-pf-syntax macro."
+  ;; (warn "Use the enable-pf-syntax macro instead of enable-pf-reader")
+  (%enable-pf-reader))
 
 (defun |[-reader| (stream char)
   (declare (ignore char))

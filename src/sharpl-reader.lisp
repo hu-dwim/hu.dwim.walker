@@ -60,11 +60,30 @@ that adds its two arguments."
   (let ((body (read stream t nil t)))
     `(sharpl-expander ,*package* ,body ,min-args)))
 
-(defun enable-sharp-l ()
+(defun with-sharp-l-syntax ()
+  "To be used with the curly reader from arnesi: {with-sharp-l-syntax #L(typep !1 'foo)}"
+  (lambda (handler)
+    (%enable-sharp-l-reader)
+    `(progn ,@(funcall handler))))
+
+(defmacro enable-sharp-l-syntax ()
+  ;; The standard sais that *readtable* is restored after loading/compiling a file,
+  ;; so we make a copy and alter that. The effect is that it will be enabled
+  ;; for the rest of the file being processed.
+  `(eval-when (:compile-toplevel :execute)
+    (setf *readtable* (copy-readtable *readtable*))
+    (%enable-sharp-l-reader)))
+
+(defun %enable-sharp-l-reader ()
   "Bind SHARPL-READER to the macro character #L.
 
 This function overrides (and forgets) and previous value of #L."
   (set-dispatch-macro-character #\# #\L 'sharpL-reader))
+
+(defun enable-sharp-l ()
+  "TODO: Obsolete, to be removed. Use the enable-sharp-l-syntax macro."
+  ;; (warn "Use the enable-sharp-l-syntax macro instead of enable-sharp-l")
+  (%enable-sharp-l-reader))
 
 (defun find-var-references (input-form)
   (typecase input-form
@@ -72,12 +91,12 @@ This function overrides (and forgets) and previous value of #L."
       (append (find-var-references (car input-form))
 	      (find-var-references (cdr input-form))))
 
-    (arnesi:free-variable-reference (list (slot-value input-form 'arnesi:name)))
-    (arnesi:local-lexical-variable-reference (list (slot-value input-form 'arnesi:name)))
+    (free-variable-reference (list (slot-value input-form 'name)))
+    (local-lexical-variable-reference (list (slot-value input-form 'name)))
       
-    (arnesi:form
-     (loop for slot-name in (mapcar #'it.bese.arnesi.mopp:slot-definition-name 
-				    (it.bese.arnesi.mopp::class-slots (class-of input-form)))
+    (form
+     (loop for slot-name in (mapcar #'mopp:slot-definition-name 
+				    (mopp::class-slots (class-of input-form)))
 	   if (not (member slot-name '(parent target-progn enclosing-tagbody target-block)))
 	   append (find-var-references (slot-value input-form slot-name))))
 

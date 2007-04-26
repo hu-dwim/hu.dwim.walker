@@ -2,6 +2,8 @@
 
 (in-package :it.bese.arnesi)
 
+;;;; * {} syntax for local readtable modifications
+
 (defun |{-reader| (stream char)
   (declare (ignore char))
   "A utility read macro for modifying the read table.
@@ -25,7 +27,7 @@ See WITH-PACKAGE for an example of a specifier function."
                (lambda ()
                  (read-delimited-list #\} stream t))))))
 
-(defmacro enable-bracket-reader ()
+(defmacro enable-bracket-syntax ()
   "Enable bracket reader for the rest of the file (being loaded or compiled).
 Be careful when using in different situations, because it modifies *readtable*."
   ;; The standard sais that *readtable* is restored after loading/compiling a file,
@@ -35,6 +37,11 @@ Be careful when using in different situations, because it modifies *readtable*."
     (setf *readtable* (copy-readtable *readtable*))
     (set-macro-character #\{ #'|{-reader| t *readtable*)
     (set-syntax-from-char #\} #\) *readtable*)))
+
+(defmacro enable-bracket-reader ()
+  "TODO Obsolete, use the enable-bracket-syntax macro."
+  ;; (warn "Use the enable-bracket-syntax macro instead of enable-bracket-reader")
+  `(enable-bracket-syntax))
 
 (defun with-package (package-name)
   "When used as a specifier for the #\{ reader locally rebinds,

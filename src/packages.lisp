@@ -323,9 +323,10 @@
    #:round-half-down
    #:round-up
 
-   #:enable-sharp-l
-
-   #:enable-bracket-reader
+   #:enable-sharp-l-syntax
+   #:enable-bracket-syntax
+   #:enable-pf-syntax
+   #:with-sharp-l-syntax
    #:with-package
 
    #:defclass-struct
@@ -346,7 +347,6 @@
    #:defun1
    #:defmethod1
 
-   #:enable-pf-reader
    #:_
 
    #:eval-always
@@ -362,6 +362,11 @@
    #:class-name-of
    #:circularize
    #:let1
+
+   ;; Obsolete stuff for backward compatibility. To be removed eventually.
+   #:enable-sharp-l
+   #:enable-bracket-reader
+   #:enable-pf-reader
    ))
 
 ;;;; * Colophon
