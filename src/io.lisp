@@ -119,7 +119,7 @@ possible values."
             (,@(if muffle-errors
                    `(handler-bind ((error (lambda (error)
                                             (declare (ignore error))
-                                            (print "<<error printing object>>")
+                                            (write-string "<<error printing object>>")
                                             (return-from printing)))))
                    `(progn))
                (let (,@(when with-package `((*package* ,(find-package with-package)))))
