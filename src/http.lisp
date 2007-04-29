@@ -65,7 +65,8 @@
                  (prog1 (aref input input-index)
                    (incf input-index)))
                (write-next-byte (byte)
-                 (vector-push-extend  byte output))
+                 (vector-push-extend byte output)
+                 (values))
                (char-to-int (char)
                  (let ((result (digit-char-p char 16)))
                    (unless result
