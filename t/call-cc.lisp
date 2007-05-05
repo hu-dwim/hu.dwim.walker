@@ -515,3 +515,15 @@
                      (declare (special var))
                      (let/cc k k)
                      (lookup-special-in-lisp))))))))
+
+(defvar *special-variable-in-lisp* 42)
+
+(test special-lisp-var-rebound-in/cc
+  (is (= 42
+         (with-call/cc
+           *special-variable-in-lisp*)))
+  (is (= 43
+         (with-call/cc
+           (let ((*special-variable-in-lisp* 43))
+             ;;(declare (special *special-variable-in-lisp*)) ; TODO shouldn't be needed
+             *special-variable-in-lisp*)))))
