@@ -269,6 +269,9 @@
       :report "Ignore all future messages to this logger."
       (setf (log-stream s) (make-broadcast-stream)))))
 
+(eval-always
+  (defparameter *max-category-name-length* 12))
+
 (defmethod append-message ((category log-category) (s brief-stream-log-appender)
                            message level)
   (multiple-value-bind (second minute hour day month year)
@@ -284,11 +287,19 @@
         (setf last-message-year year
               last-message-month month
               last-message-day day)))
-    (format (log-stream s)
-            "~2,'0D:~2,'0D ~A/~A: "
-            hour minute
-            (symbol-name (name category))
-            (symbol-name level))
+    (let* ((category-name (symbol-name (name category)))
+           (level-name (symbol-name level))
+           (category-length (length category-name)))
+      (format (log-stream s)
+              #.(strcat "~2,'0D:~2,'0D ~"
+                        *max-category-name-length*
+                        "@A ~7A ")
+              hour minute
+              (subseq category-name
+                      (max 0 (- category-length
+                                *max-category-name-length*))
+                      category-length)
+              (subseq level-name 1 (1- (length level-name)))))
     (format (log-stream s) "~A~%" message)))
 
 (defmethod append-message ((category log-category) (s verbose-stream-log-appender)
