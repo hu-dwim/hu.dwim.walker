@@ -59,7 +59,7 @@
    (lambda (c s)
      (if (enclosing-code c)
          (format s "Reference to unknown variable ~S in ~S." (name c) (enclosing-code c))
-         (format s "Reference to unknown variable ~S." (name c) (enclosing-code c))))))
+         (format s "Reference to unknown variable ~S." (name c))))))
 
 (define-condition undefined-function-reference (undefined-reference)
   ()
@@ -67,7 +67,7 @@
    (lambda (c s)
      (if (enclosing-code c)
          (format s "Reference to unknown function ~S in ~S." (name c) (enclosing-code c))
-         (format s "Reference to unknown function ~S." (name c) (enclosing-code c))))))
+         (format s "Reference to unknown function ~S." (name c))))))
 
 (defvar +atom-marker+ '+atom-marker+)
 

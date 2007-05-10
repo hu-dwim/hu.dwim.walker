@@ -1,6 +1,6 @@
 ;; -*- lisp -*-
 
-;;;; * A MOP compatability protocol
+;;;; * A MOP compatibility protocol
 
 (defpackage :it.bese.arnesi.mopp
     (:nicknames :mopp)

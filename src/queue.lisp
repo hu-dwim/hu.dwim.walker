@@ -6,7 +6,7 @@
 
 ;;;; The class QUEUE represents a simple, circular buffer based, FIFO
 ;;;; implementation. The two core operations are enqueue and dequeue,
-;;;; the utlitiy method queue-count is also provided.
+;;;; the utility method queue-count is also provided.
 
 (defclass queue ()
   ((head-index :accessor head-index)

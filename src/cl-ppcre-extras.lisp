@@ -35,7 +35,7 @@
 
 Attempt to match REGEXP agains TARGET, if the match succedes THEN
 is evaluated with $1, .. $9 bound to the groups in
-REGEXP. Otherwise ELSE is exectude."
+REGEXP. Otherwise ELSE is executed."
   (destructuring-bind (regexp &rest create-scanner-args) (if (listp regexp)
                                                              regexp
                                                              (list regexp))

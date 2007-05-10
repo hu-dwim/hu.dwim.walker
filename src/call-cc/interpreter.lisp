@@ -6,7 +6,7 @@
 
 ;;;; Notes:
 
-;;;; This interpreter is dependnt on the object tree built up by the
+;;;; This interpreter is dependent on the object tree built up by the
 ;;;; code walker in walk.lisp.
 
 ;;;; One of the, final, goals of this interpeter was to allow
@@ -21,12 +21,12 @@
 (defmacro with-call/cc (&environment e &body body)
   "Execute BODY with delimited partial continuations.
 
-  Within the code of BODY almest all common lisp forms maintain
+  Within the code of BODY almost all common lisp forms maintain
   their normal semantics. The following special forms are
   allowed:
 
   (call/cc LAMBDA) - LAMBDA, a one argument function, will be
-  passed a continutaion. This object may then be passed to the
+  passed a continuation. This object may then be passed to the
   function KALL which will cause execution to resume around the
   call/cc form. "
   (let ((walk-env (make-walk-env e))
@@ -38,9 +38,9 @@
                     :lexical-let
                     `(quote ,name)
                     ;; NB: this makes the environment, and therefore
-                    ;; contiunations, unserializable. we would need to
+                    ;; continuations, unserializable. we would need to
                     ;; change this to a regular :let and not allow the
-                    ;; setting of lexical variables. 
+                    ;; setting of lexical variables.
                     `(lambda () ,name)
                     (with-unique-names (v)
                       `(lambda (,v) (setf ,name ,v))))
@@ -58,7 +58,7 @@
                &rest other-values)
   "Continue the continuation K.
 
-This function can be used within the lexcial scope of
+This function can be used within the lexical scope of
 with-call/cc and outside, though it has slightly different
 semantics."
   (drive-interpreter/cc

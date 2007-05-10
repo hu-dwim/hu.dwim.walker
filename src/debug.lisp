@@ -4,7 +4,7 @@
 
 ;;;; * Debugging Utilties
 
-;;;; (These were far more usefull in the pre-slime days.)
+;;;; (These were far more useful in the pre-slime days.)
 
 (defmacro ppm1 (form)
   "(pprint (macroexpand-1 ',form)).
@@ -15,7 +15,7 @@ NB: C-RET is even shorter."
 (defmacro ppm (form)
   `(pprint (macroexpand ',form)))
 
-;;;; A portable flexable APROPOS implementation
+;;;; A portable flexible APROPOS implementation
 
 (defun apropos-list* (string &key (fbound nil fbound-supplied-p)
                                   (bound nil bound-supplied-p)

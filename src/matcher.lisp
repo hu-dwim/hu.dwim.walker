@@ -7,12 +7,12 @@
 ;;;; The code is written in CPS style, it's hard to understand at
 ;;;; first but once you "get it" it's actually quite simple. Basically
 ;;;; the idea is that at every point during a match one of two things
-;;;; can happen, the match can succedd or it can fail. What we do is
+;;;; can happen, the match can succeed or it can fail. What we do is
 ;;;; we pass every match two functions (closures usually), one which
-;;;; specifies what to if it succedds and one which specifies what to
+;;;; specifies what to if it succeeds and one which specifies what to
 ;;;; do if it fails. These two closures can refer to the original
-;;;; matchs parameter and hence we can easily "backtrack" if we
-;;;; fail. Another important aspect is that we explcitly pass the
+;;;; match parameter and hence we can easily "backtrack" if we
+;;;; fail. Another important aspect is that we explicitly pass the
 ;;;; target against which to match, if we didn't do this it would be
 ;;;; impossible to really backtrack.
 

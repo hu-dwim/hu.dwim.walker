@@ -2,10 +2,10 @@
 
 (in-package :it.bese.arnesi)
 
-;;;; * A Trivial Compatability Layer
+;;;; * A Trivial Compatibility Layer
 
 ;;;; Here we only have the QUIT function, see mopp.lisp for a MOP
-;;;; campatability layer.
+;;;; compatibility layer.
 
 (defun quit (&optional (exit-code 0))
   #+openmcl (ccl:quit exit-code)

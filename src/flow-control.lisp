@@ -129,7 +129,7 @@ You may exit the loop with (RETURN-FROM UNTIL)."
 (defmacro xor (&rest datums)
   "Evaluates the args one at a time. If more than one arg returns true
   evaluation stops and NIL is returned. If exactly one arg returns
-  true that value is retuned."
+  true that value is returned."
   (let ((state (gensym "XOR-state-"))
         (block-name (gensym "XOR-block-"))
         (arg-temp (gensym "XOR-arg-temp-")))
@@ -175,7 +175,7 @@ You may exit the loop with (RETURN-FROM UNTIL)."
                    `((t ,@(cdr default-clause)))))))))
 
 (defmacro eswitch ((obj &key (test #'eql)) &body body)
-  "Like switch but signals an error if no clause succeds."
+  "Like switch but signals an error if no clause succeeds."
   (rebinding (obj test)
     `(switch (,obj :test ,test)
        ,@body
