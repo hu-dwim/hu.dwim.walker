@@ -225,13 +225,12 @@
 
 ;;;; *** Stream log appender
 
-(eval-always
-  (defclass appender ()
-    ((verbosity :initform 2 :initarg :verbosity :accessor verbosity-of)))
+(defclass appender ()
+  ((verbosity :initform 2 :initarg :verbosity :accessor verbosity-of)))
   
-  (defclass stream-log-appender (appender)
-    ((stream :initarg :stream :accessor log-stream))
-    (:documentation "Human readable to the console logger.")))
+(defclass stream-log-appender (appender)
+  ((stream :initarg :stream :accessor log-stream))
+  (:documentation "Human readable to the console logger."))
 
 (defmethod make-instance ((class (eql (find-class 'stream-log-appender)))
                           &rest initargs)
