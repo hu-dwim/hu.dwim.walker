@@ -217,7 +217,11 @@
       (dolist (ancestor (ancestors cat))
 	(handle ancestor message level))))
 
-(defgeneric append-message (category log-appender message level))
+(defgeneric append-message (category log-appender message level)
+  (:method :around (category log-appender message level)
+    ;; what else should we do?
+    (ignore-errors
+      (call-next-method))))
 
 ;;;; *** Stream log appender
 
