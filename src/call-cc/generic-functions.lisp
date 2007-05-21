@@ -10,7 +10,9 @@
   `(progn
      (setf (fdefinition/cc ',name 'defun/cc)
            (make-instance 'closure/cc
-                          :code (walk-form '(lambda ,arguments ,@body) nil nil)
+                          :code (walk-form '(lambda ,arguments
+                                             (block ,name ,@body))
+                                           nil nil)
                           :env nil))
      (defun ,name ,arguments
        (declare (ignore ,@(extract-argument-names arguments)))
@@ -50,7 +52,7 @@
               (list (pop body)))
 	   (make-instance 'closure/cc
 			  :code (walk-form '(lambda ,(clean-argument-list arguments)
-					     ,@body)
+					     (block ,name ,@body))
 					   nil nil)
 			  :env nil))))))
 
