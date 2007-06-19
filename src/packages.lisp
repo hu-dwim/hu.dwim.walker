@@ -190,6 +190,7 @@
    #:escape-as-uri
    #:unescape-as-uri
    #:nunescape-as-uri
+   #:unescape-as-uri-non-strict
    #:uri-parse-error
    #:expected-digit-uri-parse-error
    #:continue-as-is
