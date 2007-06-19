@@ -46,9 +46,16 @@
   (awhen (find-restart 'continue-as-is)
     (invoke-restart it)))
 
+(defun try-other-encoding (c encoding)
+  (declare (ignore c))
+  (awhen (find-restart 'try-other-encoding)
+    (invoke-restart it encoding)))
+
 (defun unescape-as-uri-non-strict (string)
-  (handler-bind ((expected-digit-uri-parse-error #'continue-as-is))
-    (unescape-as-uri string)))
+  (handler-bind ((uri-parse-error #'continue-as-is)
+                 (serious-condition #'(lambda (c)
+                                        (try-other-encoding c :iso-8859-1)) ))
+    (%unescape-as-uri string)))
 
 (defun %unescape-as-uri (input)
   "URI unescape based on http://www.ietf.org/rfc/rfc2396.txt"
@@ -64,7 +71,12 @@
                  (when (>= input-index input-length)
                    (if must-exists-p
                        (error 'uri-parse-error :what input)
-                       (return-from %unescape-as-uri (octets-to-string output :utf-8))))
+                       (return-from %unescape-as-uri
+                         (restart-case
+                             (octets-to-string output :utf-8)
+                           (try-other-encoding (encoding)
+                             :report "Try converting uri using other encoding"
+                             (octets-to-string output encoding))))))
                  (prog1 (aref input input-index)
                    (incf input-index)))
                (write-next-byte (byte)
@@ -83,10 +95,9 @@
                      (t (write-next-byte (char-code next-char))))
                    (parse)))
                (char% ()
-                 (let* ((restart-input-index input-index)
-                        (next-char (read-next-char t)))
+                 (let ((restart-input-index input-index))
                    (restart-case
-                    (write-next-byte (+ (ash (char-to-int next-char) 4)
+                    (write-next-byte (+ (ash (char-to-int (read-next-char t)) 4)
                                         (char-to-int (read-next-char t))))
                     (continue-as-is ()
                                     :report "Continue reading uri without attempting to convert the escaped-code to a char."
