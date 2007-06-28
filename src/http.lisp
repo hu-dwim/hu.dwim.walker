@@ -5,6 +5,7 @@
 ;;;; * HTTP/HTML utilities
 
 ;;;; ** URIs/URLs
+;;;; http://www.faqs.org/rfcs/rfc2396.html
 
 (eval-always
   (defvar *uri-escaping-ok-table* (make-array 256
@@ -12,7 +13,9 @@
                                               :initial-element nil))
   (loop
       ;; The list of characters which don't need to be escaped when writing URIs.
-      for ok-char across "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789.," do
+      ;; This list is inherently a heuristic, because different uri components may have
+      ;; different escaping needs, but it should work fine for http.
+      for ok-char across "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789.,/" do
       (setf (aref *uri-escaping-ok-table* (char-code ok-char)) t))
   (setf *uri-escaping-ok-table* (coerce *uri-escaping-ok-table* '(simple-array boolean (256)))))
 
