@@ -51,14 +51,25 @@
      (mod (1+ (head-index queue)) (length (buffer queue)))))
 
 (defmethod queue-count ((queue queue))
-  (cond
-    ((= (head-index queue) (tail-index queue))
-     0)
-    ((< (tail-index queue) (head-index queue))
-     (- (head-index queue) (tail-index queue)))
-    ((> (tail-index queue) (head-index queue))
-     (- (+ (length (buffer queue)) (head-index queue))
-        (tail-index queue)))))
+  (let ((head-index (head-index queue))
+        (tail-index (tail-index queue)))
+    (cond
+      ((= head-index tail-index)
+       0)
+      ((< tail-index head-index)
+       (- head-index tail-index))
+      ((> tail-index head-index)
+       (- (+ (length (buffer queue)) head-index)
+          tail-index)))))
+
+(defmethod random-queue-element ((queue queue))
+  (let ((tail-index (tail-index queue))
+        (buffer (buffer queue))
+        (count (queue-count queue)))
+    (when (zerop count)
+      (error "Queue ~A is empty" queue))
+    (aref buffer (mod (+ tail-index (random count))
+                      (length buffer)))))
 
 (defmethod call-for-all-elements-with-index ((queue queue) callback)
   "Calls CALLBACK passing it each element in QUEUE. The elements

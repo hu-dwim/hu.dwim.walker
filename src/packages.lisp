@@ -307,6 +307,7 @@
    #:peek-queue
    #:queue-empty-p
    #:queue-count
+   #:random-queue-element
    #:queue->list
    #:lru-queue
    
