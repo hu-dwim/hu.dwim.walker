@@ -16,6 +16,7 @@
   (:export
 
    #:clean-op
+   #:collect-timing
 
    #:make-reducer
    #:make-pusher
