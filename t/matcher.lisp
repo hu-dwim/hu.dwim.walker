@@ -2,7 +2,8 @@
 
 (in-package :it.bese.arnesi.test)
 
-(def-suite :it.bese.arnesi.matcher :in :it.bese.arnesi)
+(eval-when (:compile-toplevel :load-toplevel :execute)
+  (def-suite :it.bese.arnesi.matcher :in :it.bese.arnesi))
 
 (in-suite :it.bese.arnesi.matcher)
 
