@@ -443,7 +443,7 @@ You may want to add this to your init.el to speed up cursor movement in the repl
                                                             (t '()))
                                                     ,@(when compile-time-level
                                                         `(:compile-time-level ,compile-time-level))
-                                                    :appenders (list ,@appenders)
+                                                    :appenders (remove nil (list ,@appenders))
                                                     :ancestors (list ,@ancestors))))
 	 ,(make-log-helper '#:dribble '+dribble+)
 	 ,(make-log-helper '#:debug '+debug+)
