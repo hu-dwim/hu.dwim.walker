@@ -33,15 +33,21 @@ the vector ALPHABET.
                  (cl:aref alphabet (random alphabet-length)))
         finally (return id)))
 
+(declaim (inline strcat))
 (defun strcat (&rest items)
   "Returns a fresh string consisting of ITEMS concat'd together."
+  (declare (optimize speed)
+           (dynamic-extent items))
   (strcat* items))
 
 (defun strcat* (string-designators)
   "Concatenate all the strings in STRING-DESIGNATORS."
-  (with-output-to-string (strcat)
-    (dotree (s string-designators)
-      (when s (princ s strcat)))))
+  (let ((*print-pretty* nil)
+        (*print-circle* nil))
+    (with-output-to-string (stream)
+      (dotree (str string-designators)
+        (when str
+          (princ str stream))))))
 
 ;;; A "faster" version for string concatenating.
 ;;; Could use just (apply #'concatenate 'string list), but that's quite slow
