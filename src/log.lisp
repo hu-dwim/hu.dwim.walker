@@ -58,6 +58,12 @@
               :documentation "This category's compile time log level. Any log expression below this level will macro-expand to NIL.")
    (name      :initarg :name :accessor name)))
 
+(defmethod make-load-form ((self log-category) &optional env)
+  (declare (ignore env))
+  `(let ((result (get-logger ',(name self))))
+     (assert result)
+     result))
+
 (defmethod print-object ((category log-category) stream)
   (print-unreadable-object (category stream :type t :identity t)
     (if (slot-boundp category 'name)
@@ -425,11 +431,11 @@ You may want to add this to your init.el to speed up cursor movement in the repl
                      (if (compile-time-enabled-p (get-logger ',name) ,level)
                          ;; then check at runtime
                          `(progn
-                           (when (enabled-p (get-logger ',',name) ,',level)
+                           (when (enabled-p (load-time-value (get-logger ',',name)) ,',level)
                              ,(if message-args
-                                  `(handle (get-logger ',',name) (list ,message-control ,@message-args)
+                                  `(handle (load-time-value (get-logger ',',name)) (list ,message-control ,@message-args)
                                     ',',level)
-                                  `(handle (get-logger ',',name) ,message-control ',',level)))
+                                  `(handle (load-time-value (get-logger ',',name)) ,message-control ',',level)))
                            (values))
                          (values)))))))
       `(progn
