@@ -945,6 +945,23 @@
     (setf (protected-form unwind-protect) (walk-form (second form) unwind-protect env)
           (cleanup-form unwind-protect) (walk-implict-progn unwind-protect (cddr form) env))))
 
+;;;; LOAD-TIME-VALUE
+
+(defclass load-time-value-form (form)
+  ((body :accessor body :initarg :body)
+   (read-only :initform nil :accessor read-only-p :initarg :read-only)
+   (value :accessor value)))
+
+(defmethod initialize-instance :after ((self load-time-value-form) &key)
+  (setf (value self) (eval (body self))))
+
+(defwalker-handler load-time-value (form parent env)
+  (assert (<= (length form) 3))
+  (with-form-object (load-time-value load-time-value-form :parent parent
+                                     :body form
+                                     :read-only (third form))
+    (setf (body load-time-value) (second form))))
+
 ;;;; ** Implementation specific walkers
 
 ;;;; These are for forms which certain compilers treat specially but

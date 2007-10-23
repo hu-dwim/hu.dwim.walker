@@ -297,6 +297,12 @@
 (defmethod evaluate/cc ((the the-form) lex-env dyn-env k)
   (evaluate/cc (value the) lex-env dyn-env k))
 
+;;;; LOAD-TIME-VALUE
+
+(defmethod evaluate/cc ((c load-time-value-form) lex-env dyn-env k)
+  (declare (ignore lex-env dyn-env))
+  (kontinue k (value c)))
+
 ;; Copyright (c) 2002-2006, Edward Marco Baringer
 ;; All rights reserved. 
 ;; 
