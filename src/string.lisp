@@ -36,8 +36,7 @@ the vector ALPHABET.
 (declaim (inline strcat))
 (defun strcat (&rest items)
   "Returns a fresh string consisting of ITEMS concat'd together."
-  (declare (optimize speed)
-           (dynamic-extent items))
+  (declare (optimize speed))
   (strcat* items))
 
 (defun strcat* (string-designators)
