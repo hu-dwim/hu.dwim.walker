@@ -257,7 +257,7 @@
 		 (cadr form)
 		 nil)))
       (macrolet ((mkdecl (varname formclass &rest rest)
-		   `(make-instance ,formclass :parent parent :source (list type ,varname) ,@rest))		 
+		   `(make-instance ,formclass :parent parent :source (list type ,varname) ,@rest))
 		 (extend-env ((var list) newdeclare &rest datum)
 		   `(dolist (,var ,list)
 		      (when ,newdeclare (push ,newdeclare declares))
@@ -267,11 +267,11 @@
 	  (case type
 	    (dynamic-extent
 	     (extend-env (var arguments)
-			 (mkdecl var 'dynamic-extent-declaration-form :name var) 
-			 var `(dynamic-extent)))        
+			 (mkdecl var 'dynamic-extent-declaration-form :name var)
+			 var `(dynamic-extent)))
 	    (ftype
 	     (extend-env (function-name (cdr arguments))
-			 (make-instance 'ftype-declaration-form 
+			 (make-instance 'ftype-declaration-form
 					:parent parent
 					:source `(ftype ,(first arguments) function-name)
 					:name function-name
@@ -284,7 +284,7 @@
 			      (mkdecl var 'variable-ignorable-declaration-form :name var))
 			 var `(ignorable)))
 	    (inline
-	      (extend-env (function arguments) 
+	      (extend-env (function arguments)
 			  (mkdecl function 'function-ignorable-declaration-form :name function)
 			  function `(ignorable)))
 	    (notinline
@@ -292,16 +292,16 @@
 			 (mkdecl function 'notinline-declaration-form :name function)
 			 function `(notinline)))
 	    (optimize
-	     (extend-env (optimize-spec arguments) 
+	     (extend-env (optimize-spec arguments)
 			 (mkdecl optimize-spec 'optimize-declaration-form :optimize-spec optimize-spec)
 			 'optimize optimize-spec))
 	    (special
-	     (extend-env (var arguments) 
+	     (extend-env (var arguments)
 			 (mkdecl var 'special-declaration-form :name var)
 			 var `(special)))
 	    (type
 	     (extend-env (var (rest arguments))
-			 (make-instance 'type-declaration-form 
+			 (make-instance 'type-declaration-form
 					:parent parent
 					:source `(type ,(first arguments) ,var)
 					:name var
@@ -309,11 +309,11 @@
 			 var `(type ,(first arguments))))
 	    (t
 	     (extend-env (var arguments)
-			 (make-instance 'type-declaration-form 
-					:parent parent
-					:source `(,type ,var)
-					:name var
-					:type-form type)
+			 (make-instance 'type-declaration-form
+                                        :parent parent
+                                        :source `(,type ,var)
+                                        :name var
+                                        :type-form type)
 			 var `(type ,type)))))))
     (when (null declares)
       (setq declares (list (make-instance 'declaration-form :parent parent :source declaration))))
