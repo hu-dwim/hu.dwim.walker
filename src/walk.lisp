@@ -994,7 +994,7 @@
   (with-form-object (load-time-value load-time-value-form :parent parent
                                      :body form
                                      :read-only (third form))
-    (setf (body load-time-value) (second form))))
+    (setf (body load-time-value) (walk-form (second form)))))
 
 ;;;; ** Implementation specific walkers
 

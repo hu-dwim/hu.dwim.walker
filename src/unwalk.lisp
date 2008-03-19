@@ -213,8 +213,8 @@
 
 ;;;; LOAD-TIME-VALUE
 
-(defunwalker-handler load-time-value-form (value read-only-p)
-  `(load-time-value ,(unwalk-form value) ,read-only-p))
+(defunwalker-handler load-time-value-form (body read-only)
+  `(load-time-value ,(unwalk-form body) ,read-only))
 
 ;;;; LOCALLY
 
