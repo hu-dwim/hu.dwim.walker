@@ -1,0 +1,43 @@
+;;; -*- mode: Lisp; Syntax: Common-Lisp; -*-
+;;;
+;;; Copyright (c) 2008 by the authors.
+;;;
+;;; See LICENCE for details.
+
+(eval-when (:compile-toplevel :load-toplevel :execute)
+  (unless (find-package '#:cl-walker.system)
+    (defpackage #:cl-walker.system
+      (:use :common-lisp :asdf))))
+
+(cl:in-package :cl-user)
+
+(in-package cl-walker.system)
+
+(defsystem :cl-walker
+  :depends-on (:alexandria)
+  :components ((:static-file "cl-walker.asd")
+               (:module "src"
+                :components ((:file "package")
+                             (:file "duplicates" :depends-on ("package"))
+                             (:file "lexenv" :depends-on ("package" "duplicates"))
+			     (:file "walk" :depends-on ("package" "lexenv" "duplicates"))
+                             (:file "unwalk" :depends-on ("package" "walk" "duplicates"))))))
+
+(defsystem :cl-walker-test
+  :components ((:module "tests"
+		:components ((:file "package")
+			     (:file "walk-unwalk" :depends-on ("package"))
+                             (:file "macros" :depends-on ("package")))))
+  :depends-on (:cl-walker :stefil))
+
+(defmethod perform ((op asdf:test-op) (system (eql (find-system :cl-walker))))
+  (asdf:oos 'asdf:load-op :cl-walker-test)
+  (in-package :cl-walker-test)
+  (declaim (optimize (debug 3)))
+  (warn "(declaim (optimize (debug 3))) was issued to help later C-c C-c'ing")
+  (eval (read-from-string "(progn
+                             (stefil:funcall-test-with-feedback-message 'test))"))
+  (values))
+
+(defmethod operation-done-p ((op test-op) (system (eql (find-system :cl-walker))))
+  nil)

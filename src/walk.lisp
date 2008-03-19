@@ -1,10 +1,10 @@
-;; -*- lisp -*-
+;;; -*- mode: Lisp; Syntax: Common-Lisp; -*-
+;;;
+;;; Copyright (c) 2008 by the authors.
+;;;
+;;; See LICENCE for details.
 
-(in-package :it.bese.arnesi)
-
-;;;; * A Code Walker
-
-;;;; ** Public Entry Point
+(in-package :cl-walker)
 
 (defvar *warn-undefined* nil
   "When non-NIL any references to undefined functions or
@@ -14,11 +14,43 @@
   "Walk FORM and return a FORM object."
   (funcall (find-walker-handler form) form parent env))
 
+(defun register (environment type name datum &rest other-datum)
+  (cons (if other-datum
+            (list* type name datum other-datum)
+            (list* type name datum))
+        environment))
+
+(defmacro extend (environment type name datum &rest other-datum)
+  `(setf ,environment (register ,environment ,type ,name ,datum ,@other-datum)))
+
+(defun lookup (environment type name &key (error-p nil) (default-value nil))
+  (loop
+     for (.type .name . data) in environment
+     when (and (eql .type type) (eql .name name))
+       return (values data t)
+     finally
+       (if error-p
+           (error "Sorry, No value for ~S of type ~S in environment ~S found."
+                  name type environment)
+           (values default-value nil))))
+
+(defun (setf lookup) (value environment type name &key (error-p nil))
+  (loop
+     for env-piece in environment
+     when (and (eql (first env-piece)  type)
+               (eql (second env-piece) name))
+       do (setf (cddr env-piece) value) and
+       return value
+     finally
+       (when error-p
+         (error "Sorry, No value for ~S of type ~S in environment ~S found."
+                name type environment))))
+
 (defun make-walk-env (&optional lexical-env)
   (let ((walk-env '()))
     (when lexical-env
       (dolist (var (lexical-variables lexical-env))
-        (extend walk-env :lexical-let var t))
+        (arnesi::extend walk-env :lexical-let var t))
       (dolist (fun (lexical-functions lexical-env))
 	(extend walk-env :lexical-flet fun t))
       (dolist (mac (lexical-macros lexical-env))
@@ -28,6 +60,7 @@
     (cons walk-env lexical-env)))
 
 (defun register-walk-env (env type name datum &rest other-datum)
+  (declare (ignore other-datum)) ;; TODO ?
   (let ((walk-env (register (car env) type name datum))
 	(lexenv (case type
 		  (:let (augment-with-variable (cdr env) name))
@@ -130,22 +163,23 @@
 (defclass binding-form-mixin ()
   ((binds :accessor binds :initarg :binds)))
 
+;; TODO delme
 (defmacro multiple-value-setf (places form)
   (loop
-       for place in places
-       for name = (gensym)
-       collect name into bindings
-       if (eql 'nil place)
-         collect `(declare (ignore ,name)) into ignores
-       else
-         collect `(setf ,place ,name) into body
-       finally (return
-                 `(multiple-value-bind ,bindings ,form
-                    ,@ignores
-                    ,@body))))
+     for place in places
+     for name = (gensym)
+     collect name into bindings
+     if (eql 'nil place)
+     collect `(declare (ignore ,name)) into ignores
+     else
+     collect `(setf ,place ,name) into body
+     finally (return
+               `(multiple-value-bind ,bindings ,form
+                  ,@ignores
+                  ,@body))))
 
 (defun split-body (body env &key parent (docstring t) (declare t))
-  (let ((documentation nil) 
+  (let ((documentation nil)
 	(newdecls nil)
 	(decls nil))
     (flet ((done ()
@@ -157,7 +191,7 @@
               (cons (if (and declare (eql 'cl:declare (first form)))
                         ;; declare form
                         (let ((declarations (rest form)))
-                          (dolist* (dec declarations)
+                          (dolist (dec declarations)
                             (multiple-value-setf (env newdecls) (parse-declaration dec env parent))
 			    (setf decls (append newdecls decls))))
                         ;; source code, all done
@@ -447,6 +481,7 @@
     func))
 
 (defun walk-lambda-list (lambda-list parent env &key allow-specializers macro-p)
+  (declare (ignore macro-p))
   (flet ((extend-env (argument)
            (unless (typep argument 'allow-other-keys-function-argument-form)
              (extend-walk-env env :let (name argument) argument))))
@@ -528,7 +563,7 @@
    (default-value :accessor default-value :initarg :default-value)
    (supplied-p-parameter :accessor supplied-p-parameter :initarg :supplied-p-parameter)))
 
-(defmethod effective-keyword-name ((k keyword-function-argument-form))
+(defun effective-keyword-name (k)
   (or (keyword-name k)
       (intern (symbol-name (name k)) :keyword)))
 
@@ -723,12 +758,11 @@
     (multiple-value-bind (b e d declarations)
         (split-body (cddr form) env :parent let :declare t)
       (declare (ignore b e d))
-      (dolist* ((var . value) (binds let))
-        (declare (ignore value))
-        (if (not (find-if (lambda (declaration)
-                            (and (typep declaration 'special-declaration-form)
-                                 (eq var (name declaration)))) declarations))
-            (extend-walk-env env :let var :dummy)))
+      (loop for (var . value) :in (binds let) do
+            (unless (find-if (lambda (declaration)
+                               (and (typep declaration 'special-declaration-form)
+                                    (eq var (name declaration)))) declarations)
+              (extend-walk-env env :let var :dummy)))
       (multiple-value-setf ((body let) nil (declares let))
                            (walk-implict-progn let (cddr form) env :declare t)))))
 
@@ -970,33 +1004,3 @@
 #+lispworks
 (defwalker-handler compiler::internal-the (form parent env)
   (walk-form (third form) parent env))
-
-;; Copyright (c) 2005-2006, Edward Marco Baringer
-;; All rights reserved. 
-;; 
-;; Redistribution and use in source and binary forms, with or without
-;; modification, are permitted provided that the following conditions are
-;; met:
-;; 
-;;  - Redistributions of source code must retain the above copyright
-;;    notice, this list of conditions and the following disclaimer.
-;; 
-;;  - Redistributions in binary form must reproduce the above copyright
-;;    notice, this list of conditions and the following disclaimer in the
-;;    documentation and/or other materials provided with the distribution.
-;;
-;;  - Neither the name of Edward Marco Baringer, nor BESE, nor the names
-;;    of its contributors may be used to endorse or promote products
-;;    derived from this software without specific prior written permission.
-;; 
-;; THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
-;; "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
-;; LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
-;; A PARTICULAR PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL THE COPYRIGHT
-;; OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
-;; SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
-;; LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
-;; DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
-;; THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
-;; (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
-;; OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.

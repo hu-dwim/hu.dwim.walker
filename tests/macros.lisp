@@ -1,0 +1,44 @@
+;;; -*- mode: Lisp; Syntax: Common-Lisp; -*-
+;;;
+;;; Copyright (c) 2008 by the authors.
+;;;
+;;; See LICENCE for details.
+
+(in-package :cl-walker-test)
+
+(defsuite* (macros :in test))
+
+(deftest test/macros/macrolet ()
+  (check-walk-unwalk '(macrolet ((+ (&body body)
+                                  (reverse body)))
+                       (+ 1 2 3 -))
+                     '(locally (- 3 2 1)))
+
+  (check-walk-unwalk '(macrolet ())
+                     '(locally))
+
+  (check-walk-unwalk '(macrolet ((+ (&body body)
+                                  (reverse body)))
+                       (princ "1111")
+                       (+ 1 2 3 -))
+                     '(locally
+                       (princ "1111")
+                       (- 3 2 1))))
+
+(deftest test/macros/symbol-macrolet ()
+  (check-walk-unwalk '(symbol-macrolet ((a (slot-value obj 'a))
+                                        (b (slot-value obj 'b)))
+                       (+ a b))
+                     '(locally
+                       (+ (slot-value obj 'a) (slot-value obj 'b))))
+
+  (check-walk-unwalk '(symbol-macrolet ())
+                     '(locally))
+
+  (check-walk-unwalk '(symbol-macrolet ((a (slot-value obj 'a)))
+                       (double! a)
+                       (/ a 2))
+                     '(locally
+                       (double! (slot-value obj 'a))
+                       (/ (slot-value obj 'a) 2))))
+

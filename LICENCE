@@ -1,24 +1,6 @@
-;;; -*- lisp -*-
-
-
-(in-package :it.bese.arnesi)
-
-;;;; * POSIX environment functions
-
-(defun getenv (var)
-  #+allegro (sys:getenv var)
-  #+clisp (ext:getenv var)
-  #+cmu
-  (cdr (assoc var ext:*environment-list* :test #'string=))
-  #+lispworks (lw:environment-variable var)
-  #+openmcl (ccl::getenv var)
-  #+sbcl (sb-ext:posix-getenv var)
-
-  #-(or allegro clisp cmu lispworks openmcl openmcl sbcl)
-  (error "Could not define `getenv'."))
-
-
+;; Copyright (c) 2002-2006 Edward Marco Baringer
 ;; Copyright (c) 2006 Luca Capello http://luca.pca.it <luca@pca.it>
+;; Copyright (c) 2008 Attila Lendvai attila.lendvai@gmail.com
 ;; All rights reserved.
 ;;
 ;; Redistribution and use in source and binary forms, with or without
@@ -32,7 +14,7 @@
 ;;    notice, this list of conditions and the following disclaimer in the
 ;;    documentation and/or other materials provided with the distribution.
 ;;
-;;  - Neither the name of Luca Capello, Edward Marco Baringer, nor
+;;  - Neither the name of Edward Marco Baringer, Luca Capello, nor
 ;;    BESE, nor the names of its contributors may be used to endorse
 ;;    or promote products derived from this software without specific
 ;;    prior written permission.
