@@ -14,8 +14,15 @@
 
 (defmacro define-walk-unwalk-test (name &body body)
   `(deftest ,name ()
-     ,@(loop for entry :in body
-             collect `(check-walk-unwalk ',entry))))
+     ,@(loop
+          :for entry :in body
+          :collect (if (and (consp entry)
+                            (eq (first entry) 'with-expected-failures))
+                       `(with-expected-failures
+                          ,@(mapcar (lambda (entry)
+                                      `(check-walk-unwalk ',entry))
+                                    (rest entry)))
+                       `(check-walk-unwalk ',entry)))))
 
 (define-walk-unwalk-test test/constant
   1 'a "a" (1 2 3) #(1 2 3))
@@ -33,6 +40,21 @@
   ((lambda (x k) (k x))
    (if p x y)
    id))
+
+(define-walk-unwalk-test test/declare/1
+  (locally (declare (ignorable a) (ignorable b)))
+  (with-expected-failures
+    (locally (declare (zork)))
+    (locally (declare (ignorable a b)))))
+
+(deftest test/declare/2 ()
+  (check-walk-unwalk
+   '(lambda () (declare))
+   '#'(lambda ()))
+  (with-expected-failures
+    (check-walk-unwalk
+     '(lambda () (declare (ignorable)))
+     '#'(lambda ()))))
 
 ;; TODO fix the last test, &optional is misplaced and should signal an error
 (define-walk-unwalk-test test/lambda-function

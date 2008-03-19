@@ -308,6 +308,7 @@
 					:type-form (first arguments))
 			 var `(type ,(first arguments))))
 	    (t
+             ;; TODO weak try: assumes everything else is a type declaration
 	     (extend-env (var arguments)
 			 (make-instance 'type-declaration-form
                                         :parent parent
@@ -315,6 +316,7 @@
                                         :name var
                                         :type-form type)
 			 var `(type ,type)))))))
+    ;; TODO this generates wrong ast for (walk-form '(lambda () (declare (ignorable))))
     (when (null declares)
       (setq declares (list (make-instance 'declaration-form :parent parent :source declaration))))
     (values environment declares)))
