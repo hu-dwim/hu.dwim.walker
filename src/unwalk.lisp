@@ -252,8 +252,8 @@
 
 ;;;; SETQ
 
-(defunwalker-handler setq-form (var value)
-  `(setq ,var ,(unwalk-form value)))
+(defunwalker-handler setq-form (variable-name value)
+  `(setq ,variable-name ,(unwalk-form value)))
 
 ;;;; SYMBOL-MACROLET
 

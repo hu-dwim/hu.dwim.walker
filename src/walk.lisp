@@ -870,8 +870,12 @@
 ;;;; SETQ
 
 (defclass setq-form (form)
-  ((var   :accessor var   :initarg :var)
-   (value :accessor value :initarg :value)))
+  ((variable-name
+    :accessor variable-name-of
+    :initarg :variable-name)
+   (value
+    :accessor value
+    :initarg :value)))
 
 (defwalker-handler setq (form parent env)
   ;; the SETQ handler needs to be able to deal with symbol-macrolets
@@ -890,7 +894,7 @@
             (first effective-code)
           (ecase type
             (setq (with-form-object (setq setq-form :parent parent :source form
-                                          :var var)
+                                          :variable-name var)
                     (setf (value setq) (walk-form value setq env))))
             (setf (walk-form (first effective-code) parent env))))
         ;; multiple forms

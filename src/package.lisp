@@ -108,7 +108,7 @@
    #:type-form
    #:value
    #:values-form
-   #:var
+   #:variable-name-of
    #:vars-form
 
    #:defunwalker-handler
