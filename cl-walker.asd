@@ -2,7 +2,7 @@
 ;;;
 ;;; Copyright (c) 2008 by the authors.
 ;;;
-;;; See LICENCE for details.
+;;; See COPYING for details.
 
 (eval-when (:compile-toplevel :load-toplevel :execute)
   (unless (find-package '#:cl-walker.system)
