@@ -793,12 +793,3 @@
                                      :body form
                                      :read-only (third form))
     (setf (body load-time-value) (walk-form (second form)))))
-
-;;;; ** Implementation specific walkers
-
-;;;; These are for forms which certain compilers treat specially but
-;;;; aren't macros or special-operators.
-
-#+lispworks
-(defwalker-handler compiler::internal-the (form parent env)
-  (walk-form (third form) parent env))

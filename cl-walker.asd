@@ -22,6 +22,7 @@
                              (:file "lexenv" :depends-on ("package" "duplicates"))
                              (:file "infrastructure" :depends-on ("package" "lexenv" "duplicates"))
                              (:file "walk" :depends-on ("infrastructure"))
+                             (:file "implementation-specific" :depends-on ("infrastructure"))
                              (:file "unwalk" :depends-on ("infrastructure"))))))
 
 (defsystem :cl-walker-test
