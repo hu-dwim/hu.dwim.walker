@@ -50,7 +50,7 @@
   (let ((walk-env '()))
     (when lexical-env
       (dolist (var (lexical-variables lexical-env))
-        (arnesi::extend walk-env :lexical-let var t))
+        (extend walk-env :lexical-let var t))
       (dolist (fun (lexical-functions lexical-env))
 	(extend walk-env :lexical-flet fun t))
       (dolist (mac (lexical-macros lexical-env))
@@ -135,10 +135,7 @@
    (source :accessor source :initarg :source)))
 
 (defmethod make-load-form ((object form) &optional env)
-  (make-load-form-saving-slots object
-                               :slot-names (mapcar #'mopp:slot-definition-name
-                                                   (mopp:class-slots (class-of object)))
-                               :environment env))
+  (make-load-form-saving-slots object :environment env))
 
 (defmethod print-object ((form form) stream)
   (print-unreadable-object (form stream :type t :identity t)
