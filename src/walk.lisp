@@ -149,7 +149,6 @@
   ())
 
 (defwalker-handler +atom-marker+ (form parent env)
-  (declare (special *macroexpand*))
   (cond
     ((not (or (symbolp form) (consp form)))
      (make-instance 'constant-form :value form
@@ -331,7 +330,7 @@
   (make-instance 'specialized-function-argument-form
                  :name (if (listp form)
                            (first form)
-                           form) 
+                           form)
                  :specializer (if (listp form)
                                   (second form)
                                   'T)
@@ -641,7 +640,7 @@
   (with-form-object (progn progn-form :parent parent :source form)
     (setf (body progn) (walk-implict-progn progn (cdr form) env))))
 
-;;;; PROGV 
+;;;; PROGV
 
 (defclass progv-form (form implicit-progn-mixin)
   ((vars-form :accessor vars-form :initarg :vars-form)
@@ -649,7 +648,7 @@
 
 (defwalker-handler progv (form parent env)
   (with-form-object (progv progv-form :parent parent :source form)
-    (setf (vars-form progv) (walk-form (cadr form) progv env))    
+    (setf (vars-form progv) (walk-form (cadr form) progv env))
     (setf (values-form progv) (walk-form (caddr form) progv env))
     (setf (body progv) (walk-implict-progn progv (cdddr form) env))
     progv))
