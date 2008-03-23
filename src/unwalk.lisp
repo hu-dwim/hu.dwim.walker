@@ -17,8 +17,8 @@
   (with-unique-names (form)
     `(progn
        (defmethod unwalk-form ((,form ,class))
-	 (with-slots ,slots ,form
-	   ,@body))
+         (with-slots ,slots ,form
+           ,@body))
        ',class)))
 
 (declaim (inline unwalk-forms))
@@ -62,16 +62,16 @@
 (defun unwalk-lambda-list (arguments)
   (let (optional-p rest-p keyword-p)
     (mapcan #'(lambda (form)
-		(append
-		 (typecase form
-		   (optional-function-argument-form
-		    (unless optional-p (setq optional-p t) '(&optional)))
-		   (rest-function-argument-form
-		    (unless rest-p (setq rest-p t) '(&rest)))
-		   (keyword-function-argument-form
-		    (unless keyword-p (setq keyword-p t) '(&key))))
-		 (list (unwalk-form form))))
-	    arguments)))
+                (append
+                 (typecase form
+                   (optional-function-argument-form
+                    (unless optional-p (setq optional-p t) '(&optional)))
+                   (rest-function-argument-form
+                    (unless rest-p (setq rest-p t) '(&rest)))
+                   (keyword-function-argument-form
+                    (unless keyword-p (setq keyword-p t) '(&key))))
+                 (list (unwalk-form form))))
+            arguments)))
 
 (defunwalker-handler required-function-argument-form (name)
   name)
@@ -84,22 +84,22 @@
 (defunwalker-handler optional-function-argument-form (name default-value supplied-p-parameter)
   (let ((default-value (unwalk-form default-value)))
     (cond ((and name default-value supplied-p-parameter)
-	   `(,name ,default-value ,supplied-p-parameter))
-	  ((and name default-value)
-	   `(,name ,default-value))
-	  (name name)
-	  (t (error "Invalid optional argument")))))
+           `(,name ,default-value ,supplied-p-parameter))
+          ((and name default-value)
+           `(,name ,default-value))
+          (name name)
+          (t (error "Invalid optional argument")))))
 
 (defunwalker-handler keyword-function-argument-form (keyword-name name default-value supplied-p-parameter)
   (let ((default-value (unwalk-form default-value)))
     (cond ((and keyword-name name default-value supplied-p-parameter)
-	   `((,keyword-name ,name) ,default-value ,supplied-p-parameter))
-	  ((and name default-value supplied-p-parameter)
-	   `(,name ,default-value ,supplied-p-parameter))
-	  ((and name default-value)
-	   `(,name ,default-value))
-	  (name name)
-	  (t (error "Invalid keyword argument")))))
+           `((,keyword-name ,name) ,default-value ,supplied-p-parameter))
+          ((and name default-value supplied-p-parameter)
+           `(,name ,default-value ,supplied-p-parameter))
+          ((and name default-value)
+           `(,name ,default-value))
+          (name name)
+          (t (error "Invalid keyword argument")))))
 
 (defunwalker-handler allow-other-keys-function-argument-form ()
   '&allow-other-keys)
@@ -173,20 +173,20 @@
 
 (defunwalker-handler flet-form (binds body declares)
   (flet ((unwalk-flet (binds)
-	   (mapcar #'(lambda (bind)
-		       (cons (car bind)
-			     (cdadr (unwalk-form (cdr bind)))))
-		   binds)))
+           (mapcar #'(lambda (bind)
+                       (cons (car bind)
+                             (cdadr (unwalk-form (cdr bind)))))
+                   binds)))
     `(flet ,(unwalk-flet binds)
        ,@(unwalk-declarations declares)
        ,@(unwalk-forms body))))
 
 (defunwalker-handler labels-form (binds body declares)
   (flet ((unwalk-labels (binds)
-	   (mapcar #'(lambda (bind)
-		       (cons (car bind)
-			     (cdadr (unwalk-form (cdr bind)))))
-		   binds)))
+           (mapcar #'(lambda (bind)
+                       (cons (car bind)
+                             (cdadr (unwalk-form (cdr bind)))))
+                   binds)))
     `(labels ,(unwalk-labels binds)
        ,@(unwalk-declarations declares)
        ,@(unwalk-forms body))))
@@ -195,18 +195,18 @@
 
 (defunwalker-handler let-form (binds body declares)
   (flet ((unwalk-let (binds)
-	   (mapcar #'(lambda (bind)
-		       (list (car bind) (unwalk-form (cdr bind))))
-		   binds)))
+           (mapcar #'(lambda (bind)
+                       (list (car bind) (unwalk-form (cdr bind))))
+                   binds)))
     `(let ,(unwalk-let binds)
        ,@(unwalk-declarations declares)
        ,@(unwalk-forms body))))
 
 (defunwalker-handler let*-form (binds body declares)
   (flet ((unwalk-let* (binds)
-	   (mapcar #'(lambda (bind)
-		       (list (car bind) (unwalk-form (cdr bind))))
-		   binds)))
+           (mapcar #'(lambda (bind)
+                       (list (car bind) (unwalk-form (cdr bind))))
+                   binds)))
     `(let* ,(unwalk-let* binds)
        ,@(unwalk-declarations declares)
        ,@(unwalk-forms body))))

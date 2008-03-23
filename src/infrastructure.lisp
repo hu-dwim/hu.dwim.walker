@@ -52,23 +52,23 @@
       (dolist (var (lexical-variables lexical-env))
         (extend walk-env :lexical-let var t))
       (dolist (fun (lexical-functions lexical-env))
-	(extend walk-env :lexical-flet fun t))
+        (extend walk-env :lexical-flet fun t))
       (dolist (mac (lexical-macros lexical-env))
-	(extend walk-env :macrolet (car mac) (cdr mac)))
+        (extend walk-env :macrolet (car mac) (cdr mac)))
       (dolist (symmac (lexical-symbol-macros lexical-env))
-	(extend walk-env :symbol-macrolet (car symmac) (cdr symmac))))
+        (extend walk-env :symbol-macrolet (car symmac) (cdr symmac))))
     (cons walk-env lexical-env)))
 
 (defun register-walk-env (env type name datum &rest other-datum)
   (declare (ignore other-datum)) ;; TODO ?
   (let ((walk-env (register (car env) type name datum))
-	(lexenv (case type
-		  (:let (augment-with-variable (cdr env) name))
-		  (:macrolet (augment-with-macro (cdr env) name datum))
-		  (:flet (augment-with-function (cdr env) name))
-		  (:symbol-macrolet (augment-with-symbol-macro (cdr env) name datum))
-		  ;;TODO: :declare
-		  (t (cdr env)))))
+        (lexenv (case type
+                  (:let (augment-with-variable (cdr env) name))
+                  (:macrolet (augment-with-macro (cdr env) name datum))
+                  (:flet (augment-with-function (cdr env) name))
+                  (:symbol-macrolet (augment-with-symbol-macro (cdr env) name datum))
+                  ;;TODO: :declare
+                  (t (cdr env)))))
     (cons walk-env lexenv)))
 
 (defmacro extend-walk-env (env type name datum &rest other-datum)
@@ -108,15 +108,15 @@
   (if (atom form)
       (gethash '+atom-marker+ *walker-handlers*)
       (aif (gethash (car form) *walker-handlers*)
-	   it
-	   (case (car form)
-	     ((block declare flet function go if labels let let*
-		     macrolet progn quote return-from setq symbol-macrolet
-		     tagbody unwind-protect catch multiple-value-call
-		     multiple-value-prog1 throw load-time-value the
-		     eval-when locally progv)
-	      (error "Sorry, No walker for the special operater ~S defined." (car form)))
-	     (t (gethash 'application *walker-handlers*))))))
+           it
+           (case (car form)
+             ((block declare flet function go if labels let let*
+                     macrolet progn quote return-from setq symbol-macrolet
+                     tagbody unwind-protect catch multiple-value-call
+                     multiple-value-prog1 throw load-time-value the
+                     eval-when locally progv)
+              (error "Sorry, No walker for the special operater ~S defined." (car form)))
+             (t (gethash 'application *walker-handlers*))))))
 
 (defmacro defwalker-handler (name (form parent lexical-env)
                              &body body)
@@ -169,8 +169,8 @@
 
 (defun split-body (body env &key parent (docstring t) (declare t))
   (let ((documentation nil)
-	(newdecls nil)
-	(decls nil))
+        (newdecls nil)
+        (decls nil))
     (flet ((done ()
              (return-from split-body (values body env documentation (nreverse decls)))))
       (loop
@@ -182,7 +182,7 @@
                         (let ((declarations (rest form)))
                           (dolist (dec declarations)
                             (setf (values env newdecls) (parse-declaration dec env parent))
-			    (setf decls (append newdecls decls))))
+                            (setf decls (append newdecls decls))))
                         ;; source code, all done
                         (done)))
               (string (if docstring

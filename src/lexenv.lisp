@@ -110,7 +110,7 @@
      for var-spec in (sb-c::lexenv-vars environment)
      when (and (atom (cdr var-spec))
                (not (and (typep (cdr var-spec) 'sb-c::lambda-var)
-			 (sb-c::lambda-var-ignorep (cdr var-spec)))))
+                         (sb-c::lambda-var-ignorep (cdr var-spec)))))
      collect (car var-spec)))
 
 #+sbcl
@@ -125,7 +125,7 @@
   (loop
    for mac-spec in (sb-c::lexenv-funs environment)
    when (and (consp (cdr mac-spec))
-	     (eq 'sb-sys::macro (cadr mac-spec)))
+             (eq 'sb-sys::macro (cadr mac-spec)))
    collect (cons (car mac-spec) (cddr mac-spec))))
 
 #+sbcl
@@ -133,7 +133,7 @@
   (loop
    for mac-spec in (sb-c::lexenv-vars environment)
    when (and (consp (cdr mac-spec))
-	     (eq 'sb-sys::macro (cadr mac-spec)))
+             (eq 'sb-sys::macro (cadr mac-spec)))
    collect (cons (car mac-spec) (cddr mac-spec))))
 
 ;;;; ** CMUCL
@@ -180,7 +180,7 @@
   (loop
    for mac-spec in (c::lexenv-functions environment)
    when (and (consp (cdr mac-spec))
-	     (eq 'system::macro (cadr mac-spec)))
+             (eq 'system::macro (cadr mac-spec)))
    collect (cons (car mac-spec) (cddr mac-spec))))
 
 #+cmu
@@ -188,7 +188,7 @@
   (loop
    for mac-spec in (c::lexenv-variables environment)
    when (and (consp (cdr mac-spec))
-	     (eq 'system::macro (cadr mac-spec)))
+             (eq 'system::macro (cadr mac-spec)))
    collect (cons (car mac-spec) (cddr mac-spec))))
 
 ;;;; ** CLISP
@@ -239,10 +239,10 @@
     (when (aref environment 1)
       (walk-vector-tree 
        (lambda (macro-name macro-spec)
-	 (if (system::macrop macro-spec)
-	     (push (cons macro-name 
-			 (macro-function macro-name environment))
-		   macros)))
+         (if (system::macrop macro-spec)
+             (push (cons macro-name 
+                         (macro-function macro-name environment))
+                   macros)))
        (aref environment 1)))
     macros))
 
@@ -252,10 +252,10 @@
     (when (aref environment 0)
       (walk-vector-tree 
        (lambda (macro-name macro-spec)
-	 (if (system::symbol-macro-p macro-spec)
-	     (push (cons macro-name
-			 (macroexpand-1 macro-name environment))
-		   symbol-macros)))
+         (if (system::symbol-macro-p macro-spec)
+             (push (cons macro-name
+                         (macroexpand-1 macro-name environment))
+                   symbol-macros)))
        (aref environment 0)))
     symbol-macros))
       
@@ -352,7 +352,7 @@
        (declare (ignore rest))
        (when (and (eq type :lexical)
                   (sys:variable-information symbol env))
-	 (push symbol fns)))
+         (push symbol fns)))
      env)
     fns))
 
@@ -363,7 +363,7 @@
      (lambda (name type rest)
        (when (and (eq type :function)
                   (sys:function-information name env))
-	 (push name fns)))
+         (push name fns)))
      env)
     fns))
 
@@ -436,34 +436,34 @@
 #+cmu
 (defmethod augment-with-variable ((env c::lexenv) var)
   (c::make-lexenv :default env 
-		  :variables (list (cons var (c::make-lambda-var :name var)))))
+                  :variables (list (cons var (c::make-lambda-var :name var)))))
 
 #+cmu
 (defmethod augment-with-function ((env c::lexenv) fun)
   (c::make-lexenv :default env 
-		  :functions (list (cons fun (lambda () 42)))))
+                  :functions (list (cons fun (lambda () 42)))))
 
 #+cmu
 (defmethod augment-with-macro ((env c::lexenv) mac def)
   (c::make-lexenv :default env 
-		  :functions (list (list* mac 'system::macro def))))
+                  :functions (list (list* mac 'system::macro def))))
 
 #+cmu
 (defmethod augment-with-symbol-macro ((env c::lexenv) symmac def)
   (c::make-lexenv :default env 
-		  :variables (list (list* symmac 'system::macro def))))
+                  :variables (list (list* symmac 'system::macro def))))
 
 
 #+clisp
 (defun augment-with-var-and-fun (env &key var fun)
   (let* ((old-vars (aref env 0))
-	 (old-funs (aref env 1))
-	 (new-vars (if (eq var nil)
-		       (make-array '(1) :initial-contents (list old-vars))
-		       (make-array '(3) :initial-contents (list (car var) (cdr var) old-vars))))
-	 (new-funs (if (eq fun nil)
-		       (make-array '(1) :initial-contents (list old-funs))
-		       (make-array '(3) :initial-contents (list (car fun) (cdr fun) old-funs)))))
+         (old-funs (aref env 1))
+         (new-vars (if (eq var nil)
+                       (make-array '(1) :initial-contents (list old-vars))
+                       (make-array '(3) :initial-contents (list (car var) (cdr var) old-vars))))
+         (new-funs (if (eq fun nil)
+                       (make-array '(1) :initial-contents (list old-funs))
+                       (make-array '(3) :initial-contents (list (car fun) (cdr fun) old-funs)))))
     (make-array '(2) :initial-contents (list new-vars new-funs))))
 
 ;; I don't know whether t is an acceptable value to store here,
@@ -483,8 +483,8 @@
 #+clisp
 (defmethod augment-with-symbol-macro ((env vector) symmac def)
   (augment-with-var-and-fun env :var
-			    (cons symmac 
-				  (system::make-symbol-macro def))))
+                            (cons symmac 
+                                  (system::make-symbol-macro def))))
 
 
 #+(and lispworks (or win32 linux))
@@ -532,23 +532,23 @@
 (defun parse-macro-definition (name lambda-list body env)
   (declare (ignore name))
   (let* ((environment-var nil) 
-	 (lambda-list-without-environment
-	  (loop 
-	   for prev = nil then i
-	   for i in lambda-list
-	   if (not (or (eq '&environment i) (eq '&environment prev)))
-	   collect i
-	   if (eq '&environment prev)
-	   do (if (eq environment-var nil)
-		  (setq environment-var i)
-		  (error "Multiple &ENVIRONMENT clauses in macro lambda list: ~S" lambda-list))))
-	 (handler-env (if (eq environment-var nil) (gensym "ENV-") environment-var))
-	 whole-list lambda-list-without-whole)
+         (lambda-list-without-environment
+          (loop 
+           for prev = nil then i
+           for i in lambda-list
+           if (not (or (eq '&environment i) (eq '&environment prev)))
+           collect i
+           if (eq '&environment prev)
+           do (if (eq environment-var nil)
+                  (setq environment-var i)
+                  (error "Multiple &ENVIRONMENT clauses in macro lambda list: ~S" lambda-list))))
+         (handler-env (if (eq environment-var nil) (gensym "ENV-") environment-var))
+         whole-list lambda-list-without-whole)
     (if (eq '&whole (car lambda-list-without-environment))
-	(setq whole-list (list '&whole (second lambda-list-without-environment))
-	      lambda-list-without-whole (cddr lambda-list-without-environment))
-	(setq whole-list '()
-	      lambda-list-without-whole lambda-list-without-environment))
+        (setq whole-list (list '&whole (second lambda-list-without-environment))
+              lambda-list-without-whole (cddr lambda-list-without-environment))
+        (setq whole-list '()
+              lambda-list-without-whole lambda-list-without-environment))
     (eval
      (with-unique-names (handler-args form-name)
        `(lambda (,handler-args ,handler-env)
