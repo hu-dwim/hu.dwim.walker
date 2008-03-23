@@ -14,7 +14,7 @@
     (setf expected form))
   (unless env
     (setf env (make-empty-lexical-environment)))
-  (let ((walked-form (unwalk-form (walk-form form nil (make-walk-env env)))))
+  (let ((walked-form (unwalk-form (walk-form form nil (make-walk-environment env)))))
     (is (equal walked-form expected))))
 
 (defmacro define-walk-unwalk-test (name &body body)

@@ -7,13 +7,13 @@
 (in-package :cl-walker)
 
 (defun macroexpand-all (form &optional env)
-  (unwalk-form (walk-form form nil (make-walk-env env))))
+  (unwalk-form (walk-form form nil (make-walk-environment env))))
 
 (defvar *warn-undefined* nil
   "When non-NIL any references to undefined functions or
   variables will signal a warning.")
 
-(defun walk-form (form &optional (parent nil) (env (make-walk-env)))
+(defun walk-form (form &optional (parent nil) (env (make-walk-environment)))
   "Walk FORM and return a FORM object."
   (funcall (find-walker-handler form) form parent env))
 
@@ -49,7 +49,7 @@
          (error "Sorry, No value for ~S of type ~S in environment ~S found."
                 name type environment))))
 
-(defun make-walk-env (&optional lexical-env)
+(defun make-walk-environment (&optional lexical-env)
   (let ((walk-env '()))
     (when lexical-env
       (dolist (var (lexical-variables lexical-env))

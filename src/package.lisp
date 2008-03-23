@@ -15,7 +15,7 @@
 
    #:form
    #:walk-form
-   #:make-walk-env
+   #:make-walk-environment
    #:*walk-handlers*
    #:*warn-undefined*
    #:undefined-reference
