@@ -6,7 +6,7 @@
 
 (in-package :cl-walker)
 
-(defun macroexpand-all (form &optional env)
+(defun macroexpand-all (form &optional (env (make-empty-lexical-environment)))
   (unwalk-form (walk-form form nil (make-walk-environment env))))
 
 (defvar *warn-undefined* nil
