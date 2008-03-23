@@ -8,8 +8,13 @@
 
 (defsuite* (walk-unwalk :in test))
 
-(deftest check-walk-unwalk (form &optional (expected form))
-  (let ((walked-form (unwalk-form (walk-form form))))
+(deftest check-walk-unwalk (form &optional (expected form) env)
+  (declare (optimize debug))
+  (unless expected
+    (setf expected form))
+  (unless env
+    (setf env (make-empty-lexical-environment)))
+  (let ((walked-form (unwalk-form (walk-form form nil (make-walk-env env)))))
     (is (equal walked-form expected))))
 
 (defmacro define-walk-unwalk-test (name &body body)

@@ -6,6 +6,9 @@
 
 (in-package :cl-walker)
 
+(defun macroexpand-all (form &optional env)
+  (unwalk-form (walk-form form nil (make-walk-env env))))
+
 (defvar *warn-undefined* nil
   "When non-NIL any references to undefined functions or
   variables will signal a warning.")
@@ -202,3 +205,36 @@
                (done)))
          do (pop body)
          finally (done)))))
+
+(defun parse-macro-definition (name lambda-list body env)
+  "Sort of like parse-macro from CLtL2."
+  (declare (ignore name))
+  (let* ((environment-var nil)
+         (lambda-list-without-environment
+          (loop
+           for prev = nil then i
+           for i in lambda-list
+           if (not (or (eq '&environment i) (eq '&environment prev)))
+           collect i
+           if (eq '&environment prev)
+           do (if (eq environment-var nil)
+                  (setq environment-var i)
+                  (error "Multiple &ENVIRONMENT clauses in macro lambda list: ~S" lambda-list))))
+         (handler-env (if (eq environment-var nil) (gensym "ENV-") environment-var))
+         whole-list lambda-list-without-whole)
+    (if (eq '&whole (car lambda-list-without-environment))
+        (setq whole-list (list '&whole (second lambda-list-without-environment))
+              lambda-list-without-whole (cddr lambda-list-without-environment))
+        (setq whole-list '()
+              lambda-list-without-whole lambda-list-without-environment))
+    (eval
+     (with-unique-names (handler-args form-name)
+       `(lambda (,handler-args ,handler-env)
+          ,@(unless environment-var
+              `((declare (ignore ,handler-env))))
+          (destructuring-bind (,@whole-list ,form-name ,@lambda-list-without-whole)
+              ,handler-args
+            (declare (ignore ,form-name))
+            ,@(mapcar (lambda (form)
+                        (macroexpand-all form env))
+                      body)))))))

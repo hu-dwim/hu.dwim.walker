@@ -6,53 +6,133 @@
 
 (in-package :cl-walker)
 
-;;;; * Portable lexical environment access
+;;;; Lexical environment querying
 
-(defgeneric environment-p (environment)
-  (:documentation "Returns T if ENVIRONMENT is a lexical
-  environment object (something suitable for passing to
-  macroexpand-1 or similar)"))
+(defun unimplemented-lexical-environment-function ()
+  (cerror "ignore and try to continue" "This is not implemented for your lisp, sorry.")
+  nil)
+
+(defgeneric lexical-environment-p (thing)
+  (:documentation "Returns T if THING is a lexical environment object (something suitable for passing to macroexpand-1 or similar). This is not too reliable on some lisps, so use only for asserts and similar.")
+  (:method ((thing t))
+    (unimplemented-lexical-environment-function)))
+
+(setf (documentation 'make-empty-lexical-environment 'function)
+      "Returns an empty lexical environment useful for testing and playing in the repl.")
 
 (defgeneric lexical-variables (environment)
-  (:documentation "Return the names of all the local variables
-  in ENVIRONMENT. Does not return neither symbol-macrolets nor
-  ignared variables."))
+  (:documentation "Return the names of all the local variables in ENVIRONMENT. Does not return neither symbol-macrolets nor ignared variables.")
+  (:method ((environment t))
+    (unimplemented-lexical-environment-function)))
 
 (defgeneric lexical-functions (environment)
-  (:documentation "Returns the names of all the local functions
-  in ENVIRONMENT. Names may be symbols of lists of the form (setf
-  name)."))
+  (:documentation "Returns the names of all the local functions in ENVIRONMENT. Names may be symbols of lists of the form (setf name).")
+  (:method ((environment t))
+    (unimplemented-lexical-environment-function)))
 
 (defgeneric lexical-macros (environment)
-  (:documentation "Returns the lexical macro definitions in
-  ENVIRONMENT. The return value is a list of elements of form
-  (SYMBOL . MACRO-FUNCTION. MACRO-FUNCTION can be called like
-  functions returned by macro-function."))
+  (:documentation "Returns the lexical macro definitions in ENVIRONMENT. Returns an alist of elements of form (SYMBOL . MACRO-FUNCTION. MACRO-FUNCTION can be called like functions returned by macro-function.")
+  (:method ((environment t))
+    (unimplemented-lexical-environment-function)))
 
 (defgeneric lexical-symbol-macros (environment)
-  (:documentation "Returns the lexical symbol macro definitions 
-  in ENVIRONMENT. The return value is a list of elements of form
-  (SYMBOL . EXPANSION)."))
+  (:documentation "Returns the lexical symbol macro definitions in ENVIRONMENT. Returns an alist of elements of form (SYMBOL . EXPANSION).")
+  (:method ((environment t))
+    (unimplemented-lexical-environment-function)))
 
-(defmethod lexical-variables ((environment t))
-  '())
+;;;; Lexical environment augmentation
 
-(defmethod lexical-functions ((environment t))
-  '())
+;;; These functions are a half-assed implementation of section 8.5 of
+;;; CLtL2 (environment manipulation). TODO: I really don't feel like
+;;; implementing THAT interface for every supported Lisp.
 
-(defmethod lexical-macros ((environment t))
-  '())
+(defgeneric augment-with-variable (env name)
+  (:method ((env t) name)
+    (declare (ignore name))
+    (unimplemented-lexical-environment-function)
+    env))
 
-(defmethod lexical-symbol-macros ((environment t))
-  '())
+(defgeneric augment-with-function (env name)
+  (:method ((env t) name)
+    (declare (ignore name))
+    (unimplemented-lexical-environment-function)
+    env))
 
-;;;; ** OpenMCL
+(defgeneric augment-with-macro (env name definition)
+  (:method ((env t) name definition)
+    (declare (ignore name definition))
+    (unimplemented-lexical-environment-function)
+    env))
 
-#+openmcl
-(defmethod environment-p ((e ccl::lexical-environment))
+(defgeneric augment-with-symbol-macro (env name definition)
+  (:method ((env t) name definition)
+    (declare (ignore name definition))
+    (unimplemented-lexical-environment-function)
+    env))
+
+;;;
+;;; SBCL
+;;;
+#+sbcl
+(progn
+
+(defmethod lexical-environment-p ((environment sb-kernel:lexenv))
   t)
 
+(defun make-empty-lexical-environment ()
+  (sb-kernel:make-null-lexenv))
+
+(defmethod lexical-variables ((environment sb-kernel:lexenv))
+  (loop
+     for var-spec in (sb-c::lexenv-vars environment)
+     when (and (atom (cdr var-spec))
+               (not (and (typep (cdr var-spec) 'sb-c::lambda-var)
+                         (sb-c::lambda-var-ignorep (cdr var-spec)))))
+     collect (car var-spec)))
+
+(defmethod lexical-functions ((environment sb-kernel:lexenv))
+  (loop
+   for fun-spec in (sb-c::lexenv-funs environment)
+   when (not (consp (cdr fun-spec)))
+   collect (car fun-spec)))
+
+(defmethod lexical-macros ((environment sb-kernel:lexenv))
+  (loop
+   for mac-spec in (sb-c::lexenv-funs environment)
+   when (and (consp (cdr mac-spec))
+             (eq 'sb-sys::macro (cadr mac-spec)))
+   collect (cons (car mac-spec) (cddr mac-spec))))
+
+(defmethod lexical-symbol-macros ((environment sb-kernel:lexenv))
+  (loop
+   for mac-spec in (sb-c::lexenv-vars environment)
+   when (and (consp (cdr mac-spec))
+             (eq 'sb-sys::macro (cadr mac-spec)))
+   collect (cons (car mac-spec) (cddr mac-spec))))
+
+(defmethod augment-with-variable ((env sb-kernel:lexenv) var)
+  (sb-c::make-lexenv :default env :vars (list (cons var t))))
+
+(defmethod augment-with-function ((env sb-kernel:lexenv) fun)
+  (sb-c::make-lexenv :default env :funs (list (cons fun t))))
+
+(defmethod augment-with-macro ((env sb-kernel:lexenv) mac def)
+  (sb-c::make-lexenv :default env :funs (list (list* mac 'sb-sys::macro def))))
+
+(defmethod augment-with-symbol-macro ((env sb-kernel:lexenv) symmac def)
+  (sb-c::make-lexenv :default env :vars (list (list* symmac 'sb-sys::macro def))))
+
+) ; #+sbcl
+
+;;;
+;;; OpenMCL
+;;;
 #+openmcl
+(progn
+
+(defmethod lexical-environment-p ((e ccl::lexical-environment))
+  t)
+
 (defmethod lexical-variables ((environment ccl::lexical-environment))
   (loop
      for env = environment
@@ -76,7 +156,6 @@
                                                  (eql :symbol-macro (car (ccl::var-ea var-spec)))))
                                           vars)))))
 
-#+openmcl
 (defmethod lexical-functions ((environment ccl::lexical-environment))
   (loop
      for env = environment
@@ -97,52 +176,16 @@
                                  ;; weed out all the macrolets
                                  (eql 'ccl::macro (second func-spec)))
                                funs))))
-
-;;;; ** SBCL
- 
-#+sbcl
-(defmethod environment-p ((environment sb-kernel:lexenv))
-  t)
-
-#+sbcl
-(defmethod lexical-variables ((environment sb-kernel:lexenv))
-  (loop
-     for var-spec in (sb-c::lexenv-vars environment)
-     when (and (atom (cdr var-spec))
-               (not (and (typep (cdr var-spec) 'sb-c::lambda-var)
-                         (sb-c::lambda-var-ignorep (cdr var-spec)))))
-     collect (car var-spec)))
-
-#+sbcl
-(defmethod lexical-functions ((environment sb-kernel:lexenv))
-  (loop
-   for fun-spec in (sb-c::lexenv-funs environment)
-   when (not (consp (cdr fun-spec)))
-   collect (car fun-spec)))
-
-#+sbcl
-(defmethod lexical-macros ((environment sb-kernel:lexenv))
-  (loop
-   for mac-spec in (sb-c::lexenv-funs environment)
-   when (and (consp (cdr mac-spec))
-             (eq 'sb-sys::macro (cadr mac-spec)))
-   collect (cons (car mac-spec) (cddr mac-spec))))
-
-#+sbcl
-(defmethod lexical-symbol-macros ((environment sb-kernel:lexenv))
-  (loop
-   for mac-spec in (sb-c::lexenv-vars environment)
-   when (and (consp (cdr mac-spec))
-             (eq 'sb-sys::macro (cadr mac-spec)))
-   collect (cons (car mac-spec) (cddr mac-spec))))
+) ; #+openmcl
 
 ;;;; ** CMUCL
 
 #+cmu
-(defmethod environment-p ((environment c::lexenv))
+(progn
+
+(defmethod lexical-environment-p ((environment c::lexenv))
   t)
 
-#+cmu
 (defmethod lexical-variables ((environment c::lexenv))
   (loop
      for var-spec in (c::lexenv-variables environment)
@@ -154,7 +197,6 @@
                (not (c::lambda-var-ignorep (cdr var-spec))))
      collect (car var-spec)))
 
-#+cmu
 (defmethod lexical-functions ((environment c::lexenv))
   (loop
      for func-spec in (c::lexenv-functions environment)
@@ -175,7 +217,6 @@
        do (error "Sorry, don't know how to handle the lexcial function spec ~S."
                  func-spec)))
 
-#+cmu
 (defmethod lexical-macros ((environment c::lexenv))
   (loop
    for mac-spec in (c::lexenv-functions environment)
@@ -183,7 +224,6 @@
              (eq 'system::macro (cadr mac-spec)))
    collect (cons (car mac-spec) (cddr mac-spec))))
 
-#+cmu
 (defmethod lexical-symbol-macros ((environment c::lexenv))
   (loop
    for mac-spec in (c::lexenv-variables environment)
@@ -191,13 +231,32 @@
              (eq 'system::macro (cadr mac-spec)))
    collect (cons (car mac-spec) (cddr mac-spec))))
 
+(defmethod augment-with-variable ((env c::lexenv) var)
+  (c::make-lexenv :default env
+                  :variables (list (cons var (c::make-lambda-var :name var)))))
+
+(defmethod augment-with-function ((env c::lexenv) fun)
+  (c::make-lexenv :default env
+                  :functions (list (cons fun (lambda () 42)))))
+
+(defmethod augment-with-macro ((env c::lexenv) mac def)
+  (c::make-lexenv :default env
+                  :functions (list (list* mac 'system::macro def))))
+
+(defmethod augment-with-symbol-macro ((env c::lexenv) symmac def)
+  (c::make-lexenv :default env
+                  :variables (list (list* symmac 'system::macro def))))
+
+) ; #+cmu
+
 ;;;; ** CLISP
 
 #+clisp
-(defmethod environment-p ((environment vector))
+(progn
+
+(defmethod lexical-environment-p ((environment vector))
   (= 2 (length environment)))
 
-#+clisp
 (defun walk-vector-tree (function vector-tree)
   (labels ((%walk (vector-tree)
              (loop
@@ -214,7 +273,6 @@
                               (aref vector-tree (1+ index))))))
     (%walk vector-tree)))
 
-#+clisp
 (defmethod lexical-variables ((environment vector))
   (let ((vars '()))
     (when (aref environment 0)
@@ -224,7 +282,6 @@
                         (aref environment 0)))
     vars))
 
-#+clisp
 (defmethod lexical-functions ((environment vector))
   (let ((vars '()))
     (when (aref environment 1)
@@ -233,24 +290,22 @@
                         (aref environment 1)))
     vars))
 
-#+clisp
 (defmethod lexical-macros ((environment vector))
   (let ((macros '()))
     (when (aref environment 1)
-      (walk-vector-tree 
+      (walk-vector-tree
        (lambda (macro-name macro-spec)
          (if (system::macrop macro-spec)
-             (push (cons macro-name 
+             (push (cons macro-name
                          (macro-function macro-name environment))
                    macros)))
        (aref environment 1)))
     macros))
 
-#+clisp
 (defmethod lexical-symbol-macros ((environment vector))
   (let (symbol-macros '())
     (when (aref environment 0)
-      (walk-vector-tree 
+      (walk-vector-tree
        (lambda (macro-name macro-spec)
          (if (system::symbol-macro-p macro-spec)
              (push (cons macro-name
@@ -258,14 +313,42 @@
                    symbol-macros)))
        (aref environment 0)))
     symbol-macros))
-      
+
+(defun augment-with-var-and-fun (env &key var fun)
+  (let* ((old-vars (aref env 0))
+         (old-funs (aref env 1))
+         (new-vars (if var
+                       (make-array 3 :initial-contents (list (car var) (cdr var) old-vars))
+                       (make-array 1 :initial-contents (list old-vars))))
+         (new-funs (if fun
+                       (make-array 3 :initial-contents (list (car fun) (cdr fun) old-funs))
+                       (make-array 1 :initial-contents (list old-funs)))))
+    (make-array 2 :initial-contents (list new-vars new-funs))))
+
+;; I don't know whether T is an acceptable value to store here, but
+;; CLISP does not complain.
+(defmethod augment-with-variable ((env vector) var)
+  (augment-with-var-and-fun env :var (cons var t)))
+
+(defmethod augment-with-function ((env vector) fun)
+  (augment-with-var-and-fun env :fun (cons fun t)))
+
+(defmethod augment-with-macro ((env vector) mac def)
+  (augment-with-var-and-fun env :fun (cons mac (system::make-macro def))))
+
+(defmethod augment-with-symbol-macro ((env vector) symmac def)
+  (augment-with-var-and-fun env :var (cons symmac (system::make-symbol-macro def))))
+
+) ; #+clisp
+
 ;;;; ** LispWorks
 
 #+(and lispworks macosx)
-(defmethod environment-p ((environment system::augmented-environment))
+(progn
+
+(defmethod lexical-environment-p ((environment system::augmented-environment))
   t)
 
-#+(and lispworks macosx)
 (defmethod lexical-variables ((environment system::augmented-environment))
   (mapcar (lambda (venv)
             (slot-value venv 'compiler::name))
@@ -275,7 +358,6 @@
                        (slot-value venv 'compiler::kind))
                      (slot-value environment 'compiler::venv))))
 
-#+(and lispworks macosx)
 (defmethod lexical-functions ((environment system::augmented-environment))
   (mapcar #'car
           (remove-if (lambda (fenv)
@@ -283,11 +365,9 @@
                        (eql 'compiler::macro (slot-value (cdr fenv) 'compiler::function-or-macro)))
                      (slot-value environment 'compiler::fenv))))
 
-#+(and lispworks macosx)
-(defmethod environment-p ((environment compiler::environment))
+(defmethod lexical-environment-p ((environment compiler::environment))
   t)
 
-#+(and lispworks macosx)
 (defmethod lexical-variables ((environment compiler::environment))
   (mapcar (lambda (venv)
             (slot-value venv 'compiler::name))
@@ -297,7 +377,6 @@
                        (slot-value venv 'compiler::kind))
                      (slot-value environment 'compiler::venv))))
 
-#+(and lispworks macosx)
 (defmethod lexical-functions ((environment compiler::environment))
   (mapcar #'car
           (remove-if (lambda (fenv)
@@ -305,46 +384,65 @@
                        (macro-function (car fenv) environment))
                      (slot-value environment 'compiler::fenv))))
 
-#+(and lispworks (or win32 linux))
-(defmethod environment-p ((environment lexical::environment))
-  t)
+) ; #+(and lispworks macosx)
 
 #+(and lispworks (or win32 linux))
+(progn
+
+(defmethod lexical-environment-p ((environment lexical::environment))
+  t)
+
 (defun lexical-runtime-p (value)
   (and (symbolp value)
        (eq (symbol-package value) nil)))
 
-#+(and lispworks (or win32 linux))
 (defmethod lexical-variables ((environment lexical::environment))
   (loop for candidate in (slot-value environment 'lexical::variables)
         if (lexical-runtime-p (cdr candidate))
         collect (car candidate)))
 
-#+(and lispworks (or win32 linux))
 (defmethod lexical-functions ((environment lexical::environment))
   (loop for candidate in (slot-value environment 'lexical::functions)
         if (lexical-runtime-p (cdr candidate))
         collect (car candidate)))
 
 
-#+(and lispworks (or win32 linux))
 (defmethod lexical-symbol-macros ((environment lexical::environment))
   (loop for candidate in (slot-value environment 'lexical::variables)
         unless (lexical-runtime-p (cdr candidate))
         collect candidate))
 
-#+(and lispworks (or win32 linux))
 (defmethod lexical-macros ((environment lexical::environment))
   (loop for candidate in (slot-value environment 'lexical::functions)
         unless (lexical-runtime-p (cdr candidate))
         collect candidate))
 
+(defmethod augment-with-variable ((env lexical::environment) var)
+  (harlequin-common-lisp:augment-environment
+   env :variable (list var)))
+
+(defmethod augment-with-function ((env lexical::environment) fun)
+  (harlequin-common-lisp:augment-environment
+   env :function (list fun)))
+
+(defmethod augment-with-macro ((env lexical::environment) mac def)
+  (harlequin-common-lisp:augment-environment
+   env :macro (list (list mac def))))
+
+(defmethod augment-with-symbol-macro ((env lexical::environment) symmac def)
+  (harlequin-common-lisp:augment-environment
+   env :symbol-macro (list (list symmac def))))
+
+) ; #+(and lispworks (or win32 linux))
+
 ;;;; ** Allegro
 
 #+(and allegro (version>= 7 0))
-(defmethod environment-p ((env sys::augmentable-environment)) t)
+(progn
 
-#+(and allegro (version>= 7 0))
+(defmethod lexical-environment-p ((env sys::augmentable-environment))
+  t)
+
 (defmethod lexical-variables ((env sys::augmentable-environment))
   (let (fns)
     (system::map-over-environment-variables
@@ -356,7 +454,6 @@
      env)
     fns))
 
-#+(and allegro (version>= 7 0))
 (defmethod lexical-functions ((env sys::augmentable-environment))
   (let (fns)
     (system::map-over-environment-functions
@@ -367,7 +464,6 @@
      env)
     fns))
 
-#+(and allegro (version>= 7 0))
 (defmethod lexical-macros ((env sys::augmentable-environment))
   (let (fns)
     (system::map-over-environment-functions
@@ -377,7 +473,6 @@
      env)
     fns))
 
-#+(and allegro (version>= 7 0))
 (defmethod lexical-symbol-macros ((env sys::augmentable-environment))
   (let (fns)
     (system::map-over-environment-variables
@@ -387,175 +482,25 @@
      env)
     fns))
 
-
-;; These functions are a half-assed implementation of section 8.5 in CLtL2
-;; (environment manipulation)
-;; I really don't feel like implementing THAT interface for every supported
-;; Lisp.
-
-(defgeneric augment-with-variable (env var))
-
-(defgeneric augment-with-function (env fun))
-
-(defgeneric augment-with-macro (env mac def))
-
-(defgeneric augment-with-symbol-macro (env symmac def))
-
-(defmethod augment-with-variable ((env t) var)
-  (declare (ignore var))
-  env)
-
-(defmethod augment-with-function ((env t) fun)
-  (declare (ignore fun))
-  env)
-
-(defmethod augment-with-macro ((env t) mac def)
-  (declare (ignore mac def))
-  env)
-
-(defmethod augment-with-symbol-macro ((env t) symmac def)
-  (declare (ignore symmac def))
-  env)
-
-#+sbcl
-(defmethod augment-with-variable ((env sb-kernel:lexenv) var)
-  (sb-c::make-lexenv :default env :vars (list (cons var t))))
-
-#+sbcl
-(defmethod augment-with-function ((env sb-kernel:lexenv) fun)
-  (sb-c::make-lexenv :default env :funs (list (cons fun t))))
-
-#+sbcl
-(defmethod augment-with-macro ((env sb-kernel:lexenv) mac def)
-  (sb-c::make-lexenv :default env :funs (list (list* mac 'sb-sys::macro def))))
-
-#+sbcl
-(defmethod augment-with-symbol-macro ((env sb-kernel:lexenv) symmac def)
-  (sb-c::make-lexenv :default env :vars (list (list* symmac 'sb-sys::macro def))))
-
-#+cmu
-(defmethod augment-with-variable ((env c::lexenv) var)
-  (c::make-lexenv :default env 
-                  :variables (list (cons var (c::make-lambda-var :name var)))))
-
-#+cmu
-(defmethod augment-with-function ((env c::lexenv) fun)
-  (c::make-lexenv :default env 
-                  :functions (list (cons fun (lambda () 42)))))
-
-#+cmu
-(defmethod augment-with-macro ((env c::lexenv) mac def)
-  (c::make-lexenv :default env 
-                  :functions (list (list* mac 'system::macro def))))
-
-#+cmu
-(defmethod augment-with-symbol-macro ((env c::lexenv) symmac def)
-  (c::make-lexenv :default env 
-                  :variables (list (list* symmac 'system::macro def))))
-
-
-#+clisp
-(defun augment-with-var-and-fun (env &key var fun)
-  (let* ((old-vars (aref env 0))
-         (old-funs (aref env 1))
-         (new-vars (if (eq var nil)
-                       (make-array '(1) :initial-contents (list old-vars))
-                       (make-array '(3) :initial-contents (list (car var) (cdr var) old-vars))))
-         (new-funs (if (eq fun nil)
-                       (make-array '(1) :initial-contents (list old-funs))
-                       (make-array '(3) :initial-contents (list (car fun) (cdr fun) old-funs)))))
-    (make-array '(2) :initial-contents (list new-vars new-funs))))
-
-;; I don't know whether t is an acceptable value to store here,
-;; but CLISP does not complain.
-#+clisp
-(defmethod augment-with-variable ((env vector) var)
-  (augment-with-var-and-fun env :var (cons var t)))
-
-#+clisp
-(defmethod augment-with-function ((env vector) fun)
-  (augment-with-var-and-fun env :fun (cons fun t)))
-
-#+clisp
-(defmethod augment-with-macro ((env vector) mac def)
-  (augment-with-var-and-fun env :fun (cons mac (system::make-macro def))))
-
-#+clisp
-(defmethod augment-with-symbol-macro ((env vector) symmac def)
-  (augment-with-var-and-fun env :var
-                            (cons symmac 
-                                  (system::make-symbol-macro def))))
-
-
-#+(and lispworks (or win32 linux))
-(defmethod augment-with-variable ((env lexical::environment) var)
-  (harlequin-common-lisp:augment-environment
-   env :variable (list var)))
-
-#+(and lispworks (or win32 linux))
-(defmethod augment-with-function ((env lexical::environment) fun)
-  (harlequin-common-lisp:augment-environment
-   env :function (list fun)))
-
-#+(and lispworks (or win32 linux))
-(defmethod augment-with-macro ((env lexical::environment) mac def)
-  (harlequin-common-lisp:augment-environment
-   env :macro (list (list mac def))))
-
-#+(and lispworks (or win32 linux))
-(defmethod augment-with-symbol-macro ((env lexical::environment) symmac def)
-  (harlequin-common-lisp:augment-environment
-   env :symbol-macro (list (list symmac def))))
-
-#+(and allegro (version>= 7 0))
 (defmethod augment-with-variable ((env sys::augmentable-environment) var)
   (system:augment-environment env :variable (list var)))
 
-#+(and allegro (version>= 7 0))
 (defmethod augment-with-function ((env sys::augmentable-environment) fun)
   (system:augment-environment env :function (list fun)))
 
-#+(and allegro (version>= 7 0))
 (defmethod augment-with-macro ((env sys::augmentable-environment) mac def)
   (system:augment-environment env :macro (list (list mac def))))
 
-#+(and allegro (version>= 7 0))
 (defmethod augment-with-symbol-macro ((env sys::augmentable-environment) symmac def)
   (system:augment-environment env :symbol-macro (list (list symmac def))))
 
+) ; #+(and allegro (version>= 7 0))
 
-(defun macroexpand-all (form &optional env)
-  (unwalk-form (walk-form form nil (make-walk-env env))))
-
-;; Sort of parse-macro from CLtL2.
-
-(defun parse-macro-definition (name lambda-list body env)
-  (declare (ignore name))
-  (let* ((environment-var nil) 
-         (lambda-list-without-environment
-          (loop 
-           for prev = nil then i
-           for i in lambda-list
-           if (not (or (eq '&environment i) (eq '&environment prev)))
-           collect i
-           if (eq '&environment prev)
-           do (if (eq environment-var nil)
-                  (setq environment-var i)
-                  (error "Multiple &ENVIRONMENT clauses in macro lambda list: ~S" lambda-list))))
-         (handler-env (if (eq environment-var nil) (gensym "ENV-") environment-var))
-         whole-list lambda-list-without-whole)
-    (if (eq '&whole (car lambda-list-without-environment))
-        (setq whole-list (list '&whole (second lambda-list-without-environment))
-              lambda-list-without-whole (cddr lambda-list-without-environment))
-        (setq whole-list '()
-              lambda-list-without-whole lambda-list-without-environment))
-    (eval
-     (with-unique-names (handler-args form-name)
-       `(lambda (,handler-args ,handler-env)
-          ,@(if (eq environment-var nil) 
-              `((declare (ignore ,handler-env)))
-              nil)
-          (destructuring-bind (,@whole-list ,form-name ,@lambda-list-without-whole)
-              ,handler-args
-            (declare (ignore ,form-name))
-            ,@(mapcar (lambda (form) (macroexpand-all form env)) body)))))))
+;; if there was no definition provided for
+;; make-empty-lexical-environment then register a function that will
+;; signal an error.
+(eval-when (:load-toplevel :execute)
+  (unless (fboundp 'make-empty-lexical-environment)
+    (setf (fdefinition 'make-empty-lexical-environment)
+          (lambda ()
+            (unimplemented-lexical-environment-function)))))

@@ -11,6 +11,8 @@
   (:use :common-lisp :alexandria)
   (:export
 
+   #:make-empty-lexical-environment
+
    #:form
    #:walk-form
    #:make-walk-env
