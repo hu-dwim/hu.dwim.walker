@@ -20,13 +20,14 @@
                 :components ((:file "package")
                              (:file "duplicates" :depends-on ("package"))
                              (:file "lexenv" :depends-on ("package" "duplicates"))
-			     (:file "walk" :depends-on ("package" "lexenv" "duplicates"))
-                             (:file "unwalk" :depends-on ("package" "walk" "duplicates"))))))
+                             (:file "infrastructure" :depends-on ("package" "lexenv" "duplicates"))
+                             (:file "walk" :depends-on ("infrastructure"))
+                             (:file "unwalk" :depends-on ("infrastructure"))))))
 
 (defsystem :cl-walker-test
   :components ((:module "tests"
-		:components ((:file "package")
-			     (:file "walk-unwalk" :depends-on ("package"))
+                :components ((:file "package")
+                             (:file "walk-unwalk" :depends-on ("package"))
                              (:file "macros" :depends-on ("package")))))
   :depends-on (:cl-walker :stefil))
 
