@@ -61,7 +61,7 @@
          (push name result)))
      lexenv
      :include-ignored include-ignored)
-    result))
+    (nreverse result)))
 
 (defun find-variable-in-lexenv (name-to-find lexenv &key include-ignored)
   (iterate-variables-in-lexenv
@@ -89,7 +89,7 @@
                  (funcall filter name))
          (push name result)))
      lexenv)
-    result))
+    (nreverse result)))
 
 (defun find-function-in-lexenv (name-to-find lexenv)
   (iterate-functions-in-lexenv
@@ -120,7 +120,7 @@
                  (funcall filter name))
          (push name result)))
      lexenv)
-    result))
+    (nreverse result)))
 
 (defun find-macro-in-lexenv (name-to-find lexenv)
   (iterate-macros-in-lexenv
@@ -151,7 +151,7 @@
                  (funcall filter name))
          (push name result)))
      lexenv)
-    result))
+    (nreverse result)))
 
 (defun find-symbol-macro-in-lexenv (name-to-find lexenv)
   (iterate-symbol-macros-in-lexenv
@@ -178,7 +178,7 @@
                  (funcall filter name))
          (push name result)))
      lexenv)
-    result))
+    (nreverse result)))
 
 (defun find-block-in-lexenv (name-to-find lexenv)
   (iterate-blocks-in-lexenv

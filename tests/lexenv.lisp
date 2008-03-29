@@ -17,10 +17,6 @@
                     ,form)))
   (values))
 
-(defun sort-by-symbol-name (sequence)
-  (sort (copy-seq sequence)
-        #'string< :key #'symbol-name))
-
 (defsuite* (test/lexenv/query :in test/lexenv))
 
 (deftest test/lexenv/query/variables ()
@@ -36,9 +32,8 @@
                 (z 3))
             (declare (ignore z))
             (macrolet ((dummy (&environment env)
-                         (is (equal '(x y)
-                                    (sort-by-symbol-name
-                                     (collect-variables-in-lexenv env))))
+                         (is (equal '(y x)
+                                    (collect-variables-in-lexenv env)))
                          (bind ((ignored 0)
                                 (non-ignored 0))
                            (do-variables-in-lexenv (env name ignored?)
@@ -49,9 +44,8 @@
                                  (incf non-ignored)))
                            (is (= ignored 1))
                            (is (= non-ignored 2)))
-                         (is (equal '(x y z)
-                                    (sort-by-symbol-name
-                                     (collect-variables-in-lexenv env :include-ignored t))))
+                         (is (equal '(z y x)
+                                    (collect-variables-in-lexenv env :include-ignored t)))
                          (is (find-variable-in-lexenv 'x env))
                          (is (not (find-variable-in-lexenv 'z env)))
                          (is (not (find-variable-in-lexenv 'a env)))
@@ -74,9 +68,8 @@
                 (z 3))
             (declare (ignore z))
             (macrolet ((dummy (&environment env)
-                         (is (equal '(f1 f2)
-                                    (sort-by-symbol-name
-                                     (collect-functions-in-lexenv env))))
+                         (is (equal '(f2 f1)
+                                    (collect-functions-in-lexenv env)))
                          (bind ((functions 0))
                            (do-functions-in-lexenv (env name)
                              (is (and (symbolp name)
@@ -105,8 +98,7 @@
             (declare (ignore z))
             (macrolet ((dummy (&environment env)
                          (is (equal '(dummy m1 m2)
-                                    (sort-by-symbol-name
-                                     (collect-macros-in-lexenv env))))
+                                    (collect-macros-in-lexenv env)))
                          (bind ((macros 0))
                            (do-macros-in-lexenv (env name fn)
                              (is (and (symbolp name)
@@ -135,8 +127,7 @@
             (declare (ignore z))
             (macrolet ((dummy (&environment env)
                          (is (equal '(a b)
-                                    (sort-by-symbol-name
-                                     (collect-symbol-macros-in-lexenv env))))
+                                    (collect-symbol-macros-in-lexenv env)))
                          (bind ((symbol-macros 0))
                            (do-symbol-macros-in-lexenv (env name fn)
                              (is (and (symbolp name)
