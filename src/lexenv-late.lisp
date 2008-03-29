@@ -23,6 +23,10 @@
    :do (when documentation
          (setf (documentation name 'function) documentation)))
 
+(defun unimplemented-lexical-environment-function ()
+  (cerror "ignore and try to continue" "This is not implemented for your lisp, sorry. You may try to continue, but...")
+  nil)
+
 ;;; if there was no definition provided for some of the functions in
 ;;; *lexical-environment-functions* then register a function that will
 ;;; signal an error.
@@ -157,9 +161,32 @@
    lexenv)
   (values nil))
 
-(defun unimplemented-lexical-environment-function ()
-  (cerror "ignore and try to continue" "This is not implemented for your lisp, sorry. You may try to continue, but...")
-  nil)
+;;;
+;;; blocks
+;;;
+(defmacro do-blocks-in-lexenv ((lexenv name) &body body)
+  `(iterate-blocks-in-lexenv
+    (lambda (,name)
+      ,@body)
+    ,lexenv))
+
+(defun collect-blocks-in-lexenv (lexenv &key filter)
+  (let ((result (list)))
+    (iterate-blocks-in-lexenv
+     (lambda (name)
+       (when (or (not filter)
+                 (funcall filter name))
+         (push name result)))
+     lexenv)
+    result))
+
+(defun find-block-in-lexenv (name-to-find lexenv)
+  (iterate-blocks-in-lexenv
+   (lambda (name)
+     (when (eq name name-to-find)
+       (return-from find-block-in-lexenv (values name))))
+   lexenv)
+  (values nil))
 
 #||
 
