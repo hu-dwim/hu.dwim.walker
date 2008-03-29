@@ -12,10 +12,15 @@
     (iterate-functions-in-lexenv     "(funcall VISITOR name) for each function definition in LEXENV.")
     (iterate-macros-in-lexenv        "(funcall VISITOR name macro-function) for each macro definition in LEXENV.")
     (iterate-symbol-macros-in-lexenv "(funcall VISITOR name macro-function) for each symbol macro definition in LEXENV.")
+    (iterate-blocks-in-lexenv        "(funcall VISITOR name) for each block in LEXENV.")
+    (iterate-tags-in-lexenv          "(funcall VISITOR name) for each tag in LEXENV.")
     (augment-lexenv-with-variable)
     (augment-lexenv-with-function)
     (augment-lexenv-with-macro)
-    (augment-lexenv-with-symbol-macro)))
+    (augment-lexenv-with-symbol-macro)
+    (augment-lexenv-with-block)
+    (augment-lexenv-with-tag)
+    ))
 
 ;;; set up some docstrings
 (loop
@@ -185,6 +190,33 @@
    (lambda (name)
      (when (eq name name-to-find)
        (return-from find-block-in-lexenv (values name))))
+   lexenv)
+  (values nil))
+
+;;;
+;;; tags
+;;;
+(defmacro do-tags-in-lexenv ((lexenv name) &body body)
+  `(iterate-tags-in-lexenv
+    (lambda (,name)
+      ,@body)
+    ,lexenv))
+
+(defun collect-tags-in-lexenv (lexenv &key filter)
+  (let ((result (list)))
+    (iterate-tags-in-lexenv
+     (lambda (name)
+       (when (or (not filter)
+                 (funcall filter name))
+         (push name result)))
+     lexenv)
+    (nreverse result)))
+
+(defun find-tag-in-lexenv (name-to-find lexenv)
+  (iterate-tags-in-lexenv
+   (lambda (name)
+     (when (eq name name-to-find)
+       (return-from find-tag-in-lexenv (values name))))
    lexenv)
   (values nil))
 

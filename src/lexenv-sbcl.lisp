@@ -69,6 +69,12 @@
      :for name = (first entry)
      :do (funcall visitor name)))
 
+(defun iterate-tags-in-lexenv (visitor lexenv)
+  (loop
+     :for entry :in (sb-c::lexenv-tags lexenv)
+     :for name = (first entry)
+     :do (funcall visitor name)))
+
 ;;;
 ;;; augmentation
 ;;;
@@ -93,3 +99,5 @@
 (defun augment-lexenv-with-block (lexenv name)
   (sb-c::make-lexenv :default lexenv :blocks (list (list name))))
 
+(defun augment-lexenv-with-tag (lexenv name)
+  (sb-c::make-lexenv :default lexenv :tags (list (list name))))
