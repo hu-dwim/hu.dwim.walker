@@ -28,11 +28,12 @@
                              (:file "unwalk" :depends-on ("infrastructure"))))))
 
 (defsystem :cl-walker-test
+  :depends-on (:cl-walker :stefil :alexandria :metabang-bind)
   :components ((:module "tests"
-                :components ((:file "package")
-                             (:file "walk-unwalk" :depends-on ("package"))
-                             (:file "macros" :depends-on ("package")))))
-  :depends-on (:cl-walker :stefil))
+                        :components ((:file "package")
+                                     (:file "walk-unwalk" :depends-on ("package"))
+                                     (:file "lexenv" :depends-on ("package"))
+                                     (:file "macros" :depends-on ("package"))))))
 
 (defmethod perform ((op asdf:test-op) (system (eql (find-system :cl-walker))))
   (asdf:oos 'asdf:load-op :cl-walker-test)

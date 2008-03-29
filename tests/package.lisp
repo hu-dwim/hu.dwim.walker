@@ -9,7 +9,10 @@
 (defpackage :cl-walker-test
   (:use :common-lisp
         :cl-walker
-        :stefil))
+        :alexandria
+        :stefil
+        :metabang-bind
+        ))
 
 (in-package :cl-walker-test)
 

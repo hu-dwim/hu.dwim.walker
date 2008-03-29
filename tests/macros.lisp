@@ -6,7 +6,7 @@
 
 (in-package :cl-walker-test)
 
-(defsuite* (macros :in test))
+(defsuite* (test/macros :in test))
 
 (deftest test/macros/macrolet ()
   (check-walk-unwalk '(macrolet ((+ (&body body)
