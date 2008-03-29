@@ -12,10 +12,10 @@
     (iterate-functions-in-lexenv     "(funcall VISITOR name) for each function definition in LEXENV.")
     (iterate-macros-in-lexenv        "(funcall VISITOR name macro-function) for each macro definition in LEXENV.")
     (iterate-symbol-macros-in-lexenv "(funcall VISITOR name macro-function) for each symbol macro definition in LEXENV.")
-    (augment-with-variable)
-    (augment-with-function)
-    (augment-with-macro)
-    (augment-with-symbol-macro)))
+    (augment-lexenv-with-variable)
+    (augment-lexenv-with-function)
+    (augment-lexenv-with-macro)
+    (augment-lexenv-with-symbol-macro)))
 
 ;;; set up some docstrings
 (loop
