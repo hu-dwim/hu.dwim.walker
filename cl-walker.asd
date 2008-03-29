@@ -19,8 +19,10 @@
                (:module "src"
                 :components ((:file "package")
                              (:file "duplicates" :depends-on ("package"))
-                             (:file "lexenv" :depends-on ("package" "duplicates"))
-                             (:file "infrastructure" :depends-on ("package" "lexenv" "duplicates"))
+                             #+sbcl(:file "lexenv-sbcl" :depends-on ("duplicates" "package"))
+                             (:file "lexenv-late" :depends-on ("package" "duplicates"
+                                                               #+sbcl "lexenv-sbcl"))
+                             (:file "infrastructure" :depends-on ("package" "lexenv-late" "duplicates"))
                              (:file "walk" :depends-on ("infrastructure"))
                              (:file "implementation-specific" :depends-on ("infrastructure"))
                              (:file "unwalk" :depends-on ("infrastructure"))))))

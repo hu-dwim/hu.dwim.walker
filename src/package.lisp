@@ -11,7 +11,23 @@
   (:use :common-lisp :alexandria)
   (:export
 
-   #:make-empty-lexical-environment
+   #:make-empty-lexenv
+   #:macroexpand-all
+
+   #:iterate-variables-in-lexenv
+   #:iterate-functions-in-lexenv
+   #:iterate-macros-in-lexenv
+   #:iterate-symbol-macros-in-lexenv
+
+   #:collect-variables-in-lexenv
+   #:collect-functions-in-lexenv
+   #:collect-macros-in-lexenv
+   #:collect-symbol-macros-in-lexenv
+
+   #:find-variable-in-lexenv
+   #:find-function-in-lexenv
+   #:find-macro-in-lexenv
+   #:find-symbol-macro-in-lexenv
 
    #:form
    #:walk-form

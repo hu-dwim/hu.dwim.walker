@@ -6,7 +6,7 @@
 
 (in-package :cl-walker)
 
-(defun macroexpand-all (form &optional (env (make-empty-lexical-environment)))
+(defun macroexpand-all (form &optional (env (make-empty-lexenv)))
   (unwalk-form (walk-form form nil (make-walk-environment env))))
 
 (defvar *warn-undefined* nil
@@ -52,13 +52,13 @@
 (defun make-walk-environment (&optional lexical-env)
   (let ((walk-env '()))
     (when lexical-env
-      (dolist (var (lexical-variables lexical-env))
+      (dolist (var (collect-variables-in-lexenv lexical-env))
         (extend walk-env :lexical-let var t))
-      (dolist (fun (lexical-functions lexical-env))
+      (dolist (fun (collect-functions-in-lexenv lexical-env))
         (extend walk-env :lexical-flet fun t))
-      (dolist (mac (lexical-macros lexical-env))
+      (dolist (mac (collect-macros-in-lexenv lexical-env))
         (extend walk-env :macrolet (car mac) (cdr mac)))
-      (dolist (symmac (lexical-symbol-macros lexical-env))
+      (dolist (symmac (collect-symbol-macros-in-lexenv lexical-env))
         (extend walk-env :symbol-macrolet (car symmac) (cdr symmac))))
     (cons walk-env lexical-env)))
 
