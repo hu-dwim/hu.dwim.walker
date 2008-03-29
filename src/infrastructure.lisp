@@ -52,14 +52,16 @@
 (defun make-walk-environment (&optional lexical-env)
   (let ((walk-env '()))
     (when lexical-env
-      (dolist (var (collect-variables-in-lexenv lexical-env))
-        (extend walk-env :lexical-let var t))
-      (dolist (fun (collect-functions-in-lexenv lexical-env))
-        (extend walk-env :lexical-flet fun t))
-      (dolist (mac (collect-macros-in-lexenv lexical-env))
-        (extend walk-env :macrolet (car mac) (cdr mac)))
-      (dolist (symmac (collect-symbol-macros-in-lexenv lexical-env))
-        (extend walk-env :symbol-macrolet (car symmac) (cdr symmac))))
+      (do-variables-in-lexenv (lexical-env name ignored?)
+        (unless ignored?
+          ;; TODO is it the right way to handle ignored?
+          (extend walk-env :lexical-let name t)))
+      (do-functions-in-lexenv (lexical-env name)
+        (extend walk-env :lexical-flet name t))
+      (do-macros-in-lexenv (lexical-env name macro-fn)
+        (extend walk-env :macrolet name macro-fn))
+      (do-symbol-macros-in-lexenv (lexical-env name definition)
+        (extend walk-env :symbol-macrolet name definition)))
     (cons walk-env lexical-env)))
 
 (defun register-walk-env (env type name datum &rest other-datum)
