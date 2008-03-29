@@ -168,3 +168,33 @@
                          nil))
               (dummy))))))))
 
+(deftest test/lexenv/query/tags ()
+  (compile*
+   `(block b1
+      (tagbody
+       t1
+         (progn)
+       t2
+         (tagbody
+          t21
+            (progn)
+          t22
+            (block b2
+              (macrolet ((dummy (&environment env)
+                           (is (equal '(t21 t22 t1 t2)
+                                      (collect-tags-in-lexenv env)))
+                           (bind ((tags 0))
+                             (do-tags-in-lexenv (env name)
+                               (is (and (symbolp name)
+                                        (eq (symbol-package name) ,*package*)))
+                               (incf tags))
+                             (is (= tags 4)))
+                           (is (find-tag-in-lexenv 't1 env))
+                           (is (not (find-tag-in-lexenv 'dummy env)))
+                           (is (not (find-tag-in-lexenv 'f1 env)))
+                           (is (not (find-tag-in-lexenv 'x env)))
+                           nil))
+                (dummy))))))))
+
+;; TODO (defsuite* (test/lexenv/augment :in test/lexenv))
+
