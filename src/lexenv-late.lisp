@@ -38,6 +38,16 @@
 ;;;
 ;;; variables
 ;;;
+(defmacro do-variables-in-lexenv ((lexenv name &optional (ignored? (gensym) ignored-provided?))
+                                  &body body)
+  `(iterate-variables-in-lexenv
+    (lambda (,name ,ignored?)
+      ,@(unless ignored-provided?
+        `((declare (ignore ,ignored?))))
+      ,@body)
+    ,lexenv
+    :include-ignored ,ignored-provided?))
+
 (defun collect-variables-in-lexenv (lexenv &key include-ignored filter)
   (let ((result (list)))
     (iterate-variables-in-lexenv
@@ -61,6 +71,12 @@
 ;;;
 ;;; functions
 ;;;
+(defmacro do-functions-in-lexenv ((lexenv name) &body body)
+  `(iterate-functions-in-lexenv
+    (lambda (,name)
+      ,@body)
+    ,lexenv))
+
 (defun collect-functions-in-lexenv (lexenv &key filter)
   (let ((result (list)))
     (iterate-functions-in-lexenv
@@ -82,6 +98,15 @@
 ;;;
 ;;; macros
 ;;;
+(defmacro do-macros-in-lexenv ((lexenv name &optional (macro-fn (gensym) macro-fn-provided?))
+                               &body body)
+  `(iterate-macros-in-lexenv
+    (lambda (,name ,macro-fn)
+      ,@(unless macro-fn-provided?
+        `((declare (ignore ,macro-fn))))
+      ,@body)
+    ,lexenv))
+
 (defun collect-macros-in-lexenv (lexenv &key filter)
   (let ((result (list)))
     (iterate-macros-in-lexenv
@@ -104,6 +129,15 @@
 ;;;
 ;;; symbol-macros
 ;;;
+(defmacro do-symbol-macros-in-lexenv ((lexenv name &optional (definition (gensym) definition-provided?))
+                                      &body body)
+  `(iterate-symbol-macros-in-lexenv
+    (lambda (,name ,definition)
+      ,@(unless definition-provided?
+        `((declare (ignore ,definition))))
+      ,@body)
+    ,lexenv))
+
 (defun collect-symbol-macros-in-lexenv (lexenv &key filter)
   (let ((result (list)))
     (iterate-symbol-macros-in-lexenv

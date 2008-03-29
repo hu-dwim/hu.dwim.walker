@@ -14,6 +14,11 @@
    #:make-empty-lexenv
    #:macroexpand-all
 
+   #:do-variables-in-lexenv
+   #:do-functions-in-lexenv
+   #:do-macros-in-lexenv
+   #:do-symbol-macros-in-lexenv
+
    #:iterate-variables-in-lexenv
    #:iterate-functions-in-lexenv
    #:iterate-macros-in-lexenv
