@@ -307,29 +307,27 @@
       (loop
          :for (name args . body) :in binds
          :collect (cons name (walk-form `(lambda ,args ,@body) flet env)) :into bindings
-         :finally (setf (binds flet) bindings))
+         :finally (setf (bindings-of flet) bindings))
       ;; walk the body in the new env
       (multiple-value-setf ((body flet) _ (declares flet))
         (walk-implict-progn flet
                             body
                             (loop
-                               with env = env
-                               for (name . lambda) in (binds flet)
-                               do (extend-walk-env env :flet name lambda)
-                               finally (return env))
+                               :with env = env
+                               :for (name . lambda) :in (bindings-of flet)
+                               :do (extend-walk-env env :flet name lambda)
+                               :finally (return env))
                             :declare t)))))
 
 ;; TODO factor out stuff in flet-form and labels-form
-(defunwalker-handler flet-form (binds body declares)
-  (flet ((unwalk-flet (binds)
-           (mapcar #'(lambda (bind)
-                       (cons (car bind)
-                             ;; remove (function (lambda ...)) of the function bindings
-                             (cdadr (unwalk-form (cdr bind)))))
-                   binds)))
-    `(flet ,(unwalk-flet binds)
-       ,@(unwalk-declarations declares)
-       ,@(unwalk-forms body))))
+(defunwalker-handler flet-form (bindings body declares)
+  `(flet ,(mapcar (lambda (bind)
+                    (cons (car bind)
+                          ;; remove (function (lambda ...)) of the function bindings
+                          (cdadr (unwalk-form (cdr bind)))))
+                  bindings)
+     ,@(unwalk-declarations declares)
+     ,@(unwalk-forms body)))
 
 (defclass labels-form (function-binding-form)
   ())
@@ -337,7 +335,7 @@
 (defwalker-handler labels (form parent env)
   (destructuring-bind (binds &body body)
       (cdr form)
-    (with-form-object (labels labels-form :parent parent :source form :binds '())
+    (with-form-object (labels labels-form :parent parent :source form :bindings '())
       ;; we need to walk over the bindings twice. the first pass
       ;; creates some 'empty' lambda objects in the environment so
       ;; that local-application-form and local-function-object-form
@@ -350,13 +348,13 @@
                                       :parent labels
                                       :source (list* name arguments body))
          :do (progn
-               (push (cons name lambda) (binds labels))
+               (push (cons name lambda) (bindings-of labels))
                (extend-walk-env env :flet name lambda)))
-      (setf (binds labels) (nreverse (binds labels)))
+      (setf (bindings-of labels) (nreverse (bindings-of labels)))
       (loop
          :for form :in binds
          :for (arguments . body) = (cdr form)
-         :for binding :in (binds labels)
+         :for binding :in (bindings-of labels)
          :for lambda = (cdr binding)
          :for tmp-lambda = (walk-lambda `(lambda ,arguments ,@body) labels env)
          :do (setf (body lambda) (body tmp-lambda)
@@ -365,14 +363,12 @@
       (multiple-value-setf ((body labels) _ (declares labels))
         (walk-implict-progn labels body env :declare t)))))
 
-(defunwalker-handler labels-form (binds body declares)
-  (flet ((unwalk-labels (binds)
-           (mapcar #'(lambda (bind)
-                       (cons (car bind)
-                             ;; remove (function (lambda ...)) of the function bindings
-                             (cdadr (unwalk-form (cdr bind)))))
-                   binds)))
-    `(labels ,(unwalk-labels binds)
-       ,@(unwalk-declarations declares)
-       ,@(unwalk-forms body))))
+(defunwalker-handler labels-form (bindings body declares)
+  `(labels ,(mapcar (lambda (bind)
+                      (cons (car bind)
+                            ;; remove (function (lambda ...)) of the function bindings
+                            (cdadr (unwalk-form (cdr bind)))))
+                    bindings)
+     ,@(unwalk-declarations declares)
+     ,@(unwalk-forms body)))
 

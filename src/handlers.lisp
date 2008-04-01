@@ -176,50 +176,48 @@
 
 (defwalker-handler let (form parent env)
   (with-form-object (let let-form :parent parent :source form)
-    (setf (binds let) (mapcar (lambda (binding)
-                                   (destructuring-bind (var &optional initial-value)
-                                       (ensure-list binding)
-                                     (cons var (walk-form initial-value let env))))
-                                 (second form)))
+    (setf (bindings-of let) (mapcar (lambda (binding)
+                                      (destructuring-bind (var &optional initial-value)
+                                          (ensure-list binding)
+                                        (cons var (walk-form initial-value let env))))
+                                    (second form)))
     (multiple-value-bind (b e d declarations)
         (split-body (cddr form) env :parent let :declare t)
       (declare (ignore b e d))
-      (loop for (var . value) :in (binds let) do
-            (unless (find-if (lambda (declaration)
-                               (and (typep declaration 'special-declaration-form)
-                                    (eq var (name-of declaration)))) declarations)
-              (extend-walk-env env :let var :dummy)))
+      (loop
+         :for (var . value) :in (bindings-of let)
+         :do (unless (find-if (lambda (declaration)
+                                (and (typep declaration 'special-declaration-form)
+                                     (eq var (name-of declaration)))) declarations)
+               (extend-walk-env env :let var :dummy)))
       (multiple-value-setf ((body let) _ (declares let))
                            (walk-implict-progn let (cddr form) env :declare t)))))
 
-(defunwalker-handler let-form (binds body declares)
-  (flet ((unwalk-let (binds)
-           (mapcar #'(lambda (bind)
-                       (list (car bind) (unwalk-form (cdr bind))))
-                   binds)))
-    `(let ,(unwalk-let binds)
-       ,@(unwalk-declarations declares)
-       ,@(unwalk-forms body))))
+(defunwalker-handler let-form (bindings body declares)
+  `(let ,(mapcar (lambda (bind)
+                   (list (car bind) (unwalk-form (cdr bind))))
+                 bindings)
+     ,@(unwalk-declarations declares)
+     ,@(unwalk-forms body)))
 
 (defclass let*-form (variable-binding-form)
   ())
 
 (defwalker-handler let* (form parent env)
-  (with-form-object (let* let*-form :parent parent :source form :binds '())
+  (with-form-object (let* let*-form :parent parent :source form :bindings '())
     (dolist* ((var &optional initial-value) (mapcar #'ensure-list (second form)))
-      (push (cons var (walk-form initial-value let* env)) (binds let*))
+      (push (cons var (walk-form initial-value let* env)) (bindings-of let*))
       (extend-walk-env env :let var :dummy))
-    (setf (binds let*) (nreverse (binds let*)))
-    (multiple-value-setf ((body let*) _ (declares let*)) (walk-implict-progn let* (cddr form) env :declare t))))
+    (setf (bindings-of let*) (nreverse (bindings-of let*)))
+    (multiple-value-setf ((body let*) _ (declares let*))
+      (walk-implict-progn let* (cddr form) env :declare t))))
 
-(defunwalker-handler let*-form (binds body declares)
-  (flet ((unwalk-let* (binds)
-           (mapcar #'(lambda (bind)
-                       (list (car bind) (unwalk-form (cdr bind))))
-                   binds)))
-    `(let* ,(unwalk-let* binds)
-       ,@(unwalk-declarations declares)
-       ,@(unwalk-forms body))))
+(defunwalker-handler let*-form (bindings body declares)
+  `(let* ,(mapcar (lambda (bind)
+                    (list (car bind) (unwalk-form (cdr bind))))
+                  bindings)
+     ,@(unwalk-declarations declares)
+     ,@(unwalk-forms body)))
 
 ;;;; LOAD-TIME-VALUE
 
@@ -257,19 +255,19 @@
 
 (defwalker-handler macrolet (form parent env)
   (with-form-object (macrolet macrolet-form :parent parent :source form
-                              :binds '())
+                              :bindings '())
     (dolist* ((name args &body body) (second form))
       (let ((handler (parse-macro-definition name args body (cdr env))))
         (extend-walk-env env :macrolet name handler)
-        (push (cons name handler) (binds macrolet))))
-    (setf (binds macrolet) (nreverse (binds macrolet)))
+        (push (cons name handler) (bindings-of macrolet))))
+    (setf (bindings-of macrolet) (nreverse (bindings-of macrolet)))
     (multiple-value-setf ((body macrolet) _ (declares macrolet))
       (walk-implict-progn macrolet (cddr form) env :declare t))))
 
-(defunwalker-handler macrolet-form (body binds declares)
-  ;; We ignore the binds, because the expansion has already taken
+(defunwalker-handler macrolet-form (body bindings declares)
+  ;; We ignore the bindings, because the expansion has already taken
   ;; place at walk-time.
-  (declare (ignore binds))
+  (declare (ignore bindings))
   `(locally ,@(unwalk-declarations declares) ,@(unwalk-forms body)))
 
 ;;;; MULTIPLE-VALUE-CALL
@@ -379,18 +377,18 @@
 
 (defwalker-handler symbol-macrolet (form parent env)
   (with-form-object (symbol-macrolet symbol-macrolet-form :parent parent :source form
-                                     :binds '())
+                                     :bindings '())
     (dolist* ((symbol expansion) (second form))
       (extend-walk-env env :symbol-macrolet symbol expansion)
-      (push (cons symbol expansion) (binds symbol-macrolet)))
-    (setf (binds symbol-macrolet) (nreverse (binds symbol-macrolet)))
+      (push (cons symbol expansion) (bindings-of symbol-macrolet)))
+    (setf (bindings-of symbol-macrolet) (nreverse (bindings-of symbol-macrolet)))
     (multiple-value-setf ((body symbol-macrolet) _ (declares symbol-macrolet))
       (walk-implict-progn symbol-macrolet (cddr form) env :declare t))))
 
-(defunwalker-handler symbol-macrolet-form (body binds declares)
-  ;; We ignore the binds, because the expansion has already taken
+(defunwalker-handler symbol-macrolet-form (body bindings declares)
+  ;; We ignore the bindings, because the expansion has already taken
   ;; place at walk-time.
-  (declare (ignore binds))
+  (declare (ignore bindings))
   `(locally ,@(unwalk-declarations declares) ,@(unwalk-forms body)))
 
 ;;;; TAGBODY/GO

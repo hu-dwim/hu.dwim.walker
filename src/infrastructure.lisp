@@ -173,7 +173,7 @@
   ((declares :accessor declares :initarg :declares)))
 
 (defclass binding-form-mixin ()
-  ((binds :accessor binds :initarg :binds)))
+  ((bindings :accessor bindings-of :initarg :bindings)))
 
 (defmacro multiple-value-setf (places form)
   `(let (_)
