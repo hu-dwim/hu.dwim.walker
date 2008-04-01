@@ -44,6 +44,25 @@
                    (declare (ignore args))
                    (unimplemented-lexical-environment-function))))))
 
+(defun lookup-in-lexenv (kind name lexenv &key (otherwise :error))
+  (let ((result
+         (multiple-value-list
+          (ecase kind
+            (:variable     (find-variable-in-lexenv name lexenv))
+            (:function     (find-function-in-lexenv name lexenv))
+            (:macro        (find-macro-in-lexenv name lexenv))
+            (:symbol-macro (find-symbol-macro-in-lexenv name lexenv))
+            (:block        (find-block-in-lexenv name lexenv))
+            (:tag          (find-tag-in-lexenv name lexenv))))))
+    (if (first result)
+        (values-list result)
+        (cond
+          ((eq otherwise :error) (error "Could not find ~S of kind ~S in lexenv" name kind))
+          ((eq otherwise :warn)  (warn  "Could not find ~S of kind ~S in lexenv" name kind))
+          (t (if (functionp otherwise)
+                 (funcall otherwise)
+                 otherwise))))))
+
 ;;;
 ;;; variables
 ;;;
