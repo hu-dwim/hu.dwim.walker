@@ -10,12 +10,17 @@
   (unwalk-form (walk-form form nil (make-walk-environment env))))
 
 (defvar *warn-undefined* nil
-  "When non-NIL any references to undefined functions or
-  variables will signal a warning.")
+  "When non-NIL any references to undefined functions or variables will signal a warning.")
 
 (defun walk-form (form &optional (parent nil) (env (make-walk-environment)))
-  "Walk FORM and return a FORM object."
+  "Walk FORM and return a CLOS based AST that represents it."
   (funcall (find-walker-handler form) form parent env))
+
+(defgeneric unwalk-form (form)
+  (:documentation "Unwalk FORM and return a list representation."))
+
+(defun unwalk-forms (forms)
+  (mapcar #'unwalk-form forms))
 
 (defun register (environment type name datum &rest other-datum)
   (cons (if other-datum
@@ -131,6 +136,14 @@
              (declare (ignorable ,parent ,lexical-env))
              ,@body))
      ',name))
+
+(defmacro defunwalker-handler (class (&rest slots) &body body)
+  (with-unique-names (form)
+    `(progn
+       (defmethod unwalk-form ((,form ,class))
+         (with-slots ,slots ,form
+           ,@body))
+       ',class)))
 
 (defclass form ()
   ((parent :accessor parent :initarg :parent)

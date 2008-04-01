@@ -6,132 +6,22 @@
 
 (in-package :cl-walker)
 
-(defclass declaration-form (form)
-  ())
-
-(defclass optimize-declaration-form (declaration-form)
-  ((optimize-spec :accessor optimize-spec :initarg :optimize-spec)))
-
-(defclass variable-declaration-form (declaration-form)
-  ((name :accessor name-of :initarg :name)))
-
-(defclass function-declaration-form (declaration-form)
-  ((name :accessor name-of :initarg :name)))
-
-(defclass dynamic-extent-declaration-form (variable-declaration-form)
-  ())
-
-(defclass ignorable-declaration-form-mixin (declaration-form)
-  ())
-
-(defclass variable-ignorable-declaration-form (variable-declaration-form ignorable-declaration-form-mixin)
-  ())
-
-(defclass function-ignorable-declaration-form (function-declaration-form ignorable-declaration-form-mixin)
-  ())
-
-(defclass special-declaration-form (variable-declaration-form)
-  ())
-
-(defclass type-declaration-form (variable-declaration-form)
-  ((type :accessor type-of :initarg :type)))
-
-(defclass ftype-declaration-form (function-declaration-form)
-  ((type :accessor type-of :initarg :type)))
-
-(defclass notinline-declaration-form (function-declaration-form)
-  ())
-
-(defun parse-declaration (declaration environment parent)
-  (let ((declares nil))
-    (flet ((funname (form)
-             (if (and (consp form) (eql (car form) 'function))
-                 (cadr form)
-                 nil)))
-      (macrolet ((mkdecl (varname formclass &rest rest)
-                   `(make-instance ,formclass :parent parent :source (list type ,varname) ,@rest))
-                 (extend-env ((var list) newdeclare &rest datum)
-                   `(dolist (,var ,list)
-                      (when ,newdeclare (push ,newdeclare declares))
-                      (extend-walk-env environment :declare ,@datum))))
-        (destructuring-bind (type &rest arguments)
-            declaration
-          (case type
-            (dynamic-extent
-             (extend-env (var arguments)
-                         (mkdecl var 'dynamic-extent-declaration-form :name var)
-                         var `(dynamic-extent)))
-            (ftype
-             (extend-env (function-name (cdr arguments))
-                         (make-instance 'ftype-declaration-form
-                                        :parent parent
-                                        :source `(ftype ,(first arguments) function-name)
-                                        :name function-name
-                                        :type (first arguments))
-                         function-name `(ftype ,(first arguments))))
-            ((ignore ignorable)
-             (extend-env (var arguments)
-                         (aif (funname var)
-                              (mkdecl var 'function-ignorable-declaration-form :name it)
-                              (mkdecl var 'variable-ignorable-declaration-form :name var))
-                         var `(ignorable)))
-            (inline
-              (extend-env (function arguments)
-                          (mkdecl function 'function-ignorable-declaration-form :name function)
-                          function `(ignorable)))
-            (notinline
-             (extend-env (function arguments)
-                         (mkdecl function 'notinline-declaration-form :name function)
-                         function `(notinline)))
-            (optimize
-             (extend-env (optimize-spec arguments)
-                         (mkdecl optimize-spec 'optimize-declaration-form :optimize-spec optimize-spec)
-                         'optimize optimize-spec))
-            (special
-             (extend-env (var arguments)
-                         (mkdecl var 'special-declaration-form :name var)
-                         var `(special)))
-            (type
-             (extend-env (var (rest arguments))
-                         (make-instance 'type-declaration-form
-                                        :parent parent
-                                        :source `(type ,(first arguments) ,var)
-                                        :name var
-                                        :type (first arguments))
-                         var `(type ,(first arguments))))
-            (t
-             ;; TODO weak try: assumes everything else is a type declaration
-             (extend-env (var arguments)
-                         (make-instance 'type-declaration-form
-                                        :parent parent
-                                        :source `(,type ,var)
-                                        :name var
-                                        :type type)
-                         var `(type ,type)))))))
-    ;; TODO this generates wrong ast for (walk-form '(lambda () (declare (ignorable))))
-    (when (null declares)
-      (setq declares (list (make-instance 'declaration-form :parent parent :source declaration))))
-    (values environment declares)))
-
-(defun walk-implict-progn (parent forms env &key docstring declare)
-  (handler-bind ((undefined-reference (lambda (condition)
-                                        (unless (enclosing-code condition)
-                                          (setf (enclosing-code condition) `(progn ,@forms))))))
-    (multiple-value-bind (body env docstring declarations)
-        (split-body forms env :parent parent :docstring docstring :declare declare)
-      (values (mapcar (lambda (form)
-                        (walk-form form parent env))
-                      body)
-              docstring
-              declarations))))
-
 ;;;; Atoms
 
 (defclass constant-form (form)
   ((value :accessor value-of :initarg :value)))
 
+(defunwalker-handler constant-form (value)
+  (typecase value
+    (symbol `(quote ,value))
+    (cons   `(quote ,value))
+    (t value)))
+
 (defclass variable-reference (form)
   ((name :accessor name-of :initarg :name)))
+
+(defunwalker-handler variable-reference (name)
+  name)
 
 (defmethod print-object ((v variable-reference) stream)
   (print-unreadable-object (v stream :type t :identity t)
@@ -171,231 +61,10 @@
      (make-instance 'free-variable-reference :name form
                     :parent parent :source form))))
 
-;;;; Function Applictation
-
-(defclass application-form (form)
-  ((operator :accessor operator :initarg :operator)
-   (arguments :accessor arguments :initarg :arguments)))
-
-(defclass local-application-form (application-form)
-  ((code :accessor code :initarg :code)))
-
-(defclass lexical-application-form (application-form)
-  ())
-
-(defclass free-application-form (application-form)
-  ())
-
-(defclass lambda-application-form (application-form)
-  ())
-
-(defwalker-handler application (form parent env)
-  (block nil
-    (destructuring-bind (op &rest args)
-        form
-      (when (and (consp op)
-                 (eq 'cl:lambda (car op)))
-        (return
-          (with-form-object (application lambda-application-form :parent parent :source form)
-            (setf (operator application) (walk-form op application env)
-                  (arguments application) (mapcar (lambda (form)
-                                                    (walk-form form application env))
-                                                  args)))))
-      (when (lookup-walk-env env :macrolet op)
-        (return (walk-form (funcall (lookup-walk-env env :macrolet op) form (cdr env)) parent env)))
-      (when (and (symbolp op) (macro-function op))
-        (multiple-value-bind (expansion expanded)
-            (macroexpand-1 form (cdr env))
-          (when expanded
-            (return (walk-form expansion parent env)))))
-      (let ((app (if (lookup-walk-env env :flet op)
-                     (make-instance 'local-application-form :code (lookup-walk-env env :flet op))
-                     (if (lookup-walk-env env :lexical-flet op)
-                         (make-instance 'lexical-application-form)
-                         (progn
-                           (when (and *warn-undefined*
-                                      (symbolp op)
-                                      (not (fboundp op)))
-                             (warn 'undefined-function-reference :name op))
-                           (make-instance 'free-application-form))))))
-        (setf (operator app) op
-              (parent app) parent
-              (source app) form
-              (arguments app) (mapcar (lambda (form)
-                                        (walk-form form app env))
-                                      args))
-        app))))
-
-;;;; Functions
-
-(defclass function-form (form)
-  ())
-
-(defclass lambda-function-form (function-form implicit-progn-with-declare-mixin)
-  ((arguments :accessor arguments :initarg :arguments)))
-
-(defclass function-object-form (form)
-  ((name :accessor name-of :initarg :name)))
-
-(defclass local-function-object-form (function-object-form)
-  ())
-
-(defclass free-function-object-form (function-object-form)
-  ())
-
-(defclass lexical-function-object-form (function-object-form)
-  ())
-
-(defwalker-handler function (form parent env)
-  (if (and (listp (second form))
-           (eql 'cl:lambda (first (second form))))
-      ;; (function (lambda ...))
-      (walk-lambda (second form) parent env)
-      ;; (function foo)
-      (make-instance (if (lookup-walk-env env :flet (second form))
-                         'local-function-object-form
-                         (if (lookup-walk-env env :lexical-flet (second form))
-                             'lexical-function-object-form
-                             'free-function-object-form))
-                     :name (second form)
-                     :parent parent :source form)))
-
-(defun walk-lambda (form parent env)
-  (with-form-object (func lambda-function-form
-                          :parent parent
-                          :source form)
-    ;; 1) parse the argument list creating a list of FUNCTION-ARGUMENT-FORM objects
-    (multiple-value-setf ((arguments func) env)
-      (walk-lambda-list (second form) func env))
-    ;; 2) parse the body
-    (multiple-value-setf ((body func) nil (declares func))
-      (walk-implict-progn func (cddr form) env :declare t))
-    ;; all done
-    func))
-
-(defun walk-lambda-list (lambda-list parent env &key allow-specializers macro-p)
-  (declare (ignore macro-p))
-  (flet ((extend-env (argument)
-           (unless (typep argument 'allow-other-keys-function-argument-form)
-             (extend-walk-env env :let (name-of argument) argument))))
-    (let ((state :required)
-          (arguments '()))
-      (dolist (argument lambda-list)
-        (if (member argument '(&optional &key &rest))
-            (setf state argument)
-            (progn
-              (push (case state
-                      (:required
-                       (if allow-specializers
-                           (walk-specialized-argument-form argument parent env)
-                           (walk-required-argument argument parent env)))
-                      (&optional (walk-optional-argument argument parent env))
-                      (&key
-                       (if (eql '&allow-other-keys argument)
-                           (make-instance 'allow-other-keys-function-argument-form
-                                          :parent parent :source argument)
-                           (walk-keyword-argument argument parent env)))
-                      (&rest (walk-rest-argument argument parent env)))
-                    arguments)
-              (extend-env (car arguments)))))
-      (values (nreverse arguments) env))))
-
-(defclass function-argument-form (form)
-  ((name :accessor name-of :initarg :name)))
-
-(defmethod print-object ((argument function-argument-form) stream)
-  (print-unreadable-object (argument stream :type t :identity t)
-    (if (slot-boundp argument 'name)
-        (format stream "~S" (name-of argument))
-        (write-string "#<unbound name>" stream))))
-
-(defclass required-function-argument-form (function-argument-form)
-  ())
-
-(defgeneric required-function-argument-form-p (object)
-  (:method ((object t)) nil)
-  (:method ((object required-function-argument-form)) t))
-
-(defun walk-required-argument (form parent env)
-  (declare (ignore env))
-  (make-instance 'required-function-argument-form
-                 :name form
-                 :parent parent :source form))
-
-(defclass specialized-function-argument-form (required-function-argument-form)
-  ((specializer :accessor specializer :initarg :specializer)))
-
-(defun walk-specialized-argument-form (form parent env)
-  (declare (ignore env))
-  (make-instance 'specialized-function-argument-form
-                 :name (if (listp form)
-                           (first form)
-                           form)
-                 :specializer (if (listp form)
-                                  (second form)
-                                  'T)
-                 :parent parent
-                 :source form))
-
-(defclass optional-function-argument-form (function-argument-form)
-  ((default-value :accessor default-value :initarg :default-value)
-   (supplied-p-parameter :accessor supplied-p-parameter :initarg :supplied-p-parameter)))
-
-(defun walk-optional-argument (form parent env)
-  (destructuring-bind (name &optional default-value supplied-p-parameter)
-      (ensure-list form)
-    (with-form-object (arg optional-function-argument-form
-                           :parent parent
-                           :source form
-                           :name name
-                           :supplied-p-parameter supplied-p-parameter)
-      (setf (default-value arg) (walk-form default-value arg env)))))
-
-(defclass keyword-function-argument-form (function-argument-form)
-  ((keyword-name :accessor keyword-name :initarg :keyword-name)
-   (default-value :accessor default-value :initarg :default-value)
-   (supplied-p-parameter :accessor supplied-p-parameter :initarg :supplied-p-parameter)))
-
-(defun effective-keyword-name (k)
-  (or (keyword-name k)
-      (intern (symbol-name (name-of k)) :keyword)))
-
-(defun walk-keyword-argument (form parent env)
-  (destructuring-bind (name &optional default-value supplied-p-parameter)
-      (ensure-list form)
-    (let ((name (if (consp name)
-                    (second name)
-                    name))
-          (keyword (if (consp name)
-                       (first name)
-                       nil)))
-      (with-form-object (arg keyword-function-argument-form
-                             :parent parent
-                             :source form
-                             :name name
-                             :keyword-name keyword
-                             :supplied-p-parameter supplied-p-parameter)
-        (setf (default-value arg) (walk-form default-value arg env))))))
-
-(defclass allow-other-keys-function-argument-form (function-argument-form)
-  ())
-
-(defclass rest-function-argument-form (function-argument-form)
-  ())
-
-(defun walk-rest-argument (form parent env)
-  (declare (ignore env))
-  (make-instance 'rest-function-argument-form :name form
-                 :parent parent :source form))
-
 ;;;; BLOCK/RETURN-FROM
 
 (defclass block-form (form implicit-progn-mixin)
   ((name :accessor name-of :initarg :name)))
-
-(defclass return-from-form (form)
-  ((target-block :accessor target-block :initarg :target-block)
-   (result :accessor result :initarg :result)))
 
 (defwalker-handler block (form parent env)
   (destructuring-bind (block-name &rest body)
@@ -406,6 +75,14 @@
       (setf (body block) (walk-implict-progn block
                                              body
                                              (register-walk-env env :block block-name block))))))
+
+(defunwalker-handler block-form (name body)
+  `(block ,name ,@(unwalk-forms body)))
+
+(defclass return-from-form (form)
+  ((target-block :accessor target-block :initarg :target-block)
+   (result :accessor result :initarg :result)))
+
 
 (define-condition return-from-unknown-block (error)
   ((block-name :accessor block-name :initarg :block-name))
@@ -425,14 +102,13 @@
             :report "Add this block and continue."
             (walk-form form parent (register-walk-env env :block block-name :unknown-block)))))))
 
+(defunwalker-handler return-from-form (target-block result)
+  `(return-from ,(name-of target-block) ,(unwalk-form result)))
+
 ;;;; CATCH/THROW
 
 (defclass catch-form (form implicit-progn-mixin)
   ((tag :accessor tag :initarg :tag)))
-
-(defclass throw-form (form)
-  ((tag :accessor tag :initarg :tag)
-   (value :accessor value-of :initarg :value)))
 
 (defwalker-handler catch (form parent env)
   (destructuring-bind (tag &body body)
@@ -441,12 +117,22 @@
       (setf (tag catch) (walk-form tag catch env)
             (body catch) (walk-implict-progn catch body env)))))
 
+(defunwalker-handler catch-form (tag body)
+  `(catch ,(unwalk-form tag) ,@(unwalk-forms body)))
+
+(defclass throw-form (form)
+  ((tag :accessor tag :initarg :tag)
+   (value :accessor value-of :initarg :value)))
+
 (defwalker-handler throw (form parent env)
   (destructuring-bind (tag &optional (result '(values)))
       (cdr form)
     (with-form-object (throw throw-form :parent parent :source form)
       (setf (tag throw) (walk-form tag throw env)
             (value-of throw) (walk-form result throw env)))))
+
+(defunwalker-handler throw-form (tag value)
+  `(throw ,(unwalk-form tag) ,(unwalk-form value)))
 
 ;;;; EVAL-WHEN
 
@@ -460,6 +146,10 @@
       (setf (eval-when-times eval-when) times
             (body eval-when) (walk-implict-progn eval-when body env)))))
 
+(defunwalker-handler eval-when-form (body eval-when-times)
+  `(eval-when ,eval-when-times
+     ,@(unwalk-forms body)))
+
 ;;;; IF
 
 (defclass if-form (form)
@@ -472,6 +162,9 @@
     (setf (consequent if) (walk-form (second form) if env)
           (then if) (walk-form (third form) if env)
           (else if) (walk-form (fourth form) if env))))
+
+(defunwalker-handler if-form (consequent then else)
+  `(if ,(unwalk-form consequent) ,(unwalk-form then) ,(unwalk-form else)))
 
 ;;;; FLET/LABELS
 
@@ -533,6 +226,29 @@
                   (declares lambda) (declares tmp-lambda)))
       (multiple-value-setf ((body labels) nil (declares labels)) (walk-implict-progn labels body env :declare t)))))
 
+;; TODO factor out stuff
+(defunwalker-handler flet-form (binds body declares)
+  (flet ((unwalk-flet (binds)
+           (mapcar #'(lambda (bind)
+                       (cons (car bind)
+                             ;; remove (function (lambda ...)) of the function bindings
+                             (cdadr (unwalk-form (cdr bind)))))
+                   binds)))
+    `(flet ,(unwalk-flet binds)
+       ,@(unwalk-declarations declares)
+       ,@(unwalk-forms body))))
+
+(defunwalker-handler labels-form (binds body declares)
+  (flet ((unwalk-labels (binds)
+           (mapcar #'(lambda (bind)
+                       (cons (car bind)
+                             ;; remove (function (lambda ...)) of the function bindings
+                             (cdadr (unwalk-form (cdr bind)))))
+                   binds)))
+    `(labels ,(unwalk-labels binds)
+       ,@(unwalk-declarations declares)
+       ,@(unwalk-forms body))))
+
 ;;;; LET/LET*
 
 (defclass variable-binding-form (form binding-form-mixin implicit-progn-with-declare-mixin)
@@ -559,6 +275,15 @@
       (multiple-value-setf ((body let) nil (declares let))
                            (walk-implict-progn let (cddr form) env :declare t)))))
 
+(defunwalker-handler let-form (binds body declares)
+  (flet ((unwalk-let (binds)
+           (mapcar #'(lambda (bind)
+                       (list (car bind) (unwalk-form (cdr bind))))
+                   binds)))
+    `(let ,(unwalk-let binds)
+       ,@(unwalk-declarations declares)
+       ,@(unwalk-forms body))))
+
 (defclass let*-form (variable-binding-form)
   ())
 
@@ -569,6 +294,15 @@
       (extend-walk-env env :let var :dummy))
     (setf (binds let*) (nreverse (binds let*)))
     (multiple-value-setf ((body let*) nil (declares let*)) (walk-implict-progn let* (cddr form) env :declare t))))
+
+(defunwalker-handler let*-form (binds body declares)
+  (flet ((unwalk-let* (binds)
+           (mapcar #'(lambda (bind)
+                       (list (car bind) (unwalk-form (cdr bind))))
+                   binds)))
+    `(let* ,(unwalk-let* binds)
+       ,@(unwalk-declarations declares)
+       ,@(unwalk-forms body))))
 
 ;;;; LOAD-TIME-VALUE
 
@@ -582,6 +316,9 @@
     (setf (value-of load-time-value) (walk-form (second form) load-time-value env)
           (read-only-p load-time-value) (third form))))
 
+(defunwalker-handler load-time-value-form (body read-only)
+  `(load-time-value ,(unwalk-form body) ,read-only))
+
 ;;;; LOCALLY
 
 (defclass locally-form (form implicit-progn-with-declare-mixin)
@@ -590,6 +327,10 @@
 (defwalker-handler locally (form parent env)
   (with-form-object (locally locally-form :parent parent :source form)
     (multiple-value-setf ((body locally) nil (declares locally)) (walk-implict-progn locally (cdr form) env :declare t))))
+
+(defunwalker-handler locally-form (body declares)
+  `(locally ,@(unwalk-declarations declares)
+     ,@(unwalk-forms body)))
 
 ;;;; MACROLET
 
@@ -607,6 +348,12 @@
     (multiple-value-setf ((body macrolet) nil (declares macrolet))
       (walk-implict-progn macrolet (cddr form) env :declare t))))
 
+(defunwalker-handler macrolet-form (body binds declares)
+  ;; We ignore the binds, because the expansion has already taken
+  ;; place at walk-time.
+  (declare (ignore binds))
+  `(locally ,@(unwalk-declarations declares) ,@(unwalk-forms body)))
+
 ;;;; MULTIPLE-VALUE-CALL
 
 (defclass multiple-value-call-form (form)
@@ -618,6 +365,9 @@
     (setf (func m-v-c) (walk-form (second form) m-v-c env)
           (arguments m-v-c) (mapcar (lambda (f) (walk-form f m-v-c env))
                                     (cddr form)))))
+
+(defunwalker-handler multiple-value-call-form (func arguments)
+  `(multiple-value-call ,(unwalk-form func) ,@(unwalk-forms arguments)))
 
 ;;;; MULTIPLE-VALUE-PROG1
 
@@ -631,6 +381,9 @@
           (other-forms m-v-p1) (mapcar (lambda (f) (walk-form f m-v-p1 env))
                                        (cddr form)))))
 
+(defunwalker-handler multiple-value-prog1-form (first-form other-forms)
+  `(multiple-value-prog1 ,(unwalk-form first-form) ,@(unwalk-forms other-forms)))
+
 ;;;; PROGN
 
 (defclass progn-form (form implicit-progn-mixin)
@@ -639,6 +392,9 @@
 (defwalker-handler progn (form parent env)
   (with-form-object (progn progn-form :parent parent :source form)
     (setf (body progn) (walk-implict-progn progn (cdr form) env))))
+
+(defunwalker-handler progn-form (body)
+  `(progn ,@(unwalk-forms body)))
 
 ;;;; PROGV
 
@@ -652,6 +408,9 @@
     (setf (values-form progv) (walk-form (caddr form) progv env))
     (setf (body progv) (walk-implict-progn progv (cdddr form) env))
     progv))
+
+(defunwalker-handler progv-form (body vars-form values-form)
+  `(progv ,(unwalk-form vars-form) ,(unwalk-form values-form) ,@(unwalk-forms body)))
 
 ;;;; QUOTE
 
@@ -692,6 +451,9 @@
         (with-form-object (progn progn-form :parent parent :source form)
           (setf (body progn) (walk-implict-progn progn effective-code env))))))
 
+(defunwalker-handler setq-form (variable-name value)
+  `(setq ,variable-name ,(unwalk-form value)))
+
 ;;;; SYMBOL-MACROLET
 
 (defclass symbol-macrolet-form (form binding-form-mixin implicit-progn-with-declare-mixin)
@@ -707,17 +469,16 @@
     (multiple-value-setf ((body symbol-macrolet) nil (declares symbol-macrolet))
       (walk-implict-progn symbol-macrolet (cddr form) env :declare t))))
 
+(defunwalker-handler symbol-macrolet-form (body binds declares)
+  ;; We ignore the binds, because the expansion has already taken
+  ;; place at walk-time.
+  (declare (ignore binds))
+  `(locally ,@(unwalk-declarations declares) ,@(unwalk-forms body)))
+
 ;;;; TAGBODY/GO
 
 (defclass tagbody-form (form implicit-progn-mixin)
   ())
-
-(defclass go-tag-form (form)
-  ((name :accessor name-of :initarg :name)))
-
-(defgeneric go-tag-form-p (object)
-  (:method ((object go-tag-form)) t)
-  (:method ((object t))           nil))
 
 (defwalker-handler tagbody (form parent env)
   (with-form-object (tagbody tagbody-form :parent parent :source form :body (cdr form))
@@ -740,6 +501,15 @@
          else
            do (setf (car part) (walk-form (car part) tagbody env))))))
 
+(defunwalker-handler tagbody-form (body)
+  `(tagbody ,@(unwalk-forms body)))
+
+(defclass go-tag-form (form)
+  ((name :accessor name-of :initarg :name)))
+
+(defunwalker-handler go-tag-form (name)
+  name)
+
 (defclass go-form (form)
   ((jump-target :accessor jump-target-of :initarg :jump-target)
    (name :accessor name-of :initarg :name)
@@ -753,6 +523,9 @@
                  :jump-target (lookup-walk-env env :tag (second form))
                  :enclosing-tagbody (lookup-walk-env env :tagbody 'enclosing-tagbody)))
 
+(defunwalker-handler go-form (name)
+  `(go ,name))
+
 ;;;; THE
 
 (defclass the-form (form)
@@ -763,6 +536,9 @@
   (with-form-object (the the-form :parent parent :source form
                                   :type (second form))
     (setf (value-of the) (walk-form (third form) the env))))
+
+(defunwalker-handler the-form (type value)
+  `(the ,type ,(unwalk-form value)))
 
 ;;;; UNWIND-PROTECT
 
@@ -775,6 +551,9 @@
                                     :source form)
     (setf (protected-form unwind-protect) (walk-form (second form) unwind-protect env)
           (cleanup-form unwind-protect) (walk-implict-progn unwind-protect (cddr form) env))))
+
+(defunwalker-handler unwind-protect-form (protected-form cleanup-form)
+  `(unwind-protect ,(unwalk-form protected-form) ,@(unwalk-forms cleanup-form)))
 
 ;;;; LOAD-TIME-VALUE
 

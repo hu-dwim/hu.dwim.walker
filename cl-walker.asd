@@ -23,9 +23,10 @@
                              (:file "lexenv-late" :depends-on ("package" "duplicates"
                                                                #+sbcl "lexenv-sbcl"))
                              (:file "infrastructure" :depends-on ("package" "lexenv-late" "duplicates"))
-                             (:file "walk" :depends-on ("infrastructure"))
-                             (:file "implementation-specific" :depends-on ("infrastructure"))
-                             (:file "unwalk" :depends-on ("infrastructure"))))))
+                             (:file "progn" :depends-on ("infrastructure"))
+                             (:file "functions" :depends-on ("infrastructure" "progn"))
+                             (:file "handlers" :depends-on ("infrastructure" "functions"))
+                             (:file "implementation-specific" :depends-on ("infrastructure"))))))
 
 (defsystem :cl-walker-test
   :depends-on (:cl-walker :stefil :alexandria :metabang-bind)
