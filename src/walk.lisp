@@ -34,10 +34,10 @@
   ())
 
 (defclass type-declaration-form (variable-declaration-form)
-  ((type-form :accessor type-form :initarg :type-form)))
+  ((type :accessor type-of :initarg :type)))
 
 (defclass ftype-declaration-form (function-declaration-form)
-  ((type-form :accessor type-form :initarg :type-form)))
+  ((type :accessor type-of :initarg :type)))
 
 (defclass notinline-declaration-form (function-declaration-form)
   ())
@@ -67,7 +67,7 @@
                                         :parent parent
                                         :source `(ftype ,(first arguments) function-name)
                                         :name function-name
-                                        :type-form (first arguments))
+                                        :type (first arguments))
                          function-name `(ftype ,(first arguments))))
             ((ignore ignorable)
              (extend-env (var arguments)
@@ -97,7 +97,7 @@
                                         :parent parent
                                         :source `(type ,(first arguments) ,var)
                                         :name var
-                                        :type-form (first arguments))
+                                        :type (first arguments))
                          var `(type ,(first arguments))))
             (t
              ;; TODO weak try: assumes everything else is a type declaration
@@ -106,7 +106,7 @@
                                         :parent parent
                                         :source `(,type ,var)
                                         :name var
-                                        :type-form type)
+                                        :type type)
                          var `(type ,type)))))))
     ;; TODO this generates wrong ast for (walk-form '(lambda () (declare (ignorable))))
     (when (null declares)
@@ -756,12 +756,12 @@
 ;;;; THE
 
 (defclass the-form (form)
-  ((type-form :accessor type-form :initarg :type-form)
+  ((type :accessor type-of :initarg :type)
    (value :accessor value :initarg :value)))
 
 (defwalker-handler the (form parent env)
   (with-form-object (the the-form :parent parent :source form
-                                  :type-form (second form))
+                                  :type (second form))
     (setf (value the) (walk-form (third form) the env))))
 
 ;;;; UNWIND-PROTECT

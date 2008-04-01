@@ -8,7 +8,12 @@
 
 (defpackage :cl-walker
   (:documentation "A code walker for Common Lisp")
+
   (:use :common-lisp :alexandria)
+
+  (:shadow
+   #:type-of)
+
   (:export
 
    #:make-empty-lexenv

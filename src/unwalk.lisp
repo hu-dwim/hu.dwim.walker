@@ -130,11 +130,11 @@
 (defunwalker-handler special-declaration-form (name)
   `(special ,name))
 
-(defunwalker-handler type-declaration-form (type-form name)
-  `(type ,type-form ,name))
+(defunwalker-handler type-declaration-form (type name)
+  `(type ,type ,name))
 
-(defunwalker-handler ftype-declaration-form (type-form name)
-  `(ftype ,type-form ,name))
+(defunwalker-handler ftype-declaration-form (type name)
+  `(ftype ,type ,name))
 
 (defunwalker-handler notinline-declaration-form (name)
   `(notinline ,name))
@@ -276,8 +276,8 @@
 
 ;;;; THE
 
-(defunwalker-handler the-form (type-form value)
-  `(the ,type-form ,(unwalk-form value)))
+(defunwalker-handler the-form (type value)
+  `(the ,type ,(unwalk-form value)))
 
 ;;;; UNWIND-PROTECT
 
