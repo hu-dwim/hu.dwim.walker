@@ -179,7 +179,9 @@
   `(let (_)
      (declare (ignorable _))
      (setf (values ,@(mapcar (lambda (el)
-                               (if (eq el nil)
+                               (if (and (symbolp el)
+                                        (or (eq el nil)
+                                            (string= el '_)))
                                    '_
                                    el))
                              places))
