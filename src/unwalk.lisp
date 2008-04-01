@@ -145,7 +145,7 @@
   `(block ,name ,@(unwalk-forms body)))
 
 (defunwalker-handler return-from-form (target-block result)
-  `(return-from ,(name target-block) ,(unwalk-form result)))
+  `(return-from ,(name-of target-block) ,(unwalk-form result)))
 
 ;;;; CATCH/THROW
 

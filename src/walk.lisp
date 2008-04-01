@@ -13,10 +13,10 @@
   ((optimize-spec :accessor optimize-spec :initarg :optimize-spec)))
 
 (defclass variable-declaration-form (declaration-form)
-  ((name :accessor name :initarg :name)))
+  ((name :accessor name-of :initarg :name)))
 
 (defclass function-declaration-form (declaration-form)
-  ((name :accessor name :initarg :name)))
+  ((name :accessor name-of :initarg :name)))
 
 (defclass dynamic-extent-declaration-form (variable-declaration-form)
   ())
@@ -131,11 +131,11 @@
   ((value :accessor value :initarg :value)))
 
 (defclass variable-reference (form)
-  ((name :accessor name :initarg :name)))
+  ((name :accessor name-of :initarg :name)))
 
 (defmethod print-object ((v variable-reference) stream)
   (print-unreadable-object (v stream :type t :identity t)
-    (format stream "~S" (name v))))
+    (format stream "~S" (name-of v))))
 
 (defclass local-variable-reference (variable-reference)
   ())
@@ -235,7 +235,7 @@
   ((arguments :accessor arguments :initarg :arguments)))
 
 (defclass function-object-form (form)
-  ((name :accessor name :initarg :name)))
+  ((name :accessor name-of :initarg :name)))
 
 (defclass local-function-object-form (function-object-form)
   ())
@@ -277,7 +277,7 @@
   (declare (ignore macro-p))
   (flet ((extend-env (argument)
            (unless (typep argument 'allow-other-keys-function-argument-form)
-             (extend-walk-env env :let (name argument) argument))))
+             (extend-walk-env env :let (name-of argument) argument))))
     (let ((state :required)
           (arguments '()))
       (dolist (argument lambda-list)
@@ -301,12 +301,12 @@
       (values (nreverse arguments) env))))
 
 (defclass function-argument-form (form)
-  ((name :accessor name :initarg :name)))
+  ((name :accessor name-of :initarg :name)))
 
 (defmethod print-object ((argument function-argument-form) stream)
   (print-unreadable-object (argument stream :type t :identity t)
     (if (slot-boundp argument 'name)
-        (format stream "~S" (name argument))
+        (format stream "~S" (name-of argument))
         (write-string "#<unbound name>" stream))))
 
 (defclass required-function-argument-form (function-argument-form)
@@ -358,7 +358,7 @@
 
 (defun effective-keyword-name (k)
   (or (keyword-name k)
-      (intern (symbol-name (name k)) :keyword)))
+      (intern (symbol-name (name-of k)) :keyword)))
 
 (defun walk-keyword-argument (form parent env)
   (destructuring-bind (name &optional default-value supplied-p-parameter)
@@ -391,7 +391,7 @@
 ;;;; BLOCK/RETURN-FROM
 
 (defclass block-form (form implicit-progn-mixin)
-  ((name :accessor name :initarg :name)))
+  ((name :accessor name-of :initarg :name)))
 
 (defclass return-from-form (form)
   ((target-block :accessor target-block :initarg :target-block)
@@ -554,7 +554,7 @@
       (loop for (var . value) :in (binds let) do
             (unless (find-if (lambda (declaration)
                                (and (typep declaration 'special-declaration-form)
-                                    (eq var (name declaration)))) declarations)
+                                    (eq var (name-of declaration)))) declarations)
               (extend-walk-env env :let var :dummy)))
       (multiple-value-setf ((body let) nil (declares let))
                            (walk-implict-progn let (cddr form) env :declare t)))))
@@ -713,7 +713,7 @@
   ())
 
 (defclass go-tag-form (form)
-  ((name :accessor name :initarg :name)))
+  ((name :accessor name-of :initarg :name)))
 
 (defgeneric go-tag-form-p (object)
   (:method ((object go-tag-form)) t)
@@ -741,16 +741,16 @@
            do (setf (car part) (walk-form (car part) tagbody env))))))
 
 (defclass go-form (form)
-  ((target-progn :accessor target-progn :initarg :target-progn)
-   (name :accessor name :initarg :name)
-   (enclosing-tagbody :accessor enclosing-tagbody :initarg :enclosing-tagbody)))
+  ((jump-target :accessor jump-target-of :initarg :jump-target)
+   (name :accessor name-of :initarg :name)
+   (enclosing-tagbody :accessor enclosing-tagbody-of :initarg :enclosing-tagbody)))
 
 (defwalker-handler go (form parent env)
   (make-instance 'go-form
                  :parent parent
                  :source form
                  :name (second form)
-                 :target-progn (lookup-walk-env env :tag (second form))
+                 :jump-target (lookup-walk-env env :tag (second form))
                  :enclosing-tagbody (lookup-walk-env env :tagbody 'enclosing-tagbody)))
 
 ;;;; THE
