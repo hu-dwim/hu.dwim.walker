@@ -10,10 +10,10 @@
   ())
 
 (defclass optimize-declaration-form (declaration-form)
-  ((optimize-spec :accessor optimize-spec :initarg :optimize-spec)))
+  ((specification :accessor specification-of :initarg :specification)))
 
-(defunwalker-handler optimize-declaration-form (optimize-spec)
-  `(optimize ,optimize-spec))
+(defunwalker-handler optimize-declaration-form (specification)
+  `(optimize ,specification))
 
 (defclass variable-declaration-form (declaration-form)
   ((name :accessor name-of :initarg :name)))
@@ -109,7 +109,7 @@
                          function `(notinline)))
             (optimize
              (extend-env (optimize-spec arguments)
-                         (mkdecl optimize-spec 'optimize-declaration-form :optimize-spec optimize-spec)
+                         (mkdecl optimize-spec 'optimize-declaration-form :specification optimize-spec)
                          'optimize optimize-spec))
             (special
              (extend-env (var arguments)
@@ -144,9 +144,10 @@
       (list `(declare ,@(unwalk-forms decls)))))
 
 (defun walk-implict-progn (parent forms env &key docstring declare)
-  (handler-bind ((undefined-reference (lambda (condition)
-                                        (unless (enclosing-code condition)
-                                          (setf (enclosing-code condition) `(progn ,@forms))))))
+  (handler-bind ((undefined-reference
+                  (lambda (condition)
+                    (unless (enclosing-code-of condition)
+                      (setf (enclosing-code-of condition) `(progn ,@forms))))))
     (multiple-value-bind (body env docstring declarations)
         (split-body forms env :parent parent :docstring docstring :declare declare)
       (values (mapcar (lambda (form)

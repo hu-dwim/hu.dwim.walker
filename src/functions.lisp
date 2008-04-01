@@ -7,14 +7,14 @@
 (in-package :cl-walker)
 
 (defclass application-form (form)
-  ((operator :accessor operator :initarg :operator)
-   (arguments :accessor arguments :initarg :arguments)))
+  ((operator :accessor operator-of :initarg :operator)
+   (arguments :accessor arguments-of :initarg :arguments)))
 
 (defunwalker-handler application-form (operator arguments)
   (cons operator (unwalk-forms arguments)))
 
 (defclass local-application-form (application-form)
-  ((code :accessor code :initarg :code)))
+  ((code :accessor code-of :initarg :code)))
 
 (defclass lexical-application-form (application-form)
   ())
@@ -38,10 +38,10 @@
                  (eq 'cl:lambda (car op)))
         (return
           (with-form-object (application lambda-application-form :parent parent :source form)
-            (setf (operator application) (walk-form op application env)
-                  (arguments application) (mapcar (lambda (form)
-                                                    (walk-form form application env))
-                                                  args)))))
+            (setf (operator-of application) (walk-form op application env)
+                  (arguments-of application) (mapcar (lambda (form)
+                                                       (walk-form form application env))
+                                                     args)))))
       (when (lookup-walk-env env :macrolet op)
         (return (walk-form (funcall (lookup-walk-env env :macrolet op) form (cdr env)) parent env)))
       (when (and (symbolp op) (macro-function op))
@@ -59,12 +59,12 @@
                                       (not (fboundp op)))
                              (warn 'undefined-function-reference :name op))
                            (make-instance 'free-application-form))))))
-        (setf (operator app) op
+        (setf (operator-of app) op
               (parent app) parent
               (source app) form
-              (arguments app) (mapcar (lambda (form)
-                                        (walk-form form app env))
-                                      args))
+              (arguments-of app) (mapcar (lambda (form)
+                                           (walk-form form app env))
+                                         args))
         app))))
 
 ;;;; Functions
@@ -73,7 +73,7 @@
   ())
 
 (defclass lambda-function-form (function-form implicit-progn-with-declare-mixin)
-  ((arguments :accessor arguments :initarg :arguments)))
+  ((arguments :accessor arguments-of :initarg :arguments)))
 
 (defunwalker-handler lambda-function-form (arguments body declares)
   `(function
@@ -115,7 +115,7 @@
                           :parent parent
                           :source form)
     ;; 1) parse the argument list creating a list of FUNCTION-ARGUMENT-FORM objects
-    (multiple-value-setf ((arguments func) env)
+    (multiple-value-setf ((arguments-of func) env)
       (walk-lambda-list (second form) func env))
     ;; 2) parse the body
     (multiple-value-setf ((body func) nil (declares func))

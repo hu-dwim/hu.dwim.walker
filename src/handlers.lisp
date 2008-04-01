@@ -222,7 +222,7 @@
          for lambda = (cdr binding)
          for tmp-lambda = (walk-lambda `(lambda ,arguments ,@body) labels env)
          do (setf (body lambda) (body tmp-lambda)
-                  (arguments lambda) (arguments tmp-lambda)
+                  (arguments-of lambda) (arguments-of tmp-lambda)
                   (declares lambda) (declares tmp-lambda)))
       (multiple-value-setf ((body labels) nil (declares labels)) (walk-implict-progn labels body env :declare t)))))
 
@@ -358,13 +358,13 @@
 
 (defclass multiple-value-call-form (form)
   ((func :accessor func :initarg :func)
-   (arguments :accessor arguments :initarg :arguments)))
+   (arguments :accessor arguments-of :initarg :arguments)))
 
 (defwalker-handler multiple-value-call (form parent env)
   (with-form-object (m-v-c multiple-value-call-form :parent parent :source form)
     (setf (func m-v-c) (walk-form (second form) m-v-c env)
-          (arguments m-v-c) (mapcar (lambda (f) (walk-form f m-v-c env))
-                                    (cddr form)))))
+          (arguments-of m-v-c) (mapcar (lambda (f) (walk-form f m-v-c env))
+                                       (cddr form)))))
 
 (defunwalker-handler multiple-value-call-form (func arguments)
   `(multiple-value-call ,(unwalk-form func) ,@(unwalk-forms arguments)))

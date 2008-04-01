@@ -90,24 +90,24 @@
 (defparameter *walker-handlers* (make-hash-table :test 'eq))
 
 (define-condition undefined-reference (warning)
-  ((enclosing-code :accessor enclosing-code :initform nil)
-   (name :accessor name :initarg :name)))
+  ((enclosing-code :accessor enclosing-code-of :initform nil)
+   (name :accessor name-of :initarg :name)))
 
 (define-condition undefined-variable-reference (undefined-reference)
   ()
   (:report
    (lambda (c s)
-     (if (enclosing-code c)
-         (format s "Reference to unknown variable ~S in ~S." (name c) (enclosing-code c))
-         (format s "Reference to unknown variable ~S." (name c))))))
+     (if (enclosing-code-of c)
+         (format s "Reference to unknown variable ~S in ~S." (name-of c) (enclosing-code-of c))
+         (format s "Reference to unknown variable ~S." (name-of c))))))
 
 (define-condition undefined-function-reference (undefined-reference)
   ()
   (:report
    (lambda (c s)
-     (if (enclosing-code c)
-         (format s "Reference to unknown function ~S in ~S." (name c) (enclosing-code c))
-         (format s "Reference to unknown function ~S." (name c))))))
+     (if (enclosing-code-of c)
+         (format s "Reference to unknown function ~S in ~S." (name-of c) (enclosing-code-of c))
+         (format s "Reference to unknown function ~S." (name-of c))))))
 
 (defparameter +atom-marker+ '+atom-marker+)
 
