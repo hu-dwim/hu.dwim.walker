@@ -4,14 +4,14 @@
 ;;;
 ;;; See COPYING for details.
 
+(cl:in-package :cl-user)
+
 (eval-when (:compile-toplevel :load-toplevel :execute)
   (unless (find-package '#:cl-walker.system)
     (defpackage #:cl-walker.system
       (:use :common-lisp :asdf))))
 
-(cl:in-package :cl-user)
-
-(in-package cl-walker.system)
+(in-package #:cl-walker.system)
 
 (defsystem :cl-walker
   :depends-on (:alexandria)

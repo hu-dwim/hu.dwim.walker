@@ -6,8 +6,6 @@
 
 (in-package :cl-walker)
 
-;;;; ** Implementation specific walkers
-
 ;;;; These are for forms which certain compilers treat specially but
 ;;;; aren't macros or special-operators.
 

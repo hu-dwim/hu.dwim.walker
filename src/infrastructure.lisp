@@ -33,10 +33,10 @@
 
 (defun lookup (environment type name &key (error-p nil) (default-value nil))
   (loop
-     for (.type .name . data) in environment
-     when (and (eql .type type) (eql .name name))
-       return (values data t)
-     finally
+     :for (.type .name . data) :in environment
+     :when (and (eql .type type) (eql .name name))
+       :return (values data t)
+     :finally
        (if error-p
            (error "Sorry, No value for ~S of type ~S in environment ~S found."
                   name type environment)
@@ -125,7 +125,7 @@
                      tagbody unwind-protect catch multiple-value-call
                      multiple-value-prog1 throw load-time-value the
                      eval-when locally progv)
-              (error "Sorry, No walker for the special operater ~S defined." (car form)))
+              (error "Sorry, no walker for the special operator ~S defined." (car form)))
              (t (gethash 'application *walker-handlers*))))))
 
 (defmacro defwalker-handler (name (form parent lexical-env)
