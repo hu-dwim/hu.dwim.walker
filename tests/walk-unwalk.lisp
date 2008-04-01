@@ -61,14 +61,17 @@
      '(lambda () (declare (ignorable)))
      '#'(lambda ()))))
 
-;; TODO fix the last test, &optional is misplaced and should signal an error
 (define-walk-unwalk-test test/lambda-function
   #'(lambda (x y) (y x))
   #'(lambda (x &key y z) (z (y x)))
-  #'(lambda (&optional port) (close port))
+  #'(lambda (&optional x y) (list x y))
   #'(lambda (x &rest args) (apply x args))
-  #'(lambda (object &key a &allow-other-keys) (values))
-  #'(lambda (&rest args &key a b &optional x &allow-other-keys) 2))
+  #'(lambda (object &key a b &allow-other-keys) (values))
+  #'(lambda (&optional x y &rest args &key a b &allow-other-keys) 42))
+
+(deftest test/invalid-lambda-list ()
+  (signals error
+    (walk-form '(lambda (&rest args &key a b &optional x y &allow-other-keys) 42))))
 
 (define-walk-unwalk-test test/walk-unwalk/block
   (block label (get-up) (eat-food) (go-to-sleep))
@@ -182,5 +185,3 @@
        (progn (with-call/cc* (walk-the-plank))
               (pushed-off-the-plank))
     (save-life)))
-
-
