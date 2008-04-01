@@ -128,7 +128,7 @@
 ;;;; Atoms
 
 (defclass constant-form (form)
-  ((value :accessor value :initarg :value)))
+  ((value :accessor value-of :initarg :value)))
 
 (defclass variable-reference (form)
   ((name :accessor name-of :initarg :name)))
@@ -432,7 +432,7 @@
 
 (defclass throw-form (form)
   ((tag :accessor tag :initarg :tag)
-   (value :accessor value :initarg :value)))
+   (value :accessor value-of :initarg :value)))
 
 (defwalker-handler catch (form parent env)
   (destructuring-bind (tag &body body)
@@ -446,7 +446,7 @@
       (cdr form)
     (with-form-object (throw throw-form :parent parent :source form)
       (setf (tag throw) (walk-form tag throw env)
-            (value throw) (walk-form result throw env)))))
+            (value-of throw) (walk-form result throw env)))))
 
 ;;;; EVAL-WHEN
 
@@ -573,13 +573,13 @@
 ;;;; LOAD-TIME-VALUE
 
 (defclass load-time-value-form (form)
-  ((value :accessor value)
+  ((value :accessor value-of)
    (read-only-p :accessor read-only-p)))
 
 (defwalker-handler load-time-value (form parent env)
   (with-form-object (load-time-value load-time-value-form
                                      :parent parent :source form)
-    (setf (value load-time-value) (walk-form (second form) load-time-value env)
+    (setf (value-of load-time-value) (walk-form (second form) load-time-value env)
           (read-only-p load-time-value) (third form))))
 
 ;;;; LOCALLY
@@ -665,7 +665,7 @@
     :accessor variable-name-of
     :initarg :variable-name)
    (value
-    :accessor value
+    :accessor value-of
     :initarg :value)))
 
 (defwalker-handler setq (form parent env)
@@ -686,7 +686,7 @@
           (ecase type
             (setq (with-form-object (setq setq-form :parent parent :source form
                                           :variable-name var)
-                    (setf (value setq) (walk-form value setq env))))
+                    (setf (value-of setq) (walk-form value setq env))))
             (setf (walk-form (first effective-code) parent env))))
         ;; multiple forms
         (with-form-object (progn progn-form :parent parent :source form)
@@ -757,12 +757,12 @@
 
 (defclass the-form (form)
   ((type :accessor type-of :initarg :type)
-   (value :accessor value :initarg :value)))
+   (value :accessor value-of :initarg :value)))
 
 (defwalker-handler the (form parent env)
   (with-form-object (the the-form :parent parent :source form
                                   :type (second form))
-    (setf (value the) (walk-form (third form) the env))))
+    (setf (value-of the) (walk-form (third form) the env))))
 
 ;;;; UNWIND-PROTECT
 
@@ -781,10 +781,10 @@
 (defclass load-time-value-form (form)
   ((body :accessor body :initarg :body)
    (read-only :initform nil :accessor read-only-p :initarg :read-only)
-   (value :accessor value)))
+   (value :accessor value-of)))
 
 (defmethod initialize-instance :after ((self load-time-value-form) &key)
-  (setf (value self) (eval (body self))))
+  (setf (value-of self) (eval (body self))))
 
 (defwalker-handler load-time-value (form parent env)
   (assert (<= (length form) 3))
