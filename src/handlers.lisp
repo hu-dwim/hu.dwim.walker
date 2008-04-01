@@ -189,7 +189,7 @@
                                (and (typep declaration 'special-declaration-form)
                                     (eq var (name-of declaration)))) declarations)
               (extend-walk-env env :let var :dummy)))
-      (multiple-value-setf ((body let) nil (declares let))
+      (multiple-value-setf ((body let) _ (declares let))
                            (walk-implict-progn let (cddr form) env :declare t)))))
 
 (defunwalker-handler let-form (binds body declares)
@@ -210,7 +210,7 @@
       (push (cons var (walk-form initial-value let* env)) (binds let*))
       (extend-walk-env env :let var :dummy))
     (setf (binds let*) (nreverse (binds let*)))
-    (multiple-value-setf ((body let*) nil (declares let*)) (walk-implict-progn let* (cddr form) env :declare t))))
+    (multiple-value-setf ((body let*) _ (declares let*)) (walk-implict-progn let* (cddr form) env :declare t))))
 
 (defunwalker-handler let*-form (binds body declares)
   (flet ((unwalk-let* (binds)
@@ -243,7 +243,8 @@
 
 (defwalker-handler locally (form parent env)
   (with-form-object (locally locally-form :parent parent :source form)
-    (multiple-value-setf ((body locally) nil (declares locally)) (walk-implict-progn locally (cdr form) env :declare t))))
+    (multiple-value-setf ((body locally) _ (declares locally))
+      (walk-implict-progn locally (cdr form) env :declare t))))
 
 (defunwalker-handler locally-form (body declares)
   `(locally ,@(unwalk-declarations declares)
@@ -262,7 +263,7 @@
         (extend-walk-env env :macrolet name handler)
         (push (cons name handler) (binds macrolet))))
     (setf (binds macrolet) (nreverse (binds macrolet)))
-    (multiple-value-setf ((body macrolet) nil (declares macrolet))
+    (multiple-value-setf ((body macrolet) _ (declares macrolet))
       (walk-implict-progn macrolet (cddr form) env :declare t))))
 
 (defunwalker-handler macrolet-form (body binds declares)
@@ -383,7 +384,7 @@
       (extend-walk-env env :symbol-macrolet symbol expansion)
       (push (cons symbol expansion) (binds symbol-macrolet)))
     (setf (binds symbol-macrolet) (nreverse (binds symbol-macrolet)))
-    (multiple-value-setf ((body symbol-macrolet) nil (declares symbol-macrolet))
+    (multiple-value-setf ((body symbol-macrolet) _ (declares symbol-macrolet))
       (walk-implict-progn symbol-macrolet (cddr form) env :declare t))))
 
 (defunwalker-handler symbol-macrolet-form (body binds declares)

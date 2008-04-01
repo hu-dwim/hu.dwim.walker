@@ -118,7 +118,7 @@
     (multiple-value-setf ((arguments-of func) env)
       (walk-lambda-list (second form) func env))
     ;; 2) parse the body
-    (multiple-value-setf ((body func) nil (declares func))
+    (multiple-value-setf ((body func) _ (declares func))
       (walk-implict-progn func (cddr form) env :declare t))
     ;; all done
     func))
