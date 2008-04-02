@@ -13,10 +13,13 @@
 (defunwalker-handler application-form (operator arguments)
   (cons operator (unwalk-forms arguments)))
 
-(defclass local-application-form (application-form)
+(defclass lexical-application-form (application-form)
   ((code :accessor code-of :initarg :code)))
 
-(defclass lexical-application-form (application-form)
+(defclass walked-lexical-application-form (lexical-application-form)
+  ())
+
+(defclass unwalked-lexical-application-form (lexical-application-form)
   ())
 
 (defclass free-application-form (application-form)
@@ -50,9 +53,9 @@
           (when expanded
             (return (walk-form expansion parent env)))))
       (let ((app (aif (lookup-in-walkenv :function op env)
-                      (make-instance 'local-application-form :code it)
+                      (make-instance 'walked-lexical-application-form :code it)
                       (if (lookup-in-walkenv :unwalked-function op env)
-                          (make-instance 'lexical-application-form)
+                          (make-instance 'unwalked-lexical-application-form)
                           (progn
                             (when (and *warn-undefined*
                                        (symbolp op)
@@ -87,13 +90,16 @@
 (defunwalker-handler function-object-form (name)
   `(function ,name))
 
-(defclass local-function-object-form (function-object-form)
+(defclass lexical-function-object-form (function-object-form)
+  ())
+
+(defclass walked-lexical-function-object-form (lexical-function-object-form)
+  ())
+
+(defclass unwalked-lexical-function-object-form (lexical-function-object-form)
   ())
 
 (defclass free-function-object-form (function-object-form)
-  ())
-
-(defclass lexical-function-object-form (function-object-form)
   ())
 
 (defwalker-handler function (form parent env)
@@ -103,9 +109,9 @@
       (walk-lambda (second form) parent env)
       ;; (function foo)
       (make-instance (if (lookup-in-walkenv :function (second form) env)
-                         'local-function-object-form
+                         'walked-lexical-function-object-form
                          (if (lookup-in-walkenv :unwalked-function (second form) env)
-                             'lexical-function-object-form
+                             'unwalked-lexical-function-object-form
                              'free-function-object-form))
                      :name (second form)
                      :parent parent :source form)))
@@ -338,7 +344,7 @@
     (with-form-object (labels labels-form :parent parent :source form :bindings '())
       ;; we need to walk over the bindings twice. the first pass
       ;; creates some 'empty' lambda objects in the environment so
-      ;; that local-application-form and local-function-object-form
+      ;; that walked-lexical-application-form and walked-lexical-function-object-form
       ;; have something to point to. the second pass then walks the
       ;; actual bodies of the form filling in the previously created
       ;; objects.

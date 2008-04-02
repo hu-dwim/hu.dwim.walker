@@ -17,25 +17,28 @@
     (cons   `(quote ,value))
     (t value)))
 
-(defclass variable-reference (form)
+(defclass variable-reference-form (form)
   ((name :accessor name-of :initarg :name)))
 
-(defunwalker-handler variable-reference (name)
+(defunwalker-handler variable-reference-form (name)
   name)
 
-(defmethod print-object ((v variable-reference) stream)
+(defmethod print-object ((v variable-reference-form) stream)
   (print-unreadable-object (v stream :type t :identity t)
     (format stream "~S" (name-of v))))
 
-(defclass local-variable-reference (variable-reference)
+(defclass lexical-variable-reference-form (variable-reference-form)
   ())
 
-(defclass local-lexical-variable-reference (local-variable-reference)
+(defclass walked-lexical-variable-reference-form (lexical-variable-reference-form)
   ()
-  (:documentation "A reference to a local variable defined in the
-  lexical environment outside of the form passed to walk-form."))
+  (:documentation "A reference to a local variable defined in the lexical environment inside the form passed to walk-form."))
 
-(defclass free-variable-reference (variable-reference)
+(defclass unwalked-lexical-variable-reference-form (lexical-variable-reference-form)
+  ()
+  (:documentation "A reference to a local variable defined in the lexical environment outside of the form passed to walk-form."))
+
+(defclass free-variable-reference-form (variable-reference-form)
   ())
 
 (defwalker-handler +atom-marker+ (form parent env)
@@ -44,10 +47,10 @@
      (make-instance 'constant-form :value form
                     :parent parent :source form))
     ((lookup-in-walkenv :variable form env)
-     (make-instance 'local-variable-reference :name form
+     (make-instance 'walked-lexical-variable-reference-form :name form
                     :parent parent :source form))
     ((lookup-in-walkenv :unwalked-variable form env)
-     (make-instance 'local-lexical-variable-reference :name form
+     (make-instance 'unwalked-lexical-variable-reference-form :name form
                     :parent parent :source form))
     ((lookup-in-walkenv :symbol-macro form env)
      (walk-form (lookup-in-walkenv :symbol-macro form env) parent env))
@@ -58,7 +61,7 @@
      (when (and *warn-undefined*
                 (not (boundp form)))
        (warn 'undefined-variable-reference :name form))
-     (make-instance 'free-variable-reference :name form
+     (make-instance 'free-variable-reference-form :name form
                     :parent parent :source form))))
 
 ;;;; BLOCK/RETURN-FROM
