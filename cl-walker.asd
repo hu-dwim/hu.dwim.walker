@@ -26,6 +26,7 @@
                              (:file "progn" :depends-on ("infrastructure"))
                              (:file "functions" :depends-on ("infrastructure" "progn"))
                              (:file "handlers" :depends-on ("infrastructure" "functions"))
+                             (:file "ast-utils" :depends-on ("infrastructure" "handlers" "progn" "functions"))
                              (:file "implementation-specific" :depends-on ("infrastructure"))))))
 
 (defsystem :cl-walker-test
@@ -33,6 +34,7 @@
   :components ((:module "tests"
                         :components ((:file "package")
                                      (:file "walk-unwalk" :depends-on ("package"))
+                                     (:file "ast-utils" :depends-on ("package"))
                                      (:file "lexenv" :depends-on ("package"))
                                      (:file "macros" :depends-on ("package"))))))
 
