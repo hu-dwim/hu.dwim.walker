@@ -63,6 +63,25 @@
                  (funcall otherwise)
                  otherwise))))))
 
+(defun augment-lexenv (kind name lexenv &rest args)
+  (ecase kind
+    (:variable     (progn
+                     (assert (null args))
+                     (augment-lexenv-with-variable name lexenv)))
+    (:function     (progn
+                     (assert (null args))
+                     (augment-lexenv-with-function name lexenv)))
+    (:macro        (destructuring-bind (macro-definition) args
+                     (augment-lexenv-with-macro name macro-definition lexenv)))
+    (:symbol-macro (destructuring-bind (macro-definition) args
+                     (augment-lexenv-with-symbol-macro name macro-definition lexenv)))
+    (:block        (progn
+                     (assert (null args))
+                     (augment-lexenv-with-block name lexenv)))
+    (:tag          (progn
+                     (assert (null args))
+                     (augment-lexenv-with-tag name lexenv)))))
+
 ;;;
 ;;; variables
 ;;;
