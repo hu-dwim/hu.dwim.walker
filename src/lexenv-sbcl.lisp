@@ -78,7 +78,7 @@
 ;;;
 ;;; augmentation
 ;;;
-(defun augment-lexenv-with-variable (lexenv name &key special ignored)
+(defun augment-lexenv-with-variable (name lexenv &key special ignored)
   (let ((var (if special
                  (sb-c::make-global-var :%source-name name)
                  (sb-c::make-lambda-var :%source-name name))))
@@ -87,17 +87,17 @@
     (sb-c::make-lexenv :default lexenv
                        :vars (list (cons name var)))))
 
-(defun augment-lexenv-with-function (lexenv name)
+(defun augment-lexenv-with-function (name lexenv)
   (sb-c::make-lexenv :default lexenv :funs (list (cons name t))))
 
-(defun augment-lexenv-with-macro (lexenv name def)
+(defun augment-lexenv-with-macro (name def lexenv)
   (sb-c::make-lexenv :default lexenv :funs (list (list* name 'sb-sys::macro def))))
 
-(defun augment-lexenv-with-symbol-macro (lexenv name def)
+(defun augment-lexenv-with-symbol-macro (name def lexenv)
   (sb-c::make-lexenv :default lexenv :vars (list (list* name 'sb-sys::macro def))))
 
-(defun augment-lexenv-with-block (lexenv name)
+(defun augment-lexenv-with-block (name lexenv)
   (sb-c::make-lexenv :default lexenv :blocks (list (list name))))
 
-(defun augment-lexenv-with-tag (lexenv name)
+(defun augment-lexenv-with-tag (name lexenv)
   (sb-c::make-lexenv :default lexenv :tags (list (list name))))

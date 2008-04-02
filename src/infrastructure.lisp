@@ -73,10 +73,10 @@
   (let ((walk-env (register (car env) type name datum))
         (lexenv (cdr env)))
     (cons walk-env (ecase type
-                     (:variable     (augment-lexenv-with-variable lexenv name))
-                     (:macro        (augment-lexenv-with-macro lexenv name datum))
-                     (:function     (augment-lexenv-with-function lexenv name))
-                     (:symbol-macro (augment-lexenv-with-symbol-macro lexenv name datum))
+                     (:variable     (augment-lexenv-with-variable name lexenv))
+                     (:macro        (augment-lexenv-with-macro name datum lexenv))
+                     (:function     (augment-lexenv-with-function name lexenv))
+                     (:symbol-macro (augment-lexenv-with-symbol-macro name datum lexenv))
                      ;; TODO
                      (:declare      lexenv)
                      (:block        lexenv)
