@@ -178,7 +178,7 @@
   name)
 
 (defclass specialized-function-argument-form (required-function-argument-form)
-  ((specializer :accessor specializer :initarg :specializer)))
+  ((specializer :accessor specializer-of :initarg :specializer)))
 
 (defun walk-specialized-argument-form (form parent env)
   (declare (ignore env))
@@ -188,7 +188,7 @@
                            form)
                  :specializer (if (listp form)
                                   (second form)
-                                  'T)
+                                  t)
                  :parent parent
                  :source form))
 

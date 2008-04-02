@@ -43,7 +43,8 @@
 
 (defwalker-handler +atom-marker+ (form parent env)
   (cond
-    ((not (or (symbolp form) (consp form)))
+    ((not (or (symbolp form)
+              (consp form)))
      (make-instance 'constant-form :value form
                     :parent parent :source form))
     ((lookup-in-walkenv :variable form env)
@@ -59,6 +60,7 @@
      (walk-form (macroexpand-1 form) parent env))
     (t
      (when (and *warn-undefined*
+                ;; TODO check if it's a special variable
                 (not (boundp form)))
        (warn 'undefined-variable-reference :name form))
      (make-instance 'free-variable-reference-form :name form
