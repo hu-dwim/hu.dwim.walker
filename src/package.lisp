@@ -52,6 +52,11 @@
    #:find-tag-in-lexenv
 
    ;;;
+   ;;; AST utils
+   ;;;
+   #:collect-variable-references
+
+   ;;;
    ;;; walker
    ;;;
    #:form
