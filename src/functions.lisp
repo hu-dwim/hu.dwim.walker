@@ -42,16 +42,16 @@
                   (arguments-of application) (mapcar (lambda (form)
                                                        (walk-form form application env))
                                                      args)))))
-      (awhen (lookup-in-walkenv env :macro op)
+      (awhen (lookup-in-walkenv :macro op env)
         (return (walk-form (funcall it form (cdr env)) parent env)))
       (when (and (symbolp op) (macro-function op))
         (multiple-value-bind (expansion expanded)
             (macroexpand-1 form (cdr env))
           (when expanded
             (return (walk-form expansion parent env)))))
-      (let ((app (aif (lookup-in-walkenv env :function op)
+      (let ((app (aif (lookup-in-walkenv :function op env)
                       (make-instance 'local-application-form :code it)
-                      (if (lookup-in-walkenv env :unwalked-function op)
+                      (if (lookup-in-walkenv :unwalked-function op env)
                           (make-instance 'lexical-application-form)
                           (progn
                             (when (and *warn-undefined*
@@ -102,9 +102,9 @@
       ;; (function (lambda ...))
       (walk-lambda (second form) parent env)
       ;; (function foo)
-      (make-instance (if (lookup-in-walkenv env :function (second form))
+      (make-instance (if (lookup-in-walkenv :function (second form) env)
                          'local-function-object-form
-                         (if (lookup-in-walkenv env :unwalked-function (second form))
+                         (if (lookup-in-walkenv :unwalked-function (second form) env)
                              'lexical-function-object-form
                              'free-function-object-form))
                      :name (second form)

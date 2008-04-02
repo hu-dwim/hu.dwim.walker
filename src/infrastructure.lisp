@@ -86,7 +86,7 @@
 (defmacro augment-walkenv! (env type name datum &rest other-datum)
   `(setf ,env (augment-walkenv ,env ,type ,name ,datum ,@other-datum)))
 
-(defun lookup-in-walkenv (env type name &key (error-p nil) (default-value nil))
+(defun lookup-in-walkenv (type name env &key (error-p nil) (default-value nil))
   (lookup (car env) type name :error-p error-p :default-value default-value))
 
 (defparameter *walker-handlers* (make-hash-table :test 'eq))

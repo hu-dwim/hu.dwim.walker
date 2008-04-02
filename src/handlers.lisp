@@ -43,14 +43,14 @@
     ((not (or (symbolp form) (consp form)))
      (make-instance 'constant-form :value form
                     :parent parent :source form))
-    ((lookup-in-walkenv env :variable form)
+    ((lookup-in-walkenv :variable form env)
      (make-instance 'local-variable-reference :name form
                     :parent parent :source form))
-    ((lookup-in-walkenv env :unwalked-variable form)
+    ((lookup-in-walkenv :unwalked-variable form env)
      (make-instance 'local-lexical-variable-reference :name form
                     :parent parent :source form))
-    ((lookup-in-walkenv env :symbol-macro form)
-     (walk-form (lookup-in-walkenv env :symbol-macro form) parent env))
+    ((lookup-in-walkenv :symbol-macro form env)
+     (walk-form (lookup-in-walkenv :symbol-macro form env) parent env))
     ((nth-value 1 (macroexpand-1 form))
      ;; a globaly defined symbol-macro
      (walk-form (macroexpand-1 form) parent env))
@@ -92,9 +92,9 @@
 (defwalker-handler return-from (form parent env)
   (destructuring-bind (block-name &optional (value '(values)))
       (cdr form)
-    (if (lookup-in-walkenv env :block block-name)
+    (if (lookup-in-walkenv :block block-name env)
         (with-form-object (return-from return-from-form :parent parent :source form
-                           :target-block (lookup-in-walkenv env :block block-name))
+                           :target-block (lookup-in-walkenv :block block-name env))
           (setf (result return-from) (walk-form value return-from env)))
         (restart-case
             (error 'return-from-unknown-block :block-name block-name)
@@ -352,7 +352,7 @@
   (let ((effective-code '()))
     (loop
        :for (name value) :on (cdr form) :by #'cddr
-       :for symbol-macro = (lookup-in-walkenv env :symbol-macro name)
+       :for symbol-macro = (lookup-in-walkenv :symbol-macro name env)
        :if symbol-macro
          :do (push `(setf ,symbol-macro ,value) effective-code)
        :else
@@ -439,8 +439,8 @@
                  :parent parent
                  :source form
                  :name (second form)
-                 :jump-target (lookup-in-walkenv env :tag (second form))
-                 :enclosing-tagbody (lookup-in-walkenv env :tagbody 'enclosing-tagbody)))
+                 :jump-target (lookup-in-walkenv :tag (second form) env)
+                 :enclosing-tagbody (lookup-in-walkenv :tagbody 'enclosing-tagbody env)))
 
 (defunwalker-handler go-form (name)
   `(go ,name))
