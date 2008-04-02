@@ -7,12 +7,12 @@
 (in-package :cl-walker)
 
 (defun macroexpand-all (form &optional (env (make-empty-lexenv)))
-  (unwalk-form (walk-form form nil (make-walk-environment env))))
+  (unwalk-form (walk-form form nil (make-walkenv env))))
 
 (defvar *warn-undefined* nil
   "When non-NIL any references to undefined functions or variables will signal a warning.")
 
-(defun walk-form (form &optional (parent nil) (env (make-walk-environment)))
+(defun walk-form (form &optional (parent nil) (env (make-walkenv)))
   "Walk FORM and return a CLOS based AST that represents it."
   (funcall (find-walker-handler form) form parent env))
 
@@ -54,7 +54,7 @@
          (error "Sorry, No value for ~S of type ~S in environment ~S found."
                 name type environment))))
 
-(defun make-walk-environment (&optional lexical-env)
+(defun make-walkenv (&optional lexical-env)
   (let ((walk-env '()))
     (when lexical-env
       (do-variables-in-lexenv (lexical-env name ignored?)
@@ -68,7 +68,7 @@
         (extend walk-env :symbol-macro name definition)))
     (cons walk-env lexical-env)))
 
-(defun register-walk-env (env type name datum &rest other-datum)
+(defun augment-walkenv (env type name datum &rest other-datum)
   (declare (ignore other-datum)) ;; TODO ?
   (let ((walk-env (register (car env) type name datum))
         (lexenv (cdr env)))
@@ -83,10 +83,10 @@
                      (:tagbody      lexenv)
                      (:tag          lexenv)))))
 
-(defmacro extend-walk-env (env type name datum &rest other-datum)
-  `(setf ,env (register-walk-env ,env ,type ,name ,datum ,@other-datum)))
+(defmacro augment-walkenv! (env type name datum &rest other-datum)
+  `(setf ,env (augment-walkenv ,env ,type ,name ,datum ,@other-datum)))
 
-(defun lookup-walk-env (env type name &key (error-p nil) (default-value nil))
+(defun lookup-in-walkenv (env type name &key (error-p nil) (default-value nil))
   (lookup (car env) type name :error-p error-p :default-value default-value))
 
 (defparameter *walker-handlers* (make-hash-table :test 'eq))

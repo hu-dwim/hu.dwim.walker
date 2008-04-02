@@ -77,7 +77,7 @@
                  (extend-env ((var list) newdeclare &rest datum)
                    `(dolist (,var ,list)
                       (when ,newdeclare (push ,newdeclare declares))
-                      (extend-walk-env environment :declare ,@datum))))
+                      (augment-walkenv! environment :declare ,@datum))))
         (destructuring-bind (type &rest arguments)
             declaration
           (case type

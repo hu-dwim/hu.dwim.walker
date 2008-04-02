@@ -43,14 +43,14 @@
     ((not (or (symbolp form) (consp form)))
      (make-instance 'constant-form :value form
                     :parent parent :source form))
-    ((lookup-walk-env env :variable form)
+    ((lookup-in-walkenv env :variable form)
      (make-instance 'local-variable-reference :name form
                     :parent parent :source form))
-    ((lookup-walk-env env :unwalked-variable form)
+    ((lookup-in-walkenv env :unwalked-variable form)
      (make-instance 'local-lexical-variable-reference :name form
                     :parent parent :source form))
-    ((lookup-walk-env env :symbol-macro form)
-     (walk-form (lookup-walk-env env :symbol-macro form) parent env))
+    ((lookup-in-walkenv env :symbol-macro form)
+     (walk-form (lookup-in-walkenv env :symbol-macro form) parent env))
     ((nth-value 1 (macroexpand-1 form))
      ;; a globaly defined symbol-macro
      (walk-form (macroexpand-1 form) parent env))
@@ -74,7 +74,7 @@
                        :name block-name)
       (setf (body block) (walk-implict-progn block
                                              body
-                                             (register-walk-env env :block block-name block))))))
+                                             (augment-walkenv env :block block-name block))))))
 
 (defunwalker-handler block-form (name body)
   `(block ,name ,@(unwalk-forms body)))
@@ -92,15 +92,15 @@
 (defwalker-handler return-from (form parent env)
   (destructuring-bind (block-name &optional (value '(values)))
       (cdr form)
-    (if (lookup-walk-env env :block block-name)
+    (if (lookup-in-walkenv env :block block-name)
         (with-form-object (return-from return-from-form :parent parent :source form
-                           :target-block (lookup-walk-env env :block block-name))
+                           :target-block (lookup-in-walkenv env :block block-name))
           (setf (result return-from) (walk-form value return-from env)))
         (restart-case
             (error 'return-from-unknown-block :block-name block-name)
           (add-block ()
             :report "Add this block and continue."
-            (walk-form form parent (register-walk-env env :block block-name :unknown-block)))))))
+            (walk-form form parent (augment-walkenv env :block block-name :unknown-block)))))))
 
 (defunwalker-handler return-from-form (target-block result)
   `(return-from ,(name-of target-block) ,(unwalk-form result)))
@@ -191,7 +191,7 @@
                                      (eq var (name-of declaration))))
                               declarations)
                ;; TODO audit this part, :dummy? check other occurrances, too!
-               (extend-walk-env env :variable var :dummy)))
+               (augment-walkenv! env :variable var :dummy)))
       (multiple-value-setf ((body let) _ (declares let))
                            (walk-implict-progn let (cddr form) env :declare t)))))
 
@@ -209,7 +209,7 @@
   (with-form-object (let* let*-form :parent parent :source form :bindings '())
     (dolist* ((var &optional initial-value) (mapcar #'ensure-list (second form)))
       (push (cons var (walk-form initial-value let* env)) (bindings-of let*))
-      (extend-walk-env env :variable var :dummy))
+      (augment-walkenv! env :variable var :dummy))
     (setf (bindings-of let*) (nreverse (bindings-of let*)))
     (multiple-value-setf ((body let*) _ (declares let*))
       (walk-implict-progn let* (cddr form) env :declare t))))
@@ -260,7 +260,7 @@
                               :bindings '())
     (dolist* ((name args &body body) (second form))
       (let ((handler (parse-macro-definition name args body (cdr env))))
-        (extend-walk-env env :macro name handler)
+        (augment-walkenv! env :macro name handler)
         (push (cons name handler) (bindings-of macrolet))))
     (setf (bindings-of macrolet) (nreverse (bindings-of macrolet)))
     (multiple-value-setf ((body macrolet) _ (declares macrolet))
@@ -352,7 +352,7 @@
   (let ((effective-code '()))
     (loop
        :for (name value) :on (cdr form) :by #'cddr
-       :for symbol-macro = (lookup-walk-env env :symbol-macro name)
+       :for symbol-macro = (lookup-in-walkenv env :symbol-macro name)
        :if symbol-macro
          :do (push `(setf ,symbol-macro ,value) effective-code)
        :else
@@ -382,7 +382,7 @@
   (with-form-object (symbol-macrolet symbol-macrolet-form :parent parent :source form
                                      :bindings '())
     (dolist* ((symbol expansion) (second form))
-      (extend-walk-env env :symbol-macro symbol expansion)
+      (augment-walkenv! env :symbol-macro symbol expansion)
       (push (cons symbol expansion) (bindings-of symbol-macrolet)))
     (setf (bindings-of symbol-macrolet) (nreverse (bindings-of symbol-macrolet)))
     (multiple-value-setf ((body symbol-macrolet) _ (declares symbol-macrolet))
@@ -401,7 +401,7 @@
 
 (defwalker-handler tagbody (form parent env)
   (with-form-object (tagbody tagbody-form :parent parent :source form :body (cdr form))
-    (extend-walk-env env :tagbody 'enclosing-tagbody tagbody)
+    (augment-walkenv! env :tagbody 'enclosing-tagbody tagbody)
     (flet ((go-tag-p (form)
              (or (symbolp form) (integerp form))))
       ;; the loop below destructuivly modifies the body of tagbody,
@@ -410,7 +410,7 @@
       (loop
          for part on (body tagbody)
          if (go-tag-p (car part))
-           do (extend-walk-env env :tag (car part) (cdr part)))
+           do (augment-walkenv! env :tag (car part) (cdr part)))
       (loop
          for part on (body tagbody)
          if (go-tag-p (car part))
@@ -439,8 +439,8 @@
                  :parent parent
                  :source form
                  :name (second form)
-                 :jump-target (lookup-walk-env env :tag (second form))
-                 :enclosing-tagbody (lookup-walk-env env :tagbody 'enclosing-tagbody)))
+                 :jump-target (lookup-in-walkenv env :tag (second form))
+                 :enclosing-tagbody (lookup-in-walkenv env :tagbody 'enclosing-tagbody)))
 
 (defunwalker-handler go-form (name)
   `(go ,name))
