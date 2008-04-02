@@ -77,9 +77,9 @@
     (with-form-object (block block-form
                        :parent parent :source form
                        :name block-name)
-      (setf (body block) (walk-implict-progn block
-                                             body
-                                             (augment-walkenv env :block block-name block))))))
+      (setf (body-of block) (walk-implict-progn block
+                                                body
+                                                (augment-walkenv env :block block-name block))))))
 
 (defunwalker-handler block-form (name body)
   `(block ,name ,@(unwalk-forms body)))
@@ -120,7 +120,7 @@
       (cdr form)
     (with-form-object (catch catch-form :parent parent :source form)
       (setf (tag catch) (walk-form tag catch env)
-            (body catch) (walk-implict-progn catch body env)))))
+            (body-of catch) (walk-implict-progn catch body env)))))
 
 (defunwalker-handler catch-form (tag body)
   `(catch ,(unwalk-form tag) ,@(unwalk-forms body)))
@@ -149,7 +149,7 @@
       (cdr form)
     (with-form-object (eval-when eval-when-form :parent parent :source form)
       (setf (eval-when-times eval-when) times
-            (body eval-when) (walk-implict-progn eval-when body env)))))
+            (body-of eval-when) (walk-implict-progn eval-when body env)))))
 
 (defunwalker-handler eval-when-form (body eval-when-times)
   `(eval-when ,eval-when-times
@@ -197,7 +197,7 @@
                               declarations)
                ;; TODO audit this part, :dummy? check other occurrances, too!
                (augment-walkenv! env :variable var :dummy)))
-      (multiple-value-setf ((body let) _ (declares let))
+      (multiple-value-setf ((body-of let) _ (declares let))
                            (walk-implict-progn let (cddr form) env :declare t)))))
 
 (defunwalker-handler let-form (bindings body declares)
@@ -216,7 +216,7 @@
       (push (cons var (walk-form initial-value let* env)) (bindings-of let*))
       (augment-walkenv! env :variable var :dummy))
     (setf (bindings-of let*) (nreverse (bindings-of let*)))
-    (multiple-value-setf ((body let*) _ (declares let*))
+    (multiple-value-setf ((body-of let*) _ (declares let*))
       (walk-implict-progn let* (cddr form) env :declare t))))
 
 (defunwalker-handler let*-form (bindings body declares)
@@ -248,7 +248,7 @@
 
 (defwalker-handler locally (form parent env)
   (with-form-object (locally locally-form :parent parent :source form)
-    (multiple-value-setf ((body locally) _ (declares locally))
+    (multiple-value-setf ((body-of locally) _ (declares locally))
       (walk-implict-progn locally (cdr form) env :declare t))))
 
 (defunwalker-handler locally-form (body declares)
@@ -268,7 +268,7 @@
         (augment-walkenv! env :macro name handler)
         (push (cons name handler) (bindings-of macrolet))))
     (setf (bindings-of macrolet) (nreverse (bindings-of macrolet)))
-    (multiple-value-setf ((body macrolet) _ (declares macrolet))
+    (multiple-value-setf ((body-of macrolet) _ (declares macrolet))
       (walk-implict-progn macrolet (cddr form) env :declare t))))
 
 (defunwalker-handler macrolet-form (body bindings declares)
@@ -314,7 +314,7 @@
 
 (defwalker-handler progn (form parent env)
   (with-form-object (progn progn-form :parent parent :source form)
-    (setf (body progn) (walk-implict-progn progn (cdr form) env))))
+    (setf (body-of progn) (walk-implict-progn progn (cdr form) env))))
 
 (defunwalker-handler progn-form (body)
   `(progn ,@(unwalk-forms body)))
@@ -329,7 +329,7 @@
   (with-form-object (progv progv-form :parent parent :source form)
     (setf (vars-form progv) (walk-form (cadr form) progv env))
     (setf (values-form progv) (walk-form (caddr form) progv env))
-    (setf (body progv) (walk-implict-progn progv (cdddr form) env))
+    (setf (body-of progv) (walk-implict-progn progv (cdddr form) env))
     progv))
 
 (defunwalker-handler progv-form (body vars-form values-form)
@@ -373,7 +373,7 @@
             (setf (walk-form (first effective-code) parent env))))
         ;; multiple forms
         (with-form-object (progn progn-form :parent parent :source form)
-          (setf (body progn) (walk-implict-progn progn effective-code env))))))
+          (setf (body-of progn) (walk-implict-progn progn effective-code env))))))
 
 (defunwalker-handler setq-form (variable-name value)
   `(setq ,variable-name ,(unwalk-form value)))
@@ -390,7 +390,7 @@
       (augment-walkenv! env :symbol-macro symbol expansion)
       (push (cons symbol expansion) (bindings-of symbol-macrolet)))
     (setf (bindings-of symbol-macrolet) (nreverse (bindings-of symbol-macrolet)))
-    (multiple-value-setf ((body symbol-macrolet) _ (declares symbol-macrolet))
+    (multiple-value-setf ((body-of symbol-macrolet) _ (declares symbol-macrolet))
       (walk-implict-progn symbol-macrolet (cddr form) env :declare t))))
 
 (defunwalker-handler symbol-macrolet-form (body bindings declares)
@@ -411,19 +411,19 @@
              (or (symbolp form) (integerp form))))
       ;; the loop below destructuivly modifies the body of tagbody,
       ;; since it's the same object as the source we need to copy it.
-      (setf (body tagbody) (copy-list (body tagbody)))
+      (setf (body-of tagbody) (copy-list (body-of tagbody)))
       (loop
-         for part on (body tagbody)
-         if (go-tag-p (car part))
-           do (augment-walkenv! env :tag (car part) (cdr part)))
+         :for part :on (body-of tagbody)
+         :if (go-tag-p (car part))
+           :do (augment-walkenv! env :tag (car part) (cdr part)))
       (loop
-         for part on (body tagbody)
-         if (go-tag-p (car part))
-           do (setf (car part) (make-instance 'go-tag-form :parent tagbody
-                                              :source (car part)
-                                              :name (car part)))
-         else
-           do (setf (car part) (walk-form (car part) tagbody env))))))
+         :for part :on (body-of tagbody)
+         :if (go-tag-p (car part))
+           :do (setf (car part) (make-instance 'go-tag-form :parent tagbody
+                                               :source (car part)
+                                               :name (car part)))
+         :else
+           :do (setf (car part) (walk-form (car part) tagbody env))))))
 
 (defunwalker-handler tagbody-form (body)
   `(tagbody ,@(unwalk-forms body)))
@@ -482,16 +482,16 @@
 ;;;; LOAD-TIME-VALUE
 
 (defclass load-time-value-form (form)
-  ((body :accessor body :initarg :body)
+  ((body :accessor body-of :initarg :body)
    (read-only :initform nil :accessor read-only-p :initarg :read-only)
    (value :accessor value-of)))
 
 (defmethod initialize-instance :after ((self load-time-value-form) &key)
-  (setf (value-of self) (eval (body self))))
+  (setf (value-of self) (eval (body-of self))))
 
 (defwalker-handler load-time-value (form parent env)
   (assert (<= (length form) 3))
   (with-form-object (load-time-value load-time-value-form :parent parent
                                      :body form
                                      :read-only (third form))
-    (setf (body load-time-value) (walk-form (second form)))))
+    (setf (body-of load-time-value) (walk-form (second form)))))

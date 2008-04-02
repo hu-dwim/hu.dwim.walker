@@ -187,7 +187,7 @@
      ,variable))
 
 (defclass implicit-progn-mixin ()
-  ((body :accessor body :initarg :body)))
+  ((body :accessor body-of :initarg :body)))
 
 (defclass implicit-progn-with-declare-mixin (implicit-progn-mixin)
   ((declares :accessor declares :initarg :declares)))

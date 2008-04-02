@@ -124,7 +124,7 @@
     (multiple-value-setf ((arguments-of func) env)
       (walk-lambda-list (second form) func env))
     ;; 2) parse the body
-    (multiple-value-setf ((body func) _ (declares func))
+    (multiple-value-setf ((body-of func) _ (declares func))
       (walk-implict-progn func (cddr form) env :declare t))
     ;; all done
     func))
@@ -315,7 +315,7 @@
          :collect (cons name (walk-form `(lambda ,args ,@body) flet env)) :into bindings
          :finally (setf (bindings-of flet) bindings))
       ;; walk the body in the new env
-      (multiple-value-setf ((body flet) _ (declares flet))
+      (multiple-value-setf ((body-of flet) _ (declares flet))
         (walk-implict-progn flet
                             body
                             (loop
@@ -363,10 +363,10 @@
          :for binding :in (bindings-of labels)
          :for lambda = (cdr binding)
          :for tmp-lambda = (walk-lambda `(lambda ,arguments ,@body) labels env)
-         :do (setf (body lambda) (body tmp-lambda)
+         :do (setf (body-of lambda) (body-of tmp-lambda)
                    (arguments-of lambda) (arguments-of tmp-lambda)
                    (declares lambda) (declares tmp-lambda)))
-      (multiple-value-setf ((body labels) _ (declares labels))
+      (multiple-value-setf ((body-of labels) _ (declares labels))
         (walk-implict-progn labels body env :declare t)))))
 
 (defunwalker-handler labels-form (bindings body declares)
