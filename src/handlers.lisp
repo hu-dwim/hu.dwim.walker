@@ -43,14 +43,14 @@
     ((not (or (symbolp form) (consp form)))
      (make-instance 'constant-form :value form
                     :parent parent :source form))
-    ((lookup-walk-env env :let form)
+    ((lookup-walk-env env :variable form)
      (make-instance 'local-variable-reference :name form
                     :parent parent :source form))
-    ((lookup-walk-env env :lexical-let form)
+    ((lookup-walk-env env :unwalked-variable form)
      (make-instance 'local-lexical-variable-reference :name form
                     :parent parent :source form))
-    ((lookup-walk-env env :symbol-macrolet form)
-     (walk-form (lookup-walk-env env :symbol-macrolet form) parent env))
+    ((lookup-walk-env env :symbol-macro form)
+     (walk-form (lookup-walk-env env :symbol-macro form) parent env))
     ((nth-value 1 (macroexpand-1 form))
      ;; a globaly defined symbol-macro
      (walk-form (macroexpand-1 form) parent env))
@@ -188,8 +188,10 @@
          :for (var . value) :in (bindings-of let)
          :do (unless (find-if (lambda (declaration)
                                 (and (typep declaration 'special-declaration-form)
-                                     (eq var (name-of declaration)))) declarations)
-               (extend-walk-env env :let var :dummy)))
+                                     (eq var (name-of declaration))))
+                              declarations)
+               ;; TODO audit this part, :dummy? check other occurrances, too!
+               (extend-walk-env env :variable var :dummy)))
       (multiple-value-setf ((body let) _ (declares let))
                            (walk-implict-progn let (cddr form) env :declare t)))))
 
@@ -207,7 +209,7 @@
   (with-form-object (let* let*-form :parent parent :source form :bindings '())
     (dolist* ((var &optional initial-value) (mapcar #'ensure-list (second form)))
       (push (cons var (walk-form initial-value let* env)) (bindings-of let*))
-      (extend-walk-env env :let var :dummy))
+      (extend-walk-env env :variable var :dummy))
     (setf (bindings-of let*) (nreverse (bindings-of let*)))
     (multiple-value-setf ((body let*) _ (declares let*))
       (walk-implict-progn let* (cddr form) env :declare t))))
@@ -258,7 +260,7 @@
                               :bindings '())
     (dolist* ((name args &body body) (second form))
       (let ((handler (parse-macro-definition name args body (cdr env))))
-        (extend-walk-env env :macrolet name handler)
+        (extend-walk-env env :macro name handler)
         (push (cons name handler) (bindings-of macrolet))))
     (setf (bindings-of macrolet) (nreverse (bindings-of macrolet)))
     (multiple-value-setf ((body macrolet) _ (declares macrolet))
@@ -349,11 +351,12 @@
   ;; requiring setf and not setq.
   (let ((effective-code '()))
     (loop
-       for (name value) on (cdr form) by #'cddr
-       if (lookup-walk-env env :symbol-macrolet name)
-         do (push `(setf ,(lookup-walk-env env :symbol-macrolet name) ,value) effective-code)
-       else
-         do (push `(setq ,name ,value) effective-code))
+       :for (name value) :on (cdr form) :by #'cddr
+       :for symbol-macro = (lookup-walk-env env :symbol-macro name)
+       :if symbol-macro
+         :do (push `(setf ,symbol-macro ,value) effective-code)
+       :else
+         :do (push `(setq ,name ,value) effective-code))
     (if (= 1 (length effective-code))
         ;; only one form, the "simple case"
         (destructuring-bind (type var value)
@@ -379,7 +382,7 @@
   (with-form-object (symbol-macrolet symbol-macrolet-form :parent parent :source form
                                      :bindings '())
     (dolist* ((symbol expansion) (second form))
-      (extend-walk-env env :symbol-macrolet symbol expansion)
+      (extend-walk-env env :symbol-macro symbol expansion)
       (push (cons symbol expansion) (bindings-of symbol-macrolet)))
     (setf (bindings-of symbol-macrolet) (nreverse (bindings-of symbol-macrolet)))
     (multiple-value-setf ((body symbol-macrolet) _ (declares symbol-macrolet))

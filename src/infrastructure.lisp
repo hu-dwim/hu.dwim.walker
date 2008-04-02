@@ -59,27 +59,29 @@
     (when lexical-env
       (do-variables-in-lexenv (lexical-env name ignored?)
         (unless ignored?
-          ;; TODO is it the right way to handle ignored?
-          (extend walk-env :lexical-let name t)))
+          (extend walk-env :unwalked-variable name t)))
       (do-functions-in-lexenv (lexical-env name)
-        (extend walk-env :lexical-flet name t))
+        (extend walk-env :unwalked-function name t))
       (do-macros-in-lexenv (lexical-env name macro-fn)
-        (extend walk-env :macrolet name macro-fn))
+        (extend walk-env :macro name macro-fn))
       (do-symbol-macros-in-lexenv (lexical-env name definition)
-        (extend walk-env :symbol-macrolet name definition)))
+        (extend walk-env :symbol-macro name definition)))
     (cons walk-env lexical-env)))
 
 (defun register-walk-env (env type name datum &rest other-datum)
   (declare (ignore other-datum)) ;; TODO ?
   (let ((walk-env (register (car env) type name datum))
-        (lexenv (case type
-                  (:let (augment-with-variable (cdr env) name))
-                  (:macrolet (augment-with-macro (cdr env) name datum))
-                  (:flet (augment-with-function (cdr env) name))
-                  (:symbol-macrolet (augment-with-symbol-macro (cdr env) name datum))
-                  ;;TODO: :declare
-                  (t (cdr env)))))
-    (cons walk-env lexenv)))
+        (lexenv (cdr env)))
+    (cons walk-env (ecase type
+                     (:variable     (augment-lexenv-with-variable lexenv name))
+                     (:macro        (augment-lexenv-with-macro lexenv name datum))
+                     (:function     (augment-lexenv-with-function lexenv name))
+                     (:symbol-macro (augment-lexenv-with-symbol-macro lexenv name datum))
+                     ;; TODO
+                     (:declare      lexenv)
+                     (:block        lexenv)
+                     (:tagbody      lexenv)
+                     (:tag          lexenv)))))
 
 (defmacro extend-walk-env (env type name datum &rest other-datum)
   `(setf ,env (register-walk-env ,env ,type ,name ,datum ,@other-datum)))
