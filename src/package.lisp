@@ -16,7 +16,11 @@
 
   (:export
 
+   ;;;
+   ;;; environment
+   ;;;
    #:make-empty-lexenv
+   #:lookup-in-lexenv
    #:macroexpand-all
 
    #:do-variables-in-lexenv
@@ -47,36 +51,47 @@
    #:find-block-in-lexenv
    #:find-tag-in-lexenv
 
+   ;;;
+   ;;; walker
+   ;;;
    #:form
    #:walk-form
-   #:make-walk-environment
-   #:*walk-handlers*
+   #:unwalk-form
+   #:unwalk-forms
+   #:unwalk-lambda-list
+   #:macroexpand-all
+   #:make-walkenv
    #:*warn-undefined*
+
    #:undefined-reference
    #:undefined-variable-reference
    #:undefined-function-reference
    #:return-from-unknown-block
+
    #:defwalker-handler
+   #:defunwalker-handler
+
    #:implicit-progn-mixin
    #:implicit-progn-with-declare-mixin
    #:binding-form-mixin
    #:declaration-form
    #:constant-form
-   #:variable-reference
-   #:local-variable-reference
-   #:local-lexical-variable-reference
-   #:free-variable-reference
+   #:variable-reference-form
+   #:lexical-variable-reference-form
+   #:unwalked-lexical-variable-reference-form
+   #:free-variable-reference-form
    #:application-form
-   #:local-application-form
    #:lexical-application-form
+   #:walked-lexical-application-form
+   #:unwalked-lexical-application-form
    #:free-application-form
    #:lambda-application-form
    #:function-form
    #:lambda-function-form
    #:function-object-form
-   #:local-function-object-form
+   #:walked-lexical-function-object-form
    #:free-function-object-form
-   #:lexical-function-object-form
+   #:unwalked-lexical-function-object-form
    #:function-argument-form
    #:required-function-argument-form
    #:specialized-function-argument-form
@@ -109,46 +124,38 @@
    #:go-form
    #:the-form
    #:unwind-protect-form
-   #:extract-argument-names
+
    #:walk-lambda-list
    #:walk-implict-progn
-   #:arguments
-   #:binds
    #:body
    #:cleanup-form
-   #:code
+   #:code-of
    #:consequent
    #:declares
    #:default-value
 ;; #:else ; iterate
-   #:enclosing-tagbody
+   #:enclosing-tagbody-of
    #:eval-when-times
    #:first-form
    #:func
    #:keyword-name
-   #:name
-   #:operator
-   #:optimize-spec
+   #:name-of
    #:other-forms
    #:parent
    #:protected-form
    #:read-only-p
    #:result
    #:source
-;; #:specializer ; closer-mop
+   #:specializer-of
    #:supplied-p-parameter
    #:tag
-   #:target-block
-   #:target-progn
+   #:target-block-of
+   #:jump-target-of
    #:then
-   #:type-form
-   #:value
+   ;;#:type-of
+   #:value-of
    #:values-form
    #:variable-name-of
    #:vars-form
 
-   #:defunwalker-handler
-   #:unwalk-form
-   #:unwalk-forms
-   #:unwalk-lambda-list
    ))
