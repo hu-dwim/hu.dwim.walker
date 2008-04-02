@@ -22,16 +22,65 @@
 (defun unwalk-forms (forms)
   (mapcar #'unwalk-form forms))
 
-(defun register (environment type name datum &rest other-datum)
+;;;
+;;; Walk environment
+;;;
+
+;; there are three players here:
+;; 1) the walkenv, which contains the already walked *-form instances
+;; 2) the lexenv, which is the underlying lisp's internal lexenv
+;; 3) the combined environment, which is (cons walkenv lexenv)
+;;
+;; %lookup and friends are internal utils to update/query the walkenv.
+
+;; let's provide an exported function with a nice name
+(defun make-walk-environment (&optional lexenv)
+  (make-walkenv lexenv))
+
+(defun make-walkenv (&optional lexenv)
+  (let ((walkenv '()))
+    (when lexenv
+      (macrolet ((extend! (environment type name datum &rest other-datum)
+                   `(setf ,environment (%extend ,environment ,type ,name ,datum ,@other-datum))))
+        (do-variables-in-lexenv (lexenv name ignored?)
+          (unless ignored?
+            (extend! walkenv :unwalked-variable name t)))
+        (do-functions-in-lexenv (lexenv name)
+          (extend! walkenv :unwalked-function name t))
+        (do-macros-in-lexenv (lexenv name macro-fn)
+          (extend! walkenv :macro name macro-fn))
+        (do-symbol-macros-in-lexenv (lexenv name definition)
+          (extend! walkenv :symbol-macro name definition))))
+    (cons walkenv lexenv)))
+
+(defun augment-walkenv (env type name datum &rest other-datum)
+  (declare (ignore other-datum)) ;; TODO ?
+  (let ((walkenv (%extend (car env) type name datum))
+        (lexenv (cdr env)))
+    (cons walkenv (ecase type
+                    (:variable     (augment-lexenv-with-variable name lexenv))
+                    (:macro        (augment-lexenv-with-macro name datum lexenv))
+                    (:function     (augment-lexenv-with-function name lexenv))
+                    (:symbol-macro (augment-lexenv-with-symbol-macro name datum lexenv))
+                    (:block        (augment-lexenv-with-block name lexenv))
+                    (:tag          (augment-lexenv-with-tag name lexenv))
+                    ;; TODO
+                    (:declare      lexenv)
+                    (:tagbody      lexenv)))))
+
+(defmacro augment-walkenv! (env type name datum &rest other-datum)
+  `(setf ,env (augment-walkenv ,env ,type ,name ,datum ,@other-datum)))
+
+(defun lookup-in-walkenv (type name env &key (error-p nil) (default-value nil))
+  (%lookup (car env) type name :error-p error-p :default-value default-value))
+
+(defun %extend (environment type name datum &rest other-datum)
   (cons (if other-datum
             (list* type name datum other-datum)
             (list* type name datum))
         environment))
 
-(defmacro extend (environment type name datum &rest other-datum)
-  `(setf ,environment (register ,environment ,type ,name ,datum ,@other-datum)))
-
-(defun lookup (environment type name &key (error-p nil) (default-value nil))
+(defun %lookup (environment type name &key (error-p nil) (default-value nil))
   (loop
      :for (.type .name . data) :in environment
      :when (and (eql .type type) (eql .name name))
@@ -42,7 +91,8 @@
                   name type environment)
            (values default-value nil))))
 
-(defun (setf lookup) (value environment type name &key (error-p nil))
+#+(or)
+(defun (setf %lookup) (value environment type name &key (error-p nil))
   (loop
      for env-piece in environment
      when (and (eql (first env-piece)  type)
@@ -54,40 +104,9 @@
          (error "Sorry, No value for ~S of type ~S in environment ~S found."
                 name type environment))))
 
-(defun make-walkenv (&optional lexical-env)
-  (let ((walk-env '()))
-    (when lexical-env
-      (do-variables-in-lexenv (lexical-env name ignored?)
-        (unless ignored?
-          (extend walk-env :unwalked-variable name t)))
-      (do-functions-in-lexenv (lexical-env name)
-        (extend walk-env :unwalked-function name t))
-      (do-macros-in-lexenv (lexical-env name macro-fn)
-        (extend walk-env :macro name macro-fn))
-      (do-symbol-macros-in-lexenv (lexical-env name definition)
-        (extend walk-env :symbol-macro name definition)))
-    (cons walk-env lexical-env)))
-
-(defun augment-walkenv (env type name datum &rest other-datum)
-  (declare (ignore other-datum)) ;; TODO ?
-  (let ((walk-env (register (car env) type name datum))
-        (lexenv (cdr env)))
-    (cons walk-env (ecase type
-                     (:variable     (augment-lexenv-with-variable name lexenv))
-                     (:macro        (augment-lexenv-with-macro name datum lexenv))
-                     (:function     (augment-lexenv-with-function name lexenv))
-                     (:symbol-macro (augment-lexenv-with-symbol-macro name datum lexenv))
-                     ;; TODO
-                     (:declare      lexenv)
-                     (:block        lexenv)
-                     (:tagbody      lexenv)
-                     (:tag          lexenv)))))
-
-(defmacro augment-walkenv! (env type name datum &rest other-datum)
-  `(setf ,env (augment-walkenv ,env ,type ,name ,datum ,@other-datum)))
-
-(defun lookup-in-walkenv (type name env &key (error-p nil) (default-value nil))
-  (lookup (car env) type name :error-p error-p :default-value default-value))
+;;;
+;;; Handler management
+;;;
 
 (defparameter *walker-handlers* (make-hash-table :test 'eq))
 
