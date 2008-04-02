@@ -37,7 +37,7 @@
 (defun make-walk-environment (&optional lexenv)
   (make-walkenv lexenv))
 
-(defun make-walkenv (&optional lexenv)
+(defun make-walkenv (&optional (lexenv (make-empty-lexenv)))
   (let ((walkenv '()))
     (when lexenv
       (macrolet ((extend! (environment type name datum &rest other-datum)
