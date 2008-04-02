@@ -10,7 +10,7 @@
   (unwalk-form (walk-form form nil (make-walkenv env))))
 
 (defvar *warn-undefined* nil
-  "When non-NIL any references to undefined functions or variables will signal a warning.")
+  "When non-NIL, any references to undefined functions or variables will signal a warning.")
 
 (defun walk-form (form &optional (parent nil) (env (make-walkenv)))
   "Walk FORM and return a CLOS based AST that represents it."
@@ -87,21 +87,22 @@
        :return (values data t)
      :finally
        (if error-p
-           (error "Sorry, No value for ~S of type ~S in environment ~S found."
+           (error "No value for ~S of type ~S in environment ~S was found."
                   name type environment)
            (values default-value nil))))
 
-#+(or)
+#+(or) ;; it's not used for now
 (defun (setf %lookup) (value environment type name &key (error-p nil))
   (loop
-     for env-piece in environment
-     when (and (eql (first env-piece)  type)
-               (eql (second env-piece) name))
-       do (setf (cddr env-piece) value) and
-       return value
-     finally
+     :for env-piece :in environment
+     :when (and (eql (first env-piece) type)
+                (eql (second env-piece) name))
+       :do (progn
+             (setf (cddr env-piece) value)
+             (return value))
+     :finally
        (when error-p
-         (error "Sorry, No value for ~S of type ~S in environment ~S found."
+         (error "No value for ~S of type ~S in environment ~S was found."
                 name type environment))))
 
 ;;;
@@ -133,9 +134,7 @@
 (defparameter +atom-marker+ '+atom-marker+)
 
 (defun find-walker-handler (form)
-  "Simple function which tells us what handler should deal
-  with FORM. Signals an error if we don't have a handler for
-  FORM."
+  "Simple function which tells us what handler should deal with FORM. Signals an error if we don't have a handler for FORM."
   (if (atom form)
       (gethash '+atom-marker+ *walker-handlers*)
       (aif (gethash (car form) *walker-handlers*)
@@ -149,12 +148,12 @@
               (error "Sorry, no walker for the special operator ~S defined." (car form)))
              (t (gethash 'application *walker-handlers*))))))
 
-(defmacro defwalker-handler (name (form parent lexical-env)
+(defmacro defwalker-handler (name (form parent lexenv)
                              &body body)
   `(progn
      (setf (gethash ',name *walker-handlers*)
-           (lambda (,form ,parent ,lexical-env)
-             (declare (ignorable ,parent ,lexical-env))
+           (lambda (,form ,parent ,lexenv)
+             (declare (ignorable ,parent ,lexenv))
              ,@body))
      ',name))
 
