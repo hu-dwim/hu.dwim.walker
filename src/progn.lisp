@@ -6,6 +6,16 @@
 
 (in-package :cl-walker)
 
+(defclass implicit-progn-mixin ()
+  ((body :accessor body-of :initarg :body)))
+
+(defclass implicit-progn-with-declare-mixin (implicit-progn-mixin)
+  ((declares :accessor declares :initarg :declares)))
+
+(defclass binding-form-mixin ()
+  ((bindings :accessor bindings-of :initarg :bindings)))
+
+
 (defclass declaration-form (form)
   ())
 
