@@ -57,6 +57,15 @@
    #:collect-variable-references
 
    ;;;
+   ;;; conditions
+   ;;;
+   #:undefined-reference
+   #:undefined-variable-reference
+   #:undefined-function-reference
+   #:return-from-unknown-block
+   #:illegal-lambda-list
+
+   ;;;
    ;;; walker
    ;;;
    #:form
@@ -67,11 +76,6 @@
    #:macroexpand-all
    #:make-walkenv
    #:*warn-undefined*
-
-   #:undefined-reference
-   #:undefined-variable-reference
-   #:undefined-function-reference
-   #:return-from-unknown-block
 
    #:defwalker-handler
    #:defunwalker-handler
