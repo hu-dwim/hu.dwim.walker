@@ -41,6 +41,10 @@
 (defclass free-variable-reference-form (variable-reference-form)
   ())
 
+(defun special-variable-name? (name)
+  (or (boundp name)
+      #+sbcl(eq (sb-int:info :variable :kind name) :special)))
+
 (defwalker-handler +atom-marker+ (form parent env)
   (cond
     ((not (or (symbolp form)
@@ -60,8 +64,7 @@
      (walk-form (macroexpand-1 form) parent env))
     (t
      (when (and *warn-undefined*
-                ;; TODO check if it's a special variable
-                (not (boundp form)))
+                (not (special-variable-name? form)))
        (warn 'undefined-variable-reference :name form))
      (make-instance 'free-variable-reference-form :name form
                     :parent parent :source form))))
