@@ -52,9 +52,10 @@
    #:find-tag-in-lexenv
 
    ;;;
-   ;;; AST utils
+   ;;; some utils
    ;;;
    #:collect-variable-references
+   #:special-variable-name?
 
    ;;;
    ;;; conditions
@@ -143,7 +144,7 @@
 
    #:walk-lambda-list
    #:walk-implict-progn
-   #:body
+   #:body-of
    #:cleanup-form-of
    #:code-of
    #:condition-of
