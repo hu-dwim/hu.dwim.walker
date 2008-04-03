@@ -82,7 +82,7 @@
 (defunwalker-handler unknown-declaration-form (source)
   source)
 
-(defun parse-declaration (declaration environment parent)
+(defun walk-declaration (declaration environment parent)
   (let ((declares nil))
     (flet ((function-name (form)
              (if (and (consp form)

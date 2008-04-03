@@ -209,7 +209,7 @@
           (assert (eq (first declaration) 'declare))
           (dolist (entry (rest declaration))
             (let ((newdecls nil))
-              (setf (values env newdecls) (parse-declaration entry env parent))
+              (setf (values env newdecls) (walk-declaration entry env parent))
               (appendf walked-declarations newdecls)))))
       (values body env documentation walked-declarations))))
 
@@ -219,14 +219,15 @@
   (let* ((environment-var nil)
          (lambda-list-without-environment
           (loop
-           for prev = nil then i
-           for i in lambda-list
-           if (not (or (eq '&environment i) (eq '&environment prev)))
-           collect i
-           if (eq '&environment prev)
-           do (if (eq environment-var nil)
-                  (setq environment-var i)
-                  (error "Multiple &ENVIRONMENT clauses in macro lambda list: ~S" lambda-list))))
+             :for prev = nil :then i
+             :for i :in lambda-list
+             :when (not (or (eq '&environment i)
+                            (eq '&environment prev)))
+               :collect i
+             :when (eq '&environment prev)
+               :do (if (eq environment-var nil)
+                       (setq environment-var i)
+                       (error "Multiple &ENVIRONMENT clauses in macro lambda list: ~S" lambda-list))))
          (handler-env (if (eq environment-var nil) (gensym "ENV-") environment-var))
          whole-list lambda-list-without-whole)
     (if (eq '&whole (car lambda-list-without-environment))
