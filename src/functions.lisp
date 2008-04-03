@@ -131,30 +131,33 @@
 
 (defun walk-lambda-list (lambda-list parent env &key allow-specializers macro-p)
   (declare (ignore macro-p))
-  (flet ((extend-env (argument)
-           (unless (typep argument 'allow-other-keys-function-argument-form)
-             (augment-walkenv! env :variable (name-of argument) argument))))
-    (let ((state :required)
-          (arguments '()))
-      (dolist (argument lambda-list)
-        (if (member argument '(&optional &key &rest))
-            (setf state argument)
-            (progn
-              (push (case state
-                      (:required
-                       (if allow-specializers
-                           (walk-specialized-argument-form argument parent env)
-                           (walk-required-argument argument parent env)))
-                      (&optional (walk-optional-argument argument parent env))
-                      (&key
-                       (if (eql '&allow-other-keys argument)
-                           (make-instance 'allow-other-keys-function-argument-form
-                                          :parent parent :source argument)
-                           (walk-keyword-argument argument parent env)))
-                      (&rest (walk-rest-argument argument parent env)))
-                    arguments)
-              (extend-env (car arguments)))))
-      (values (nreverse arguments) env))))
+  (let ((result (list)))
+    (flet ((extend-env (argument)
+             (unless (typep argument 'allow-other-keys-function-argument-form)
+               (augment-walkenv! env :variable (name-of argument) argument))))
+      (parse-lambda-list lambda-list
+                         (lambda (kind name argument)
+                           (declare (ignore name))
+                           (let ((parsed
+                                  (case kind
+                                    ((nil)
+                                     (if allow-specializers
+                                         (walk-specialized-argument-form argument parent env)
+                                         (make-instance 'required-function-argument-form
+                                                        :name argument :parent parent :source argument)))
+                                    (&optional
+                                     (walk-optional-argument argument parent env))
+                                    (&allow-other-keys
+                                     (make-instance 'allow-other-keys-function-argument-form
+                                                    :parent parent :source nil))
+                                    (&rest (make-instance 'rest-function-argument-form :name argument
+                                                          :parent parent :source argument))
+                                    (&key
+                                     (walk-keyword-argument argument parent env)))))
+                             (when parsed
+                               (push parsed result)
+                               (extend-env parsed)))))
+      (values (nreverse result) env))))
 
 (defclass function-argument-form (form)
   ((name :accessor name-of :initarg :name)))
@@ -167,12 +170,6 @@
 
 (defclass required-function-argument-form (function-argument-form)
   ())
-
-(defun walk-required-argument (form parent env)
-  (declare (ignore env))
-  (make-instance 'required-function-argument-form
-                 :name form
-                 :parent parent :source form))
 
 (defunwalker-handler required-function-argument-form (name)
   name)
@@ -265,11 +262,6 @@
 
 (defclass rest-function-argument-form (function-argument-form)
   ())
-
-(defun walk-rest-argument (form parent env)
-  (declare (ignore env))
-  (make-instance 'rest-function-argument-form :name form
-                 :parent parent :source form))
 
 (defunwalker-handler rest-function-argument-form (name)
   name)
