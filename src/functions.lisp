@@ -195,7 +195,7 @@
       `(,name ,specializer)))
 
 (defclass optional-function-argument-form (function-argument-form)
-  ((default-value :accessor default-value :initarg :default-value)
+  ((default-value :accessor default-value-of :initarg :default-value)
    (supplied-p-parameter :accessor supplied-p-parameter :initarg :supplied-p-parameter)))
 
 (defun walk-optional-argument (form parent env)
@@ -206,7 +206,7 @@
                            :source form
                            :name name
                            :supplied-p-parameter supplied-p-parameter)
-      (setf (default-value arg) (walk-form default-value arg env)))))
+      (setf (default-value-of arg) (walk-form default-value arg env)))))
 
 (defunwalker-handler optional-function-argument-form (name default-value supplied-p-parameter)
   (let ((default-value (unwalk-form default-value)))
@@ -219,7 +219,7 @@
 
 (defclass keyword-function-argument-form (function-argument-form)
   ((keyword-name :accessor keyword-name :initarg :keyword-name)
-   (default-value :accessor default-value :initarg :default-value)
+   (default-value :accessor default-value-of :initarg :default-value)
    (supplied-p-parameter :accessor supplied-p-parameter :initarg :supplied-p-parameter)))
 
 (defun effective-keyword-name (k)
@@ -241,7 +241,7 @@
                              :name name
                              :keyword-name keyword
                              :supplied-p-parameter supplied-p-parameter)
-        (setf (default-value arg) (walk-form default-value arg env))))))
+        (setf (default-value-of arg) (walk-form default-value arg env))))))
 
 (defunwalker-handler keyword-function-argument-form (keyword-name name default-value supplied-p-parameter)
   (let ((default-value (unwalk-form default-value)))

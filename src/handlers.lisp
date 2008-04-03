@@ -86,7 +86,7 @@
 
 (defclass return-from-form (form)
   ((target-block :accessor target-block :initarg :target-block)
-   (result :accessor result :initarg :result)))
+   (result :accessor result-of :initarg :result)))
 
 
 (define-condition return-from-unknown-block (error)
@@ -100,7 +100,7 @@
     (if (lookup-in-walkenv :block block-name env)
         (with-form-object (return-from return-from-form :parent parent :source form
                            :target-block (lookup-in-walkenv :block block-name env))
-          (setf (result return-from) (walk-form value return-from env)))
+          (setf (result-of return-from) (walk-form value return-from env)))
         (restart-case
             (error 'return-from-unknown-block :block-name block-name)
           (add-block ()
@@ -158,18 +158,18 @@
 ;;;; IF
 
 (defclass if-form (form)
-  ((consequent :accessor consequent :initarg :consequent)
-   (then :accessor then :initarg :then)
-   (else :accessor else :initarg :else)))
+  ((condition :accessor condition-of :initarg :condition)
+   (then :accessor then-of :initarg :then)
+   (else :accessor else-of :initarg :else)))
 
 (defwalker-handler if (form parent env)
   (with-form-object (if if-form :parent parent :source form)
-    (setf (consequent if) (walk-form (second form) if env)
-          (then if) (walk-form (third form) if env)
-          (else if) (walk-form (fourth form) if env))))
+    (setf (condition-of if) (walk-form (second form) if env)
+          (then-of if) (walk-form (third form) if env)
+          (else-of if) (walk-form (fourth form) if env))))
 
-(defunwalker-handler if-form (consequent then else)
-  `(if ,(unwalk-form consequent) ,(unwalk-form then) ,(unwalk-form else)))
+(defunwalker-handler if-form (condition then else)
+  `(if ,(unwalk-form condition) ,(unwalk-form then) ,(unwalk-form else)))
 
 ;;;; LET/LET*
 
@@ -280,28 +280,28 @@
 ;;;; MULTIPLE-VALUE-CALL
 
 (defclass multiple-value-call-form (form)
-  ((func :accessor func :initarg :func)
+  ((function-designator :accessor function-designator-of :initarg :function-designator)
    (arguments :accessor arguments-of :initarg :arguments)))
 
 (defwalker-handler multiple-value-call (form parent env)
   (with-form-object (m-v-c multiple-value-call-form :parent parent :source form)
-    (setf (func m-v-c) (walk-form (second form) m-v-c env)
+    (setf (function-designator-of m-v-c) (walk-form (second form) m-v-c env)
           (arguments-of m-v-c) (mapcar (lambda (f) (walk-form f m-v-c env))
                                        (cddr form)))))
 
-(defunwalker-handler multiple-value-call-form (func arguments)
-  `(multiple-value-call ,(unwalk-form func) ,@(unwalk-forms arguments)))
+(defunwalker-handler multiple-value-call-form (function-designator arguments)
+  `(multiple-value-call ,(unwalk-form function-designator) ,@(unwalk-forms arguments)))
 
 ;;;; MULTIPLE-VALUE-PROG1
 
 (defclass multiple-value-prog1-form (form)
-  ((first-form :accessor first-form :initarg :first-form)
-   (other-forms :accessor other-forms :initarg :other-forms)))
+  ((first-form :accessor first-form-of :initarg :first-form)
+   (other-forms :accessor other-forms-of :initarg :other-forms)))
 
 (defwalker-handler multiple-value-prog1 (form parent env)
   (with-form-object (m-v-p1 multiple-value-prog1-form :parent parent :source form)
-    (setf (first-form m-v-p1) (walk-form (second form) m-v-p1 env)
-          (other-forms m-v-p1) (mapcar (lambda (f) (walk-form f m-v-p1 env))
+    (setf (first-form-of m-v-p1) (walk-form (second form) m-v-p1 env)
+          (other-forms-of m-v-p1) (mapcar (lambda (f) (walk-form f m-v-p1 env))
                                        (cddr form)))))
 
 (defunwalker-handler multiple-value-prog1-form (first-form other-forms)
@@ -322,18 +322,18 @@
 ;;;; PROGV
 
 (defclass progv-form (form implicit-progn-mixin)
-  ((vars-form :accessor vars-form :initarg :vars-form)
-   (values-form :accessor values-form :initarg :values-form)))
+  ((variables-form :accessor variables-form-of :initarg :variables-form)
+   (values-form :accessor values-form-of :initarg :values-form)))
 
 (defwalker-handler progv (form parent env)
   (with-form-object (progv progv-form :parent parent :source form)
-    (setf (vars-form progv) (walk-form (cadr form) progv env))
-    (setf (values-form progv) (walk-form (caddr form) progv env))
+    (setf (variables-form-of progv) (walk-form (cadr form) progv env))
+    (setf (values-form-of progv) (walk-form (caddr form) progv env))
     (setf (body-of progv) (walk-implict-progn progv (cdddr form) env))
     progv))
 
-(defunwalker-handler progv-form (body vars-form values-form)
-  `(progv ,(unwalk-form vars-form) ,(unwalk-form values-form) ,@(unwalk-forms body)))
+(defunwalker-handler progv-form (body variables-form values-form)
+  `(progv ,(unwalk-form variables-form) ,(unwalk-form values-form) ,@(unwalk-forms body)))
 
 ;;;; QUOTE
 
@@ -467,14 +467,14 @@
 ;;;; UNWIND-PROTECT
 
 (defclass unwind-protect-form (form)
-  ((protected-form :accessor protected-form :initarg :protected-form)
-   (cleanup-form :accessor cleanup-form :initarg :cleanup-form)))
+  ((protected-form :accessor protected-form-of :initarg :protected-form)
+   (cleanup-form :accessor cleanup-form-of :initarg :cleanup-form)))
 
 (defwalker-handler unwind-protect (form parent env)
   (with-form-object (unwind-protect unwind-protect-form :parent parent
                                     :source form)
-    (setf (protected-form unwind-protect) (walk-form (second form) unwind-protect env)
-          (cleanup-form unwind-protect) (walk-implict-progn unwind-protect (cddr form) env))))
+    (setf (protected-form-of unwind-protect) (walk-form (second form) unwind-protect env)
+          (cleanup-form-of unwind-protect) (walk-implict-progn unwind-protect (cddr form) env))))
 
 (defunwalker-handler unwind-protect-form (protected-form cleanup-form)
   `(unwind-protect ,(unwalk-form protected-form) ,@(unwalk-forms cleanup-form)))
