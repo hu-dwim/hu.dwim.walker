@@ -70,7 +70,7 @@
   #'(lambda (&optional x y &rest args &key a b &allow-other-keys) 42))
 
 (deftest test/invalid-lambda-list ()
-  (signals error
+  (signals illegal-lambda-list
     (walk-form '(lambda (&rest args &key a b &optional x y &allow-other-keys) 42))))
 
 (define-walk-unwalk-test test/walk-unwalk/block

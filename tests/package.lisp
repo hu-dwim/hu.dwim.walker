@@ -4,7 +4,7 @@
 ;;;
 ;;; See COPYING for details.
 
-(cl:in-package :cl-user)
+(cl:in-package :cl-walker)
 
 (defpackage :cl-walker-test
   (:use :common-lisp
