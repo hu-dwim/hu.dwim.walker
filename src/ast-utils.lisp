@@ -7,32 +7,48 @@
 (in-package :cl-walker)
 
 (defgeneric walk-ast (form visitor)
+  (:method-combination progn)
   (:method :around (form visitor)
     (when (funcall visitor form)
       (call-next-method))
      (values))
-  (:method ((form null) visitor)
-    ;; nop
-    )
-  (:method ((form t) visitor)
-    ;;(break "~A" form)
-    )
-  (:method ((form cons) visitor)
-    (walk-ast (car form) visitor)
-    (walk-ast (cdr form) visitor))
-  (:method ((form application-form) visitor)
-    (walk-ast (arguments-of form) visitor))
-  (:method ((form implicit-progn-mixin) visitor)
-    (walk-ast (body-of form) visitor))
-  (:method ((form function-binding-form) visitor)
-    (walk-ast (bindings-of form) visitor)
-    (call-next-method)))
+  (:method progn ((form t) visitor)
+    ;; a primary method with a huge NOP
+    ))
 
-(defun collect-variable-references (top-form)
+(macrolet ((frob (&rest entries)
+             `(progn
+                ,@(loop
+                     :for (type . accessors) :in entries
+                     :collect `(defmethod walk-ast progn ((form ,type) visitor)
+                                 ,@(loop
+                                      :for accessor :in accessors
+                                      :collect `(walk-ast (,accessor form) visitor)))))))
+  (frob
+   (cons                      car cdr)
+   (application-form          operator-of arguments-of)
+   (lambda-function-form      arguments-of)
+   (optional-function-argument-form default-value-of)
+   (keyword-function-argument-form default-value-of)
+   (implicit-progn-mixin      body-of)
+   (binding-form-mixin        bindings-of)
+
+   (return-from-form result-of)
+   (throw-form                value-of)
+   (if-form                   condition-of then-of else-of)
+   (multiple-value-call-form  arguments-of function-designator-of)
+   (multiple-value-prog1-form first-form-of other-forms-of)
+   (progv-form                variables-form-of values-form-of)
+   (setq-form                 variable-name-of value-of)
+   ;; go-form: dragons be there (and an infinite recursion, too)
+   (the-form                  type-of value-of)
+   (unwind-protect-form       protected-form-of cleanup-form-of)))
+
+(defun collect-variable-references (top-form &key (type 'variable-reference-form))
   (let ((result (list)))
     (walk-ast top-form
               (lambda (form)
-                (when (typep form 'variable-reference-form)
+                (when (typep form type)
                   (push form result))
                 t))
     result))
