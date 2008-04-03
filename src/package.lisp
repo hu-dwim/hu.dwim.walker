@@ -69,6 +69,7 @@
    ;;; walker
    ;;;
    #:form
+   #:walk-ast
    #:walk-form
    #:unwalk-form
    #:unwalk-forms
@@ -87,20 +88,25 @@
    #:constant-form
    #:variable-reference-form
    #:lexical-variable-reference-form
+   #:walked-lexical-variable-reference-form
    #:unwalked-lexical-variable-reference-form
    #:free-variable-reference-form
+
    #:application-form
    #:lexical-application-form
    #:walked-lexical-application-form
    #:unwalked-lexical-application-form
    #:free-application-form
    #:lambda-application-form
+
+   #:function-object-form
+   #:lexical-function-object-form
+   #:walked-lexical-function-object-form
+   #:unwalked-lexical-function-object-form
+   #:free-function-object-form
+
    #:function-form
    #:lambda-function-form
-   #:function-object-form
-   #:walked-lexical-function-object-form
-   #:free-function-object-form
-   #:unwalked-lexical-function-object-form
    #:function-argument-form
    #:required-function-argument-form
    #:specialized-function-argument-form
@@ -108,6 +114,7 @@
    #:keyword-function-argument-form
    #:allow-other-keys-function-argument-form
    #:rest-function-argument-form
+
    #:block-form
    #:return-from-form
    #:catch-form
@@ -137,21 +144,21 @@
    #:walk-lambda-list
    #:walk-implict-progn
    #:body
-   #:cleanup-form
+   #:cleanup-form-of
    #:code-of
-   #:consequent
+   #:condition-of
    #:declares
-   #:default-value
-;; #:else ; iterate
+   #:default-value-of
+   #:else-of
    #:enclosing-tagbody-of
    #:eval-when-times
-   #:first-form
-   #:func
+   #:first-form-of
+   #:function-designator-of
    #:keyword-name
    #:name-of
-   #:other-forms
+   #:other-forms-of
    #:parent
-   #:protected-form
+   #:protected-form-of
    #:read-only-p
    #:result
    #:source
@@ -160,11 +167,11 @@
    #:tag
    #:target-block-of
    #:jump-target-of
-   #:then
+   #:then-of
    ;;#:type-of
    #:value-of
-   #:values-form
+   #:values-form-of
    #:variable-name-of
-   #:vars-form
+   #:variables-form-of
 
    ))
