@@ -66,24 +66,31 @@
 (defunwalker-handler notinline-declaration-form (name)
   `(notinline ,name))
 
+(defclass unknown-declaration-form (declaration-form)
+  ())
+
+(defunwalker-handler unknown-declaration-form (source)
+  source)
+
 (defun parse-declaration (declaration environment parent)
   (let ((declares nil))
-    (flet ((funname (form)
-             (if (and (consp form) (eql (car form) 'function))
-                 (cadr form)
+    (flet ((function-name (form)
+             (if (and (consp form)
+                      (eql (car form) 'function))
+                 (second form)
                  nil)))
-      (macrolet ((mkdecl (varname formclass &rest rest)
+      (macrolet ((make-declaration (varname formclass &rest rest)
                    `(make-instance ,formclass :parent parent :source (list type ,varname) ,@rest))
                  (extend-env ((var list) newdeclare &rest datum)
                    `(dolist (,var ,list)
-                      (when ,newdeclare (push ,newdeclare declares))
+                      (push ,newdeclare declares)
                       (augment-walkenv! environment :declare ,@datum))))
         (destructuring-bind (type &rest arguments)
             declaration
           (case type
             (dynamic-extent
              (extend-env (var arguments)
-                         (mkdecl var 'dynamic-extent-declaration-form :name var)
+                         (make-declaration var 'dynamic-extent-declaration-form :name var)
                          var `(dynamic-extent)))
             (ftype
              (extend-env (function-name (cdr arguments))
@@ -95,25 +102,25 @@
                          function-name `(ftype ,(first arguments))))
             ((ignore ignorable)
              (extend-env (var arguments)
-                         (aif (funname var)
-                              (mkdecl var 'function-ignorable-declaration-form :name it)
-                              (mkdecl var 'variable-ignorable-declaration-form :name var))
-                         var `(ignorable)))
+                         (aif (function-name var)
+                              (make-declaration var 'function-ignorable-declaration-form :name it)
+                              (make-declaration var 'variable-ignorable-declaration-form :name var))
+                         var `(,type)))
             (inline
               (extend-env (function arguments)
-                          (mkdecl function 'function-ignorable-declaration-form :name function)
-                          function `(ignorable)))
+                          (make-declaration function 'function-ignorable-declaration-form :name function)
+                          function `(inline)))
             (notinline
              (extend-env (function arguments)
-                         (mkdecl function 'notinline-declaration-form :name function)
+                         (make-declaration function 'notinline-declaration-form :name function)
                          function `(notinline)))
             (optimize
              (extend-env (optimize-spec arguments)
-                         (mkdecl optimize-spec 'optimize-declaration-form :specification optimize-spec)
+                         (make-declaration optimize-spec 'optimize-declaration-form :specification optimize-spec)
                          'optimize optimize-spec))
             (special
              (extend-env (var arguments)
-                         (mkdecl var 'special-declaration-form :name var)
+                         (make-declaration var 'special-declaration-form :name var)
                          var `(special)))
             (type
              (extend-env (var (rest arguments))
@@ -124,17 +131,9 @@
                                         :type (first arguments))
                          var `(type ,(first arguments))))
             (t
-             ;; TODO weak try: assumes everything else is a type declaration
-             (extend-env (var arguments)
-                         (make-instance 'type-declaration-form
-                                        :parent parent
-                                        :source `(,type ,var)
-                                        :name var
-                                        :type type)
-                         var `(type ,type)))))))
-    ;; TODO this generates wrong ast for (walk-form '(lambda () (declare (ignorable))))
-    (when (null declares)
-      (setq declares (list (make-instance 'declaration-form :parent parent :source declaration))))
+             (simple-style-warning "Ignoring unknown declaration ~S while walking forms. If it's a type declaration, then use the full form to avoid the warning: `(type ,type ,@variables)!"
+                                   declaration)
+             (push (make-instance 'unknown-declaration-form :parent parent :source declaration) declares))))))
     (values environment declares)))
 
 (defun unwalk-declarations (decls)
