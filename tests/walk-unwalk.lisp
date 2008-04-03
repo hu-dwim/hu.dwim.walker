@@ -47,12 +47,18 @@
    id))
 
 (define-walk-unwalk-test test/declare/1
+  (locally (declare (zork)))
+  (locally (declare (optimize speed) (optimize (debug 2))))
   (locally (declare (ignorable a) (ignorable b)))
-  (with-expected-failures
-    (locally (declare (zork)))
-    (locally (declare (ignorable a b)))))
+  (locally (declare (dynamic-extent a) (ignorable b))))
 
 (deftest test/declare/2 ()
+  (signals style-warning
+    (walk-form '(locally (declare (zork)))))
+  (signals style-warning
+    (walk-form '(locally (declare (integer x))))))
+
+(deftest test/declare/3 ()
   (check-walk-unwalk
    '(lambda () (declare))
    '#'(lambda ()))

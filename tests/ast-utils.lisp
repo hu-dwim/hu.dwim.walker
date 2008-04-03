@@ -26,5 +26,8 @@
        ((macrolet ((mac (x)
                      `(+ ,x a)))
           (mac (+ var1 var2)))
+        3)
+       ((let ((a (+ b c)))
+          a)
         3))
      :do (test-collect-variable-references form expected-count)))
