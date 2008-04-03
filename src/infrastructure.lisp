@@ -199,40 +199,19 @@
            ,form)))
 
 (defun split-body (body env &key parent (docstring t) (declare t))
-  (let ((documentation nil)
-        (newdecls nil)
-        (decls nil))
-    (flet ((done ()
-             (return-from split-body (values body env documentation (nreverse decls)))))
-      (loop
-         for form = (car body)
-         while body
-         do (typecase form
-              (cons (if (and declare (eql 'cl:declare (first form)))
-                        ;; declare form
-                        (let ((declarations (rest form)))
-                          (dolist (dec declarations)
-                            (setf (values env newdecls) (parse-declaration dec env parent))
-                            (setf decls (append newdecls decls))))
-                        ;; source code, all done
-                        (done)))
-              (string (if docstring
-                          (if documentation
-                              ;; already found the docstring, this is source
-                              (done)
-                              (if (cdr body)
-                                  ;; found the doc string
-                                  (setf documentation form)
-                                  ;; this looks like a doc string, but
-                                  ;; it's the only form in body, so
-                                  ;; it's actually code.
-                                  (done)))
-                          ;; no docstring allowed, this is source
-                          (done)))
-              (t ;; more code, all done
-               (done)))
-         do (pop body)
-         finally (done)))))
+  (let ((walked-declarations (list)))
+    (multiple-value-bind (body declarations documentation)
+        (parse-body body :documentation docstring)
+      (when declarations
+        (unless declare
+          (error "Declarations are not allowed at ~S" body))
+        (dolist (declaration declarations)
+          (assert (eq (first declaration) 'declare))
+          (dolist (entry (rest declaration))
+            (let ((newdecls nil))
+              (setf (values env newdecls) (parse-declaration entry env parent))
+              (appendf walked-declarations newdecls)))))
+      (values body env documentation walked-declarations))))
 
 (defun parse-macro-definition (name lambda-list body env)
   "Sort of like parse-macro from CLtL2."
