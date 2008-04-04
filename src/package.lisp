@@ -85,6 +85,7 @@
    #:implicit-progn-mixin
    #:implicit-progn-with-declare-mixin
    #:binding-form-mixin
+   #:bindings-of
    #:declaration-form
    #:constant-form
    #:variable-reference-form
@@ -141,6 +142,7 @@
    #:go-form
    #:the-form
    #:unwind-protect-form
+   #:load-time-value-form
 
    #:walk-lambda-list
    #:walk-implict-progn
@@ -158,14 +160,14 @@
    #:keyword-name
    #:name-of
    #:other-forms-of
-   #:parent
+   #:parent-of
    #:protected-form-of
    #:read-only-p
-   #:result
-   #:source
+   #:result-of
+   #:source-of
    #:specializer-of
    #:supplied-p-parameter
-   #:tag
+   #:tag-of
    #:target-block-of
    #:jump-target-of
    #:then-of
