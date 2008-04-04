@@ -63,8 +63,8 @@
                               (warn 'undefined-function-reference :name op))
                             (make-instance 'free-application-form))))))
         (setf (operator-of app) op
-              (parent app) parent
-              (source app) form
+              (parent-of app) parent
+              (source-of app) form
               (arguments-of app) (mapcar (lambda (form)
                                            (walk-form form app env))
                                          args))

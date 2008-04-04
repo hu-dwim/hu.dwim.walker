@@ -88,7 +88,7 @@
   `(block ,name ,@(unwalk-forms body)))
 
 (defclass return-from-form (form)
-  ((target-block :accessor target-block :initarg :target-block)
+  ((target-block :accessor target-block-of :initarg :target-block)
    (result :accessor result-of :initarg :result)))
 
 
@@ -116,27 +116,27 @@
 ;;;; CATCH/THROW
 
 (defclass catch-form (form implicit-progn-mixin)
-  ((tag :accessor tag :initarg :tag)))
+  ((tag :accessor tag-of :initarg :tag)))
 
 (defwalker-handler catch (form parent env)
   (destructuring-bind (tag &body body)
       (cdr form)
     (with-form-object (catch catch-form :parent parent :source form)
-      (setf (tag catch) (walk-form tag catch env)
+      (setf (tag-of catch) (walk-form tag catch env)
             (body-of catch) (walk-implict-progn catch body env)))))
 
 (defunwalker-handler catch-form (tag body)
   `(catch ,(unwalk-form tag) ,@(unwalk-forms body)))
 
 (defclass throw-form (form)
-  ((tag :accessor tag :initarg :tag)
+  ((tag :accessor tag-of :initarg :tag)
    (value :accessor value-of :initarg :value)))
 
 (defwalker-handler throw (form parent env)
   (destructuring-bind (tag &optional (result '(values)))
       (cdr form)
     (with-form-object (throw throw-form :parent parent :source form)
-      (setf (tag throw) (walk-form tag throw env)
+      (setf (tag-of throw) (walk-form tag throw env)
             (value-of throw) (walk-form result throw env)))))
 
 (defunwalker-handler throw-form (tag value)

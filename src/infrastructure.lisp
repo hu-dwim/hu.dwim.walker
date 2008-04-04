@@ -166,8 +166,8 @@
        ',class)))
 
 (defclass form ()
-  ((parent :accessor parent :initarg :parent)
-   (source :accessor source :initarg :source)))
+  ((parent :accessor parent-of :initarg :parent)
+   (source :accessor source-of :initarg :source)))
 
 (defmethod make-load-form ((object form) &optional env)
   (make-load-form-saving-slots object :environment env))
@@ -178,7 +178,7 @@
       (let ((*print-readably* nil)
             (*print-level* 0)
             (*print-length* 4))
-        (format stream "~S" (source form))))))
+        (format stream "~S" (source-of form))))))
 
 (defmacro with-form-object ((variable type &rest initargs)
                             &body body)
