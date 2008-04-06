@@ -20,6 +20,11 @@
                 :components ((:file "package")
                              (:file "duplicates" :depends-on ("package"))
                              #+sbcl(:file "lexenv-sbcl" :depends-on ("duplicates" "package"))
+                             #+cmu(:file "lexenv-cmucl" :depends-on ("duplicates" "package"))
+                             #+clisp(:file "lexenv-clisp" :depends-on ("duplicates" "package"))
+                             #+lispworks(:file "lexenv-lispworks" :depends-on ("duplicates" "package"))
+                             #+allegro(:file "lexenv-allegro" :depends-on ("duplicates" "package"))
+                             #+openmcl(:file "lexenv-openmcl" :depends-on ("duplicates" "package"))
                              (:file "lexenv-late" :depends-on ("package" "duplicates"
                                                                #+sbcl "lexenv-sbcl"))
                              (:file "infrastructure" :depends-on ("package" "lexenv-late" "duplicates"))
