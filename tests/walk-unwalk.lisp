@@ -32,6 +32,10 @@
 (define-walk-unwalk-test test/constant
   1 'a "a" (1 2 3) #(1 2 3))
 
+(deftest test/constant/nil-and-t ()
+  (is (typep (walk-form 't) 'constant-form))
+  (is (typep (walk-form 'nil) 'constant-form)))
+
 (define-walk-unwalk-test test/variable
   var)
 
