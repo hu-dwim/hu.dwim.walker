@@ -187,7 +187,7 @@
    ;;#:type-of
    #:value-of
    #:values-form-of
-   #:variable-name-of
+   #:variable-of
    #:variables-form-of
    #:operator-of
    #:arguments-of

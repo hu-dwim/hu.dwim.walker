@@ -39,7 +39,7 @@
    (multiple-value-call-form  arguments-of function-designator-of)
    (multiple-value-prog1-form first-form-of other-forms-of)
    (progv-form                variables-form-of values-form-of)
-   (setq-form                 variable-name-of value-of)
+   (setq-form                 variable-of value-of)
    ;; go-form: dragons be there (and an infinite recursion, too)
    (the-form                  type-of value-of)
    (unwind-protect-form       protected-form-of cleanup-form-of)))

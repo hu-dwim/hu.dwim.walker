@@ -351,9 +351,9 @@
 ;;;; SETQ
 
 (defclass setq-form (form)
-  ((variable-name
-    :accessor variable-name-of
-    :initarg :variable-name)
+  ((variable
+    :accessor variable-of
+    :initarg :variable)
    (value
     :accessor value-of
     :initarg :value)))
@@ -365,26 +365,25 @@
   (let ((effective-code '()))
     (loop
        :for (name value) :on (cdr form) :by #'cddr
-       :for symbol-macro = (lookup-in-walkenv :symbol-macro name env)
-       :if symbol-macro
-         :do (push `(setf ,symbol-macro ,value) effective-code)
-       :else
-         :do (push `(setq ,name ,value) effective-code))
+       :do (push (aif (lookup-in-walkenv :symbol-macro name env)
+                      `(setf ,it ,value)
+                      `(setq ,name ,value))
+                 effective-code))
     (if (= 1 (length effective-code))
         ;; only one form, the "simple case"
-        (destructuring-bind (type var value)
+        (destructuring-bind (type variable value)
             (first effective-code)
           (ecase type
-            (setq (with-form-object (setq setq-form :parent parent :source form
-                                          :variable-name var)
+            (setq (with-form-object (setq setq-form :parent parent :source form)
+                    (setf (variable-of setq) (walk-form variable setq env))
                     (setf (value-of setq) (walk-form value setq env))))
             (setf (walk-form (first effective-code) parent env))))
         ;; multiple forms
         (with-form-object (progn progn-form :parent parent :source form)
           (setf (body-of progn) (walk-implict-progn progn effective-code env))))))
 
-(defunwalker-handler setq-form (variable-name value)
-  `(setq ,variable-name ,(unwalk-form value)))
+(defunwalker-handler setq-form (variable value)
+  `(setq ,(unwalk-form variable) ,(unwalk-form value)))
 
 ;;;; SYMBOL-MACROLET
 
