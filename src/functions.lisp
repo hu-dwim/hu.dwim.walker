@@ -206,12 +206,10 @@
                            :source form
                            :name name
                            :supplied-p-parameter supplied-p-parameter)
-      (when default-value
-        (setf (default-value-of arg) (walk-form default-value arg env))))))
+      (setf (default-value-of arg) (walk-form default-value arg env)))))
 
 (defunwalker-handler optional-function-argument-form (name supplied-p-parameter)
-  (let ((default-value (when (slot-boundp -form- 'default-value)
-                         (unwalk-form (default-value-of -form-)))))
+  (let ((default-value (unwalk-form (default-value-of -form-))))
     (cond ((and name default-value supplied-p-parameter)
            `(,name ,default-value ,supplied-p-parameter))
           ((and name default-value)
@@ -243,12 +241,10 @@
                              :name name
                              :keyword-name keyword
                              :supplied-p-parameter supplied-p-parameter)
-        (when default-value
-          (setf (default-value-of arg) (walk-form default-value arg env)))))))
+        (setf (default-value-of arg) (walk-form default-value arg env))))))
 
 (defunwalker-handler keyword-function-argument-form (keyword-name name default-value supplied-p-parameter)
-  (let ((default-value (when (slot-boundp -form- 'default-value)
-                         (unwalk-form (default-value-of -form-)))))
+  (let ((default-value (unwalk-form (default-value-of -form-))))
     (cond ((and keyword-name name default-value supplied-p-parameter)
            `((,keyword-name ,name) ,default-value ,supplied-p-parameter))
           ((and name default-value supplied-p-parameter)
