@@ -52,10 +52,10 @@
 (defunwalker-handler function-ignorable-declaration-form (name)
   `(ignorable (function ,name)))
 
-(defclass special-declaration-form (variable-declaration-form)
+(defclass special-variable-declaration-form (variable-declaration-form)
   ())
 
-(defunwalker-handler special-declaration-form (name)
+(defunwalker-handler special-variable-declaration-form (name)
   `(special ,name))
 
 (defclass type-declaration-form (variable-declaration-form)
@@ -130,7 +130,7 @@
                          'optimize optimize-spec))
             (special
              (extend-env (var arguments)
-                         (make-declaration var 'special-declaration-form :name var)
+                         (make-declaration var 'special-variable-declaration-form :name var)
                          var `(special)))
             (type
              (extend-env (var (rest arguments))

@@ -87,6 +87,18 @@
    #:binding-form-mixin
    #:bindings-of
    #:declaration-form
+   #:optimize-declaration-form
+   #:variable-declaration-form
+   #:function-declaration-form
+   #:dynamic-extent-declaration-form
+   #:variable-ignorable-declaration-form
+   #:function-ignorable-declaration-form
+   #:special-variable-declaration-form
+   #:type-declaration-form
+   #:ftype-declaration-form
+   #:notinline-declaration-form
+   #:unknown-declaration-form
+
    #:constant-form
    #:variable-reference-form
    #:lexical-variable-reference-form
@@ -157,7 +169,8 @@
    #:eval-when-times
    #:first-form-of
    #:function-designator-of
-   #:keyword-name
+   #:keyword-name-of
+   #:effective-keyword-name-of
    #:name-of
    #:other-forms-of
    #:parent-of
@@ -176,5 +189,7 @@
    #:values-form-of
    #:variable-name-of
    #:variables-form-of
+   #:operator-of
+   #:arguments-of
 
    ))

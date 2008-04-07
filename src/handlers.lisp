@@ -195,7 +195,7 @@
       (loop
          :for (var . value) :in (bindings-of let)
          :do (unless (find-if (lambda (declaration)
-                                (and (typep declaration 'special-declaration-form)
+                                (and (typep declaration 'special-variable-declaration-form)
                                      (eq var (name-of declaration))))
                               declarations)
                ;; TODO audit this part, :dummy? check other occurrances, too!

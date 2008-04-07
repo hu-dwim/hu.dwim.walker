@@ -218,12 +218,12 @@
           (t (error "Invalid optional argument")))))
 
 (defclass keyword-function-argument-form (function-argument-form)
-  ((keyword-name :accessor keyword-name :initarg :keyword-name)
+  ((keyword-name :accessor keyword-name-of :initarg :keyword-name)
    (default-value :accessor default-value-of :initarg :default-value)
    (supplied-p-parameter :accessor supplied-p-parameter :initarg :supplied-p-parameter)))
 
-(defun effective-keyword-name (k)
-  (or (keyword-name k)
+(defun effective-keyword-name-of (k)
+  (or (keyword-name-of k)
       (intern (symbol-name (name-of k)) :keyword)))
 
 (defun walk-keyword-argument (form parent env)
