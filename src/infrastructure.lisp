@@ -158,12 +158,11 @@
      ',name))
 
 (defmacro defunwalker-handler (class (&rest slots) &body body)
-  (with-unique-names (form)
-    `(progn
-       (defmethod unwalk-form ((,form ,class))
-         (with-slots ,slots ,form
-           ,@body))
-       ',class)))
+  `(progn
+     (defmethod unwalk-form ((-form- ,class))
+       (with-slots ,slots -form-
+         ,@body))
+     ',class))
 
 (defclass form ()
   ((parent :accessor parent-of :initarg :parent)

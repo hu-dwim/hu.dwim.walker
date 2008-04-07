@@ -12,10 +12,13 @@
   ((value :accessor value-of :initarg :value)))
 
 (defunwalker-handler constant-form (value)
-  (typecase value
-    (symbol `(quote ,value))
-    (cons   `(quote ,value))
-    (t value)))
+  (if (or (eq value t)
+          (eq value nil))
+      value
+      (typecase value
+        (symbol `(quote ,value))
+        (cons   `(quote ,value))
+        (t value))))
 
 (defclass variable-reference-form (form)
   ((name :accessor name-of :initarg :name)))
@@ -47,8 +50,10 @@
 
 (defwalker-handler +atom-marker+ (form parent env)
   (cond
-    ((not (or (symbolp form)
-              (consp form)))
+    ((or (eq form t)
+         (eq form nil)
+         (not (or (symbolp form)
+                  (consp form))))
      (make-instance 'constant-form :value form
                     :parent parent :source form))
     ((lookup-in-walkenv :variable form env)
