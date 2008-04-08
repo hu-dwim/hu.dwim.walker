@@ -45,13 +45,15 @@
                   (arguments-of application) (mapcar (lambda (form)
                                                        (walk-form form application env))
                                                      args)))))
-      (awhen (lookup-in-walkenv :macro op env)
-        (return (walk-form (funcall it form (cdr env)) parent env)))
-      (when (and (symbolp op) (macro-function op))
-        (multiple-value-bind (expansion expanded)
-            (macroexpand-1 form (cdr env))
-          (when expanded
-            (return (walk-form expansion parent env)))))
+      (let ((lexenv (cdr env)))
+        (awhen (lookup-in-walkenv :macro op env)
+          (return (walk-form (funcall it form lexenv) parent env)))
+        (when (and (symbolp op)
+                   (macro-name? op lexenv))
+          (multiple-value-bind (expansion expanded?)
+              (walker-macroexpand-1 form lexenv)
+            (when expanded?
+              (return (walk-form expansion parent env))))))
       (let ((app (aif (lookup-in-walkenv :function op env)
                       (make-instance 'walked-lexical-application-form :code it)
                       (if (lookup-in-walkenv :unwalked-function op env)
@@ -59,7 +61,7 @@
                           (progn
                             (when (and *warn-undefined*
                                        (symbolp op)
-                                       (not (fboundp op)))
+                                       (not (function-name? op)))
                               (warn 'undefined-function-reference :name op))
                             (make-instance 'free-application-form))))))
         (setf (operator-of app) op

@@ -22,6 +22,7 @@
    #:make-empty-lexical-environment
    #:lookup-in-lexenv
    #:macroexpand-all
+   #:with-walker-configuration
 
    #:do-variables-in-lexenv
    #:do-functions-in-lexenv
@@ -75,7 +76,6 @@
    #:unwalk-form
    #:unwalk-forms
    #:unwalk-lambda-list
-   #:macroexpand-all
    #:make-walk-environment
    #:*warn-undefined*
 

@@ -22,6 +22,41 @@
 (defun unwalk-forms (forms)
   (mapcar #'unwalk-form forms))
 
+(defun special-variable-name? (name)
+  (or (boundp name)
+      #+sbcl(eq (sb-int:info :variable :kind name) :special)))
+
+(defparameter *function-name?*     #'fboundp)
+(defparameter *macro-name?*        #'macro-function)
+(defparameter *macroexpand-1*      #'macroexpand-1)
+(defparameter *symbol-macro-name?* '%symbol-macro-name?)
+
+(defun function-name? (name)
+  (funcall *function-name?* name))
+
+(defun macro-name? (name &optional env)
+  (funcall *macro-name?* name env))
+
+(defun symbol-macro-name? (name &optional env)
+  (funcall *symbol-macro-name?* name env))
+
+(defun %symbol-macro-name? (name &optional env)
+  (nth-value 1 (macroexpand-1 name env)))
+
+(defun walker-macroexpand-1 (form &optional env)
+  (funcall *macroexpand-1* form env))
+
+(defmacro with-walker-configuration ((&key (function-name? *function-name?*) (macro-name? *macro-name?*)
+                                           (symbol-macro-name? *symbol-macro-name?*) (macroexpand-1 *macroexpand-1*)
+                                           (warn-for-undefined *warn-undefined*))
+                                     &body body)
+  `(let ((*warn-undefined* ,warn-for-undefined)
+         (*function-name?* ,function-name?)
+         (*macro-name?* ,macro-name?)
+         (*symbol-macro-name?* ,symbol-macro-name?)
+         (*macroexpand-1* ,macroexpand-1))
+     ,@body))
+
 ;;;
 ;;; Walk environment
 ;;;
@@ -33,7 +68,9 @@
 ;;
 ;; %lookup and friends are internal utils to update/query the walkenv.
 
-(defun make-walk-environment (&optional (lexenv (make-empty-lexical-environment)))
+(defun make-walk-environment (&optional lexenv)
+  (unless lexenv
+    (setf lexenv (make-empty-lexical-environment)))
   (let ((walkenv '()))
     (macrolet ((extend! (environment type name datum &rest other-datum)
                  `(setf ,environment (%extend ,environment ,type ,name ,datum ,@other-datum))))
@@ -206,7 +243,7 @@
               (appendf walked-declarations newdecls)))))
       (values body env documentation walked-declarations))))
 
-(defun parse-macro-definition (name lambda-list body lexenv)
+(defun parse-macro-definition (name lambda-list body &optional lexenv)
   "Sort of like parse-macro from CLtL2."
   (declare (ignore name))
   ;; TODO could use parse-lambda-list
@@ -232,19 +269,20 @@
               lambda-list-without-whole lambda-list-without-environment))
     (eval
      (with-unique-names (handler-args form-name)
-       `(lambda (,handler-args ,handler-env)
+       `(lambda (,handler-args &optional ,handler-env)
           ,@(unless environment-var
               `((declare (ignore ,handler-env))))
           (destructuring-bind (,@whole-list ,form-name ,@lambda-list-without-whole)
               ,handler-args
             (declare (ignore ,form-name))
             ,@(progn
-               (dolist (variable (lambda-list-to-variable-name-list
-                                  lambda-list-without-whole :macro t :include-specials t))
-                 ;; augment the lexenv with the macro's variables, so
-                 ;; that we don't get free variable warnings while
-                 ;; walking the body of the macro.
-                 (augment-lexenv! :variable variable lexenv))
+               (when lexenv
+                 (dolist (variable (lambda-list-to-variable-name-list
+                                    lambda-list-without-whole :macro t :include-specials t))
+                   ;; augment the lexenv with the macro's variables, so
+                   ;; that we don't get free variable warnings while
+                   ;; walking the body of the macro.
+                   (augment-lexenv! :variable variable lexenv)))
                (mapcar (lambda (form)
                          (macroexpand-all form lexenv))
                        body))))))))

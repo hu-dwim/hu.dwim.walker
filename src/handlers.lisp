@@ -44,35 +44,31 @@
 (defclass free-variable-reference-form (variable-reference-form)
   ())
 
-(defun special-variable-name? (name)
-  (or (boundp name)
-      #+sbcl(eq (sb-int:info :variable :kind name) :special)))
-
 (defwalker-handler +atom-marker+ (form parent env)
-  (cond
-    ((or (eq form t)
-         (eq form nil)
-         (not (or (symbolp form)
-                  (consp form))))
-     (make-instance 'constant-form :value form
-                    :parent parent :source form))
-    ((lookup-in-walkenv :variable form env)
-     (make-instance 'walked-lexical-variable-reference-form :name form
-                    :parent parent :source form))
-    ((lookup-in-walkenv :unwalked-variable form env)
-     (make-instance 'unwalked-lexical-variable-reference-form :name form
-                    :parent parent :source form))
-    ((lookup-in-walkenv :symbol-macro form env)
-     (walk-form (lookup-in-walkenv :symbol-macro form env) parent env))
-    ((nth-value 1 (macroexpand-1 form))
-     ;; a globaly defined symbol-macro
-     (walk-form (macroexpand-1 form) parent env))
-    (t
-     (when (and *warn-undefined*
-                (not (special-variable-name? form)))
-       (warn 'undefined-variable-reference :name form))
-     (make-instance 'free-variable-reference-form :name form
-                    :parent parent :source form))))
+  (let ((lexenv (cdr env)))
+    (cond
+      ((or (eq form t)
+           (eq form nil)
+           (not (or (symbolp form)
+                    (consp form))))
+       (make-instance 'constant-form :value form
+                      :parent parent :source form))
+      ((lookup-in-walkenv :variable form env)
+       (make-instance 'walked-lexical-variable-reference-form :name form
+                      :parent parent :source form))
+      ((lookup-in-walkenv :unwalked-variable form env)
+       (make-instance 'unwalked-lexical-variable-reference-form :name form
+                      :parent parent :source form))
+      ((lookup-in-walkenv :symbol-macro form env)
+       (walk-form (lookup-in-walkenv :symbol-macro form env) parent env))
+      ((symbol-macro-name? form lexenv)
+       (walk-form (walker-macroexpand-1 form lexenv) parent env))
+      (t
+       (when (and *warn-undefined*
+                  (not (special-variable-name? form)))
+         (warn 'undefined-variable-reference :name form))
+       (make-instance 'free-variable-reference-form :name form
+                      :parent parent :source form)))))
 
 ;;;; BLOCK/RETURN-FROM
 
