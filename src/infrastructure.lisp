@@ -53,8 +53,7 @@
           (extend! walkenv :symbol-macro name definition))))
     (cons walkenv lexenv)))
 
-(defun augment-walkenv (env type name datum &rest other-datum)
-  (declare (ignore other-datum)) ;; TODO ?
+(defun augment-walkenv (env type name datum)
   (let ((walkenv (%extend (car env) type name datum))
         (lexenv (cdr env)))
     (cons walkenv (ecase type
@@ -212,9 +211,10 @@
               (appendf walked-declarations newdecls)))))
       (values body env documentation walked-declarations))))
 
-(defun parse-macro-definition (name lambda-list body env)
+(defun parse-macro-definition (name lambda-list body lexenv)
   "Sort of like parse-macro from CLtL2."
   (declare (ignore name))
+  ;; TODO could use parse-lambda-list
   (let* ((environment-var nil)
          (lambda-list-without-environment
           (loop
@@ -228,7 +228,8 @@
                        (setq environment-var i)
                        (error "Multiple &ENVIRONMENT clauses in macro lambda list: ~S" lambda-list))))
          (handler-env (if (eq environment-var nil) (gensym "ENV-") environment-var))
-         whole-list lambda-list-without-whole)
+         whole-list
+         lambda-list-without-whole)
     (if (eq '&whole (car lambda-list-without-environment))
         (setq whole-list (list '&whole (second lambda-list-without-environment))
               lambda-list-without-whole (cddr lambda-list-without-environment))
@@ -242,6 +243,13 @@
           (destructuring-bind (,@whole-list ,form-name ,@lambda-list-without-whole)
               ,handler-args
             (declare (ignore ,form-name))
-            ,@(mapcar (lambda (form)
-                        (macroexpand-all form env))
-                      body)))))))
+            ,@(progn
+               (dolist (variable (lambda-list-to-variable-name-list
+                                  lambda-list-without-whole :macro t :include-specials t))
+                 ;; augment the lexenv with the macro's variables, so
+                 ;; that we don't get free variable warnings while
+                 ;; walking the body of the macro.
+                 (augment-lexenv! :variable variable lexenv))
+               (mapcar (lambda (form)
+                         (macroexpand-all form lexenv))
+                       body))))))))

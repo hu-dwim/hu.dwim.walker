@@ -82,6 +82,9 @@
                      (assert (null args))
                      (augment-lexenv-with-tag name lexenv)))))
 
+(defmacro augment-lexenv! (kind name env &rest other-datum)
+  `(setf ,env (augment-lexenv ,kind ,name ,env ,@other-datum)))
+
 ;;;
 ;;; variables
 ;;;
