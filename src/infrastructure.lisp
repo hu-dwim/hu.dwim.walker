@@ -6,13 +6,13 @@
 
 (in-package :cl-walker)
 
-(defun macroexpand-all (form &optional (env (make-empty-lexenv)))
-  (unwalk-form (walk-form form nil (make-walkenv env))))
+(defun macroexpand-all (form &optional (env (make-empty-lexical-environment)))
+  (unwalk-form (walk-form form nil (make-walk-environment env))))
 
 (defvar *warn-undefined* t
   "When non-NIL, any references to undefined functions or variables will signal a warning.")
 
-(defun walk-form (form &optional (parent nil) (env (make-walkenv)))
+(defun walk-form (form &optional (parent nil) (env (make-walk-environment)))
   "Walk FORM and return a CLOS based AST that represents it."
   (funcall (find-walker-handler form) form parent env))
 
@@ -33,24 +33,19 @@
 ;;
 ;; %lookup and friends are internal utils to update/query the walkenv.
 
-;; let's provide an exported function with a nice name
-(defun make-walk-environment (&optional lexenv)
-  (make-walkenv lexenv))
-
-(defun make-walkenv (&optional (lexenv (make-empty-lexenv)))
+(defun make-walk-environment (&optional (lexenv (make-empty-lexical-environment)))
   (let ((walkenv '()))
-    (when lexenv
-      (macrolet ((extend! (environment type name datum &rest other-datum)
-                   `(setf ,environment (%extend ,environment ,type ,name ,datum ,@other-datum))))
-        (do-variables-in-lexenv (lexenv name ignored?)
-          (unless ignored?
-            (extend! walkenv :unwalked-variable name t)))
-        (do-functions-in-lexenv (lexenv name)
-          (extend! walkenv :unwalked-function name t))
-        (do-macros-in-lexenv (lexenv name macro-fn)
-          (extend! walkenv :macro name macro-fn))
-        (do-symbol-macros-in-lexenv (lexenv name definition)
-          (extend! walkenv :symbol-macro name definition))))
+    (macrolet ((extend! (environment type name datum &rest other-datum)
+                 `(setf ,environment (%extend ,environment ,type ,name ,datum ,@other-datum))))
+      (do-variables-in-lexenv (lexenv name ignored?)
+        (unless ignored?
+          (extend! walkenv :unwalked-variable name t)))
+      (do-functions-in-lexenv (lexenv name)
+        (extend! walkenv :unwalked-function name t))
+      (do-macros-in-lexenv (lexenv name macro-fn)
+        (extend! walkenv :macro name macro-fn))
+      (do-symbol-macros-in-lexenv (lexenv name definition)
+        (extend! walkenv :symbol-macro name definition)))
     (cons walkenv lexenv)))
 
 (defun augment-walkenv (env type name datum)

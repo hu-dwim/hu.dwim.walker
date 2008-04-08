@@ -7,7 +7,7 @@
 (in-package :cl-walker)
 
 (defparameter *lexical-environment-functions*
-  '((make-empty-lexenv "Returns an empty lexical environment useful for testing and playing around in the repl.")
+  '((make-empty-lexical-environment  "Returns an empty lexical environment useful for testing and playing around in the repl.")
     (iterate-variables-in-lexenv     "(funcall VISITOR name ignored?) for each variable definition in LEXENV.")
     (iterate-functions-in-lexenv     "(funcall VISITOR name) for each function definition in LEXENV.")
     (iterate-macros-in-lexenv        "(funcall VISITOR name macro-function) for each macro definition in LEXENV.")

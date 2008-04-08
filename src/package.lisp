@@ -19,7 +19,7 @@
    ;;;
    ;;; environment
    ;;;
-   #:make-empty-lexenv
+   #:make-empty-lexical-environment
    #:lookup-in-lexenv
    #:macroexpand-all
 
@@ -76,7 +76,7 @@
    #:unwalk-forms
    #:unwalk-lambda-list
    #:macroexpand-all
-   #:make-walkenv
+   #:make-walk-environment
    #:*warn-undefined*
 
    #:defwalker-handler

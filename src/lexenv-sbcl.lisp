@@ -9,7 +9,7 @@
 ;;;
 ;;; SBCL
 ;;;
-(defun make-empty-lexenv ()
+(defun make-empty-lexical-environment ()
   (sb-kernel:make-null-lexenv))
 
 ;;;
