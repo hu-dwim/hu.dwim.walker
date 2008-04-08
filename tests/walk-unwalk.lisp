@@ -19,15 +19,16 @@
 
 (defmacro define-walk-unwalk-test (name &body body)
   `(deftest ,name ()
-     ,@(loop
-          :for entry :in body
-          :collect (if (and (consp entry)
-                            (eq (first entry) 'with-expected-failures))
-                       `(with-expected-failures
-                          ,@(mapcar (lambda (entry)
-                                      `(check-walk-unwalk ',entry))
-                                    (rest entry)))
-                       `(check-walk-unwalk ',entry)))))
+     (bind ((*warn-undefined* nil))
+       ,@(loop
+            :for entry :in body
+            :collect (if (and (consp entry)
+                              (eq (first entry) 'with-expected-failures))
+                         `(with-expected-failures
+                            ,@(mapcar (lambda (entry)
+                                        `(check-walk-unwalk ',entry))
+                                      (rest entry)))
+                         `(check-walk-unwalk ',entry))))))
 
 (define-walk-unwalk-test test/constant
   1 'a "a" (1 2 3) #(1 2 3))

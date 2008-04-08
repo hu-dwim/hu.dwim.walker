@@ -26,19 +26,23 @@
                        (- 3 2 1))))
 
 (deftest test/macros/symbol-macrolet ()
-  (check-walk-unwalk '(symbol-macrolet ((a (slot-value obj 'a))
-                                        (b (slot-value obj 'b)))
-                       (+ a b))
-                     '(locally
-                       (+ (slot-value obj 'a) (slot-value obj 'b))))
+  (check-walk-unwalk '(let ((obj 42))
+                       (symbol-macrolet ((a (slot-value obj 'a))
+                                         (b (slot-value obj 'b)))
+                         (+ a b)))
+                     '(let ((obj 42))
+                       (locally
+                           (+ (slot-value obj 'a) (slot-value obj 'b)))))
 
   (check-walk-unwalk '(symbol-macrolet ())
                      '(locally))
 
-  (check-walk-unwalk '(symbol-macrolet ((a (slot-value obj 'a)))
-                       (double! a)
-                       (/ a 2))
-                     '(locally
-                       (double! (slot-value obj 'a))
-                       (/ (slot-value obj 'a) 2))))
+  (check-walk-unwalk '(let ((obj 42))
+                       (symbol-macrolet ((a (slot-value obj 'a)))
+                         (null a)
+                         (/ a 2)))
+                     '(let ((obj 42))
+                       (locally
+                           (null (slot-value obj 'a))
+                         (/ (slot-value obj 'a) 2)))))
 

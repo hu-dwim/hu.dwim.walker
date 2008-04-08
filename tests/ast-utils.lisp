@@ -9,7 +9,8 @@
 (defsuite* (test/utils :in test))
 
 (deftest test-collect-variable-references (form expected-count)
-  (let ((ast (walk-form form)))
+  (bind ((*warn-undefined* nil)
+         (ast (walk-form form)))
     (is (= expected-count
            (length (collect-variable-references ast))))))
 
