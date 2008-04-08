@@ -9,7 +9,7 @@
 (defun macroexpand-all (form &optional (env (make-empty-lexenv)))
   (unwalk-form (walk-form form nil (make-walkenv env))))
 
-(defvar *warn-undefined* nil
+(defvar *warn-undefined* t
   "When non-NIL, any references to undefined functions or variables will signal a warning.")
 
 (defun walk-form (form &optional (parent nil) (env (make-walkenv)))
