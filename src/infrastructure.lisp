@@ -142,7 +142,7 @@
 
 (defparameter *walker-handlers* (make-hash-table :test 'eq))
 
-(define-condition undefined-reference (warning)
+(define-condition undefined-reference (style-warning)
   ((enclosing-code :accessor enclosing-code-of :initform nil)
    (name :accessor name-of :initarg :name)))
 
