@@ -8,6 +8,12 @@
 
 (defsuite* (test/walk-unwalk :in test))
 
+(defvar *foo*)
+
+(deftest test/walk-unwalk/special-variable-name? ()
+  (is (special-variable-name? '*foo*)
+      "Unbound special variables are not properly detected! It needs platform dependent support..."))
+
 (deftest check-walk-unwalk (form &optional (expected form) env)
   (declare (optimize debug))
   (unless expected
