@@ -24,7 +24,8 @@
 
 (defun special-variable-name? (name)
   (or (boundp name)
-      #+sbcl(eq (sb-int:info :variable :kind name) :special)))
+      #+sbcl(eq (sb-int:info :variable :kind name) :special)
+      #+lispworks(eq (cl::variable-information name) :special)))
 
 (defparameter *function-name?*     #'fboundp)
 (defparameter *macro-name?*        #'macro-function)
