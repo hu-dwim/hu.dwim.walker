@@ -9,7 +9,7 @@
 (defun macroexpand-all (form &optional (env (make-empty-lexical-environment)))
   (unwalk-form (walk-form form nil (make-walk-environment env))))
 
-(defvar *warn-undefined* t
+(defvar *warn-for-undefined-references* t
   "When non-NIL, any references to undefined functions or variables will signal a warning.")
 
 (defun walk-form (form &optional (parent nil) (env (make-walk-environment)))
@@ -27,10 +27,11 @@
       #+sbcl(eq (sb-int:info :variable :kind name) :special)
       #+lispworks(eq (cl::variable-information name) :special)))
 
-(defparameter *function-name?*     #'fboundp)
-(defparameter *macro-name?*        #'macro-function)
-(defparameter *macroexpand-1*      #'macroexpand-1)
+(defparameter *function-name?*     'fboundp)
+(defparameter *macro-name?*        'macro-function)
+(defparameter *macroexpand-1*      'macroexpand-1)
 (defparameter *symbol-macro-name?* '%symbol-macro-name?)
+(defparameter *undefined-reference-handler* 'undefined-reference-handler)
 
 (defun function-name? (name)
   (funcall *function-name?* name))
@@ -47,11 +48,20 @@
 (defun walker-macroexpand-1 (form &optional env)
   (funcall *macroexpand-1* form env))
 
-(defmacro with-walker-configuration ((&key (function-name? *function-name?*) (macro-name? *macro-name?*)
-                                           (symbol-macro-name? *symbol-macro-name?*) (macroexpand-1 *macroexpand-1*)
-                                           (warn-for-undefined *warn-undefined*))
+(defun undefined-reference-handler (type name)
+  (ecase type
+    (:function (warn 'undefined-function-reference :name name))
+    (:variable (warn 'undefined-variable-reference :name name))))
+
+(defmacro with-walker-configuration ((&key (function-name? '*function-name?*)
+                                           (macro-name? '*macro-name?*)
+                                           (symbol-macro-name? '*symbol-macro-name?*)
+                                           (macroexpand-1 '*macroexpand-1*)
+                                           (warn-for-undefined-references '*warn-for-undefined-references*)
+                                           (undefined-reference-handler '*undefined-reference-handler*))
                                      &body body)
-  `(let ((*warn-undefined* ,warn-for-undefined)
+  `(let ((*warn-for-undefined-references* ,warn-for-undefined-references)
+         (*undefined-reference-handler* ,undefined-reference-handler)
          (*function-name?* ,function-name?)
          (*macro-name?* ,macro-name?)
          (*symbol-macro-name?* ,symbol-macro-name?)

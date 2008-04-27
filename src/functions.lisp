@@ -59,10 +59,10 @@
                       (if (lookup-in-walkenv :unwalked-function op env)
                           (make-instance 'unwalked-lexical-application-form)
                           (progn
-                            (when (and *warn-undefined*
+                            (when (and *warn-for-undefined-references*
                                        (symbolp op)
                                        (not (function-name? op)))
-                              (warn 'undefined-function-reference :name op))
+                              (funcall *undefined-reference-handler* :function op))
                             (make-instance 'free-application-form))))))
         (setf (operator-of app) op
               (parent-of app) parent

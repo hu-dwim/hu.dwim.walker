@@ -77,7 +77,6 @@
    #:unwalk-forms
    #:unwalk-lambda-list
    #:make-walk-environment
-   #:*warn-undefined*
 
    #:defwalker-handler
    #:defunwalker-handler

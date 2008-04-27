@@ -25,7 +25,7 @@
 
 (defmacro define-walk-unwalk-test (name &body body)
   `(deftest ,name ()
-     (bind ((*warn-undefined* nil))
+     (bind ((*warn-for-undefined-references* nil))
        ,@(loop
             :for entry :in body
             :collect (if (and (consp entry)
