@@ -27,7 +27,7 @@
       #+sbcl(eq (sb-int:info :variable :kind name) :special)
       #+lispworks(eq (cl::variable-information name) :special)))
 
-(defparameter *function-name?*     'fboundp)
+(defparameter *function-name?*     '%function-name?)
 (defparameter *macro-name?*        'macro-function)
 (defparameter *macroexpand-1*      'macroexpand-1)
 (defparameter *symbol-macro-name?* '%symbol-macro-name?)
@@ -35,6 +35,10 @@
 
 (defun function-name? (name)
   (funcall *function-name?* name))
+
+(defun %function-name? (name)
+  (or #+sbcl(eq (sb-int:info :function :kind name) :function)
+      (fboundp name)))
 
 (defun macro-name? (name &optional env)
   (funcall *macro-name?* name env))
