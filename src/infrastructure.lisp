@@ -198,7 +198,8 @@
                              &body body)
   `(progn
      (setf (gethash ',name *walker-handlers*)
-           (lambda (,form ,parent ,lexenv)
+           (named-lambda ,(format-symbol *package* "WALKER-HANDLER/~A" name)
+               (,form ,parent ,lexenv)
              (declare (ignorable ,parent ,lexenv))
              ,@body))
      ',name))
