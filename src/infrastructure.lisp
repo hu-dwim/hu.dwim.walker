@@ -31,6 +31,7 @@
 (defparameter *macro-name?*        'macro-function)
 (defparameter *macroexpand-1*      'macroexpand-1)
 (defparameter *symbol-macro-name?* '%symbol-macro-name?)
+(defparameter *constant-name?*     '%constant-name?)
 (defparameter *undefined-reference-handler* 'undefined-reference-handler)
 
 (defun function-name? (name)
@@ -49,6 +50,16 @@
 (defun %symbol-macro-name? (name &optional env)
   (nth-value 1 (macroexpand-1 name env)))
 
+(defun constant-name? (name &optional env)
+  (funcall *constant-name?* name env))
+
+(defun %constant-name? (form &optional env)
+  (declare (ignore env))
+  (or (eq form t)
+      (eq form nil)
+      (not (or (symbolp form)
+               (consp form)))))
+
 (defun walker-macroexpand-1 (form &optional env)
   (funcall *macroexpand-1* form env))
 
@@ -60,16 +71,20 @@
 (defmacro with-walker-configuration ((&key (function-name? '*function-name?*)
                                            (macro-name? '*macro-name?*)
                                            (symbol-macro-name? '*symbol-macro-name?*)
+                                           (constant-name? '*constant-name?*)
                                            (macroexpand-1 '*macroexpand-1*)
                                            (warn-for-undefined-references '*warn-for-undefined-references*)
-                                           (undefined-reference-handler '*undefined-reference-handler*))
+                                           (undefined-reference-handler '*undefined-reference-handler*)
+                                           (handlers '*walker-handlers*))
                                      &body body)
   `(let ((*warn-for-undefined-references* ,warn-for-undefined-references)
          (*undefined-reference-handler* ,undefined-reference-handler)
          (*function-name?* ,function-name?)
          (*macro-name?* ,macro-name?)
          (*symbol-macro-name?* ,symbol-macro-name?)
-         (*macroexpand-1* ,macroexpand-1))
+         (*constant-name?* ,constant-name?)
+         (*macroexpand-1* ,macroexpand-1)
+         (*walker-handlers* ,handlers))
      ,@body))
 
 ;;;
@@ -156,6 +171,9 @@
 ;;;
 
 (defparameter *walker-handlers* (make-hash-table :test 'eq))
+
+(defun copy-walker-handlers ()
+  (copy-hash-table *walker-handlers*))
 
 (define-condition undefined-reference (style-warning)
   ((enclosing-code :accessor enclosing-code-of :initform nil)

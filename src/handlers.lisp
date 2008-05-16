@@ -47,10 +47,7 @@
 (defwalker-handler +atom-marker+ (form parent env)
   (let ((lexenv (cdr env)))
     (cond
-      ((or (eq form t)
-           (eq form nil)
-           (not (or (symbolp form)
-                    (consp form))))
+      ((constant-name? form)
        (make-instance 'constant-form :value form
                       :parent parent :source form))
       ((lookup-in-walkenv :variable form env)

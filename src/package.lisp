@@ -79,9 +79,11 @@
    #:unwalk-lambda-list
    #:make-walk-environment
 
+   #:copy-walker-handlers
    #:defwalker-handler
    #:defwalker-handler-alias
    #:defunwalker-handler
+   #:with-form-object
 
    #:implicit-progn-mixin
    #:implicit-progn-with-declare-mixin
