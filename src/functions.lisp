@@ -119,17 +119,17 @@
                      :parent parent :source form)))
 
 (defun walk-lambda (form parent env)
-  (with-form-object (func lambda-function-form
-                          :parent parent
-                          :source form)
-    ;; 1) parse the argument list creating a list of FUNCTION-ARGUMENT-FORM objects
-    (multiple-value-setf ((arguments-of func) env)
-      (walk-lambda-list (second form) func env))
-    ;; 2) parse the body
-    (multiple-value-setf ((body-of func) _ (declares func))
-      (walk-implict-progn func (cddr form) env :declare t))
-    ;; all done
-    func))
+  (with-form-object (ast-node lambda-function-form
+                              :parent parent
+                              :source form)
+    (walk-lambda-like ast-node (second form) (cddr form) env)))
+
+(defun walk-lambda-like (ast-node args body env)
+  (multiple-value-setf ((arguments-of ast-node) env)
+    (walk-lambda-list args ast-node env))
+  (multiple-value-setf ((body-of ast-node) _ (declares-of ast-node))
+    (walk-implict-progn ast-node body env :declare t))
+  ast-node)
 
 (defun walk-lambda-list (lambda-list parent env &key allow-specializers macro-p)
   (declare (ignore macro-p))

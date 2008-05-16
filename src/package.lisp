@@ -73,6 +73,7 @@
    #:form
    #:walk-ast
    #:walk-form
+   #:walk-lambda-like
    #:unwalk-form
    #:unwalk-forms
    #:unwalk-lambda-list
