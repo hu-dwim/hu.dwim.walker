@@ -80,6 +80,7 @@
    #:make-walk-environment
 
    #:defwalker-handler
+   #:defwalker-handler-alias
    #:defunwalker-handler
 
    #:implicit-progn-mixin

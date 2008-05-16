@@ -204,6 +204,11 @@
              ,@body))
      ',name))
 
+(defmacro defwalker-handler-alias (from-name to-name)
+  `(progn
+     (setf (gethash ',to-name *walker-handlers*) (gethash ',from-name *walker-handlers*))
+     ',to-name))
+
 (defmacro defunwalker-handler (class (&rest slots) &body body)
   `(progn
      (defmethod unwalk-form ((-form- ,class))
