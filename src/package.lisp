@@ -161,7 +161,7 @@
    #:cleanup-form-of
    #:code-of
    #:condition-of
-   #:declares
+   #:declares-of
    #:default-value-of
    #:else-of
    #:enclosing-tagbody-of

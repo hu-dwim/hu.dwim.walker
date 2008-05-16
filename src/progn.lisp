@@ -10,7 +10,7 @@
   ((body :accessor body-of :initarg :body)))
 
 (defclass implicit-progn-with-declare-mixin (implicit-progn-mixin)
-  ((declares :accessor declares :initarg :declares)))
+  ((declares :accessor declares-of :initarg :declares)))
 
 (defclass binding-form-mixin ()
   ((bindings :accessor bindings-of :initarg :bindings)))

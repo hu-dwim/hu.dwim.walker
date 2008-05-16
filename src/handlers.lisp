@@ -201,7 +201,7 @@
                               declarations)
                ;; TODO audit this part, :dummy? check other occurrances, too!
                (augment-walkenv! env :variable var :dummy)))
-      (multiple-value-setf ((body-of let) _ (declares let))
+      (multiple-value-setf ((body-of let) _ (declares-of let))
                            (walk-implict-progn let (cddr form) env :declare t)))))
 
 (defunwalker-handler let-form (bindings body declares)
@@ -220,7 +220,7 @@
       (push (cons var (walk-form initial-value let* env)) (bindings-of let*))
       (augment-walkenv! env :variable var :dummy))
     (setf (bindings-of let*) (nreverse (bindings-of let*)))
-    (multiple-value-setf ((body-of let*) _ (declares let*))
+    (multiple-value-setf ((body-of let*) _ (declares-of let*))
       (walk-implict-progn let* (cddr form) env :declare t))))
 
 (defunwalker-handler let*-form (bindings body declares)
@@ -252,7 +252,7 @@
 
 (defwalker-handler locally (form parent env)
   (with-form-object (locally locally-form :parent parent :source form)
-    (multiple-value-setf ((body-of locally) _ (declares locally))
+    (multiple-value-setf ((body-of locally) _ (declares-of locally))
       (walk-implict-progn locally (cdr form) env :declare t))))
 
 (defunwalker-handler locally-form (body declares)
@@ -272,7 +272,7 @@
         (augment-walkenv! env :macro name handler)
         (push (cons name handler) (bindings-of macrolet))))
     (setf (bindings-of macrolet) (nreverse (bindings-of macrolet)))
-    (multiple-value-setf ((body-of macrolet) _ (declares macrolet))
+    (multiple-value-setf ((body-of macrolet) _ (declares-of macrolet))
       (walk-implict-progn macrolet (cddr form) env :declare t))))
 
 (defunwalker-handler macrolet-form (body bindings declares)
@@ -393,7 +393,7 @@
       (augment-walkenv! env :symbol-macro symbol expansion)
       (push (cons symbol expansion) (bindings-of symbol-macrolet)))
     (setf (bindings-of symbol-macrolet) (nreverse (bindings-of symbol-macrolet)))
-    (multiple-value-setf ((body-of symbol-macrolet) _ (declares symbol-macrolet))
+    (multiple-value-setf ((body-of symbol-macrolet) _ (declares-of symbol-macrolet))
       (walk-implict-progn symbol-macrolet (cddr form) env :declare t))))
 
 (defunwalker-handler symbol-macrolet-form (body bindings declares)

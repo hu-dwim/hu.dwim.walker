@@ -309,7 +309,7 @@
          :collect (cons name (walk-form `(lambda ,args ,@body) flet env)) :into bindings
          :finally (setf (bindings-of flet) bindings))
       ;; walk the body in the new env
-      (multiple-value-setf ((body-of flet) _ (declares flet))
+      (multiple-value-setf ((body-of flet) _ (declares-of flet))
         (walk-implict-progn flet
                             body
                             (loop
@@ -359,8 +359,8 @@
          :for tmp-lambda = (walk-lambda `(lambda ,arguments ,@body) labels env)
          :do (setf (body-of lambda) (body-of tmp-lambda)
                    (arguments-of lambda) (arguments-of tmp-lambda)
-                   (declares lambda) (declares tmp-lambda)))
-      (multiple-value-setf ((body-of labels) _ (declares labels))
+                   (declares-of lambda) (declares-of tmp-lambda)))
+      (multiple-value-setf ((body-of labels) _ (declares-of labels))
         (walk-implict-progn labels body env :declare t)))))
 
 (defunwalker-handler labels-form (bindings body declares)
