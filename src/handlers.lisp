@@ -86,7 +86,7 @@
   `(block ,name ,@(unwalk-forms body)))
 
 (defclass return-from-form (form)
-  ((target-block :accessor target-block-of :initarg :target-block)
+  ((target-block :initform nil :accessor target-block-of :initarg :target-block)
    (result :accessor result-of :initarg :result)))
 
 (define-condition return-from-unknown-block (walker-error)
@@ -94,21 +94,30 @@
   (:report (lambda (condition stream)
              (format stream "Unable to return from block named ~S." (block-name condition)))))
 
+(defun walk-return (block-name value form parent env)
+  (if (lookup-in-walkenv :block block-name env)
+      (with-form-object (return-from return-from-form :parent parent :source form
+                                     :target-block (lookup-in-walkenv :block block-name env))
+        (setf (result-of return-from) (walk-form value return-from env)))
+      (restart-case
+          (error 'return-from-unknown-block :block-name block-name)
+        (add-block ()
+          :report "Add this block and continue."
+          (walk-form form parent (augment-walkenv env :block block-name :unknown-block))))))
+
 (defwalker-handler return-from (form parent env)
   (destructuring-bind (block-name &optional (value '(values)))
       (cdr form)
-    (if (lookup-in-walkenv :block block-name env)
-        (with-form-object (return-from return-from-form :parent parent :source form
-                           :target-block (lookup-in-walkenv :block block-name env))
-          (setf (result-of return-from) (walk-form value return-from env)))
-        (restart-case
-            (error 'return-from-unknown-block :block-name block-name)
-          (add-block ()
-            :report "Add this block and continue."
-            (walk-form form parent (augment-walkenv env :block block-name :unknown-block)))))))
+    (walk-return block-name value form parent env)))
 
 (defunwalker-handler return-from-form (target-block result)
-  `(return-from ,(name-of target-block) ,(unwalk-form result)))
+  (let* ((unwalked-result (unwalk-form result))
+         (result-form (if (equal unwalked-result '(values))
+                          '()
+                          (list unwalked-result))))
+    (if (null (name-of target-block))
+        `(return ,@result-form)
+        `(return-from ,(name-of target-block) ,@result-form))))
 
 ;;;; CATCH/THROW
 
