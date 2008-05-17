@@ -6,6 +6,15 @@
 
 (in-package :cl-walker)
 
+(define-condition walker-error (error)
+  ())
+
+(define-condition simple-walker-error (simple-error walker-error)
+  ())
+
+(defun simple-walker-error (message &rest args)
+  (error 'simple-walker-error :format-control message :format-arguments args))
+
 (defun macroexpand-all (form &optional (env (make-empty-lexical-environment)))
   (unwalk-form (walk-form form nil (make-walk-environment env))))
 

@@ -61,6 +61,8 @@
    ;;;
    ;;; conditions
    ;;;
+   #:walker-error
+   #:simple-walker-error
    #:undefined-reference
    #:undefined-variable-reference
    #:undefined-function-reference

@@ -89,8 +89,7 @@
   ((target-block :accessor target-block-of :initarg :target-block)
    (result :accessor result-of :initarg :result)))
 
-
-(define-condition return-from-unknown-block (error)
+(define-condition return-from-unknown-block (walker-error)
   ((block-name :accessor block-name :initarg :block-name))
   (:report (lambda (condition stream)
              (format stream "Unable to return from block named ~S." (block-name condition)))))
