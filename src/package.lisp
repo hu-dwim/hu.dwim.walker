@@ -84,6 +84,7 @@
    #:copy-walker-handlers
    #:defwalker-handler
    #:defwalker-handler-alias
+   #:find-walker-handler
    #:defunwalker-handler
    #:with-form-object
 

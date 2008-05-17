@@ -206,20 +206,21 @@
 
 (defparameter +atom-marker+ '+atom-marker+)
 
-(defun find-walker-handler (form)
-  "Simple function which tells us what handler should deal with FORM. Signals an error if we don't have a handler for FORM."
-  (if (atom form)
-      (gethash '+atom-marker+ *walker-handlers*)
-      (aif (gethash (car form) *walker-handlers*)
-           it
-           (case (car form)
-             ((block declare flet function go if labels let let*
-                     macrolet progn quote return-from setq symbol-macrolet
-                     tagbody unwind-protect catch multiple-value-call
-                     multiple-value-prog1 throw load-time-value the
-                     eval-when locally progv)
-              (error "Sorry, no walker for the special operator ~S defined." (car form)))
-             (t (gethash 'application *walker-handlers*))))))
+(defgeneric find-walker-handler (form)
+  (:documentation "Simple function which tells us what handler should deal with FORM. Signals an error if we don't have a handler for FORM.")
+  (:method ((form cons))
+    (aif (gethash (car form) *walker-handlers*)
+         it
+         (case (car form)
+           ((block declare flet function go if labels let let*
+                   macrolet progn quote return-from setq symbol-macrolet
+                   tagbody unwind-protect catch multiple-value-call
+                   multiple-value-prog1 throw load-time-value the
+                   eval-when locally progv)
+            (error "Sorry, no walker for the special operator ~S defined." (car form)))
+           (t (gethash 'application *walker-handlers*)))))
+  (:method ((form t))
+    (gethash '+atom-marker+ *walker-handlers*)))
 
 (defmacro defwalker-handler (name (form parent lexenv)
                              &body body)
