@@ -235,21 +235,6 @@
      ,@(unwalk-declarations declares)
      ,@(unwalk-forms body)))
 
-;;;; LOAD-TIME-VALUE
-
-(defclass load-time-value-form (form)
-  ((value :accessor value-of)
-   (read-only-p :accessor read-only-p)))
-
-(defwalker-handler load-time-value (form parent env)
-  (with-form-object (load-time-value load-time-value-form
-                                     :parent parent :source form)
-    (setf (value-of load-time-value) (walk-form (second form) load-time-value env)
-          (read-only-p load-time-value) (third form))))
-
-(defunwalker-handler load-time-value-form (body read-only)
-  `(load-time-value ,(unwalk-form body) ,read-only))
-
 ;;;; LOCALLY
 
 (defclass locally-form (form implicit-progn-with-declare-mixin)
@@ -503,3 +488,6 @@
                                      :body form
                                      :read-only (third form))
     (setf (body-of load-time-value) (walk-form (second form)))))
+
+(defunwalker-handler load-time-value-form (body read-only)
+  `(load-time-value ,(unwalk-form body) ,read-only))
