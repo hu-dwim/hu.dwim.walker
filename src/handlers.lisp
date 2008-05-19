@@ -8,7 +8,7 @@
 
 ;;;; Atoms
 
-(defclass constant-form (form)
+(defclass constant-form (walked-form)
   ((value :accessor value-of :initarg :value)))
 
 (defunwalker-handler constant-form (value)
@@ -20,7 +20,7 @@
         (cons   `(quote ,value))
         (t value))))
 
-(defclass variable-reference-form (form)
+(defclass variable-reference-form (walked-form)
   ((name :accessor name-of :initarg :name)))
 
 (defunwalker-handler variable-reference-form (name)
@@ -69,7 +69,7 @@
 
 ;;;; BLOCK/RETURN-FROM
 
-(defclass block-form (form implicit-progn-mixin)
+(defclass block-form (walked-form implicit-progn-mixin)
   ((name :accessor name-of :initarg :name)))
 
 (defwalker-handler block (form parent env)
@@ -85,7 +85,7 @@
 (defunwalker-handler block-form (name body)
   `(block ,name ,@(unwalk-forms body)))
 
-(defclass return-from-form (form)
+(defclass return-from-form (walked-form)
   ((target-block :initform nil :accessor target-block-of :initarg :target-block)
    (result :accessor result-of :initarg :result)))
 
@@ -121,7 +121,7 @@
 
 ;;;; CATCH/THROW
 
-(defclass catch-form (form implicit-progn-mixin)
+(defclass catch-form (walked-form implicit-progn-mixin)
   ((tag :accessor tag-of :initarg :tag)))
 
 (defwalker-handler catch (form parent env)
@@ -134,7 +134,7 @@
 (defunwalker-handler catch-form (tag body)
   `(catch ,(unwalk-form tag) ,@(unwalk-forms body)))
 
-(defclass throw-form (form)
+(defclass throw-form (walked-form)
   ((tag :accessor tag-of :initarg :tag)
    (value :accessor value-of :initarg :value)))
 
@@ -150,7 +150,7 @@
 
 ;;;; EVAL-WHEN
 
-(defclass eval-when-form (form implicit-progn-mixin)
+(defclass eval-when-form (walked-form implicit-progn-mixin)
   ((eval-when-times :accessor eval-when-times :initarg :eval-when-times)))
 
 (defwalker-handler eval-when (form parent env)
@@ -166,7 +166,7 @@
 
 ;;;; IF
 
-(defclass if-form (form)
+(defclass if-form (walked-form)
   ((condition :accessor condition-of :initarg :condition)
    (then :accessor then-of :initarg :then)
    (else :accessor else-of :initarg :else)))
@@ -182,7 +182,7 @@
 
 ;;;; LET/LET*
 
-(defclass variable-binding-form (form binding-form-mixin implicit-progn-with-declare-mixin)
+(defclass variable-binding-form (walked-form binding-form-mixin implicit-progn-with-declare-mixin)
   ())
 
 (defclass let-form (variable-binding-form)
@@ -237,7 +237,7 @@
 
 ;;;; LOCALLY
 
-(defclass locally-form (form implicit-progn-with-declare-mixin)
+(defclass locally-form (walked-form implicit-progn-with-declare-mixin)
   ())
 
 (defwalker-handler locally (form parent env)
@@ -251,7 +251,7 @@
 
 ;;;; MACROLET
 
-(defclass macrolet-form (form binding-form-mixin implicit-progn-with-declare-mixin)
+(defclass macrolet-form (walked-form binding-form-mixin implicit-progn-with-declare-mixin)
   ())
 
 (defwalker-handler macrolet (form parent env)
@@ -273,7 +273,7 @@
 
 ;;;; MULTIPLE-VALUE-CALL
 
-(defclass multiple-value-call-form (form)
+(defclass multiple-value-call-form (walked-form)
   ((function-designator :accessor function-designator-of :initarg :function-designator)
    (arguments :accessor arguments-of :initarg :arguments)))
 
@@ -288,7 +288,7 @@
 
 ;;;; MULTIPLE-VALUE-PROG1
 
-(defclass multiple-value-prog1-form (form)
+(defclass multiple-value-prog1-form (walked-form)
   ((first-form :accessor first-form-of :initarg :first-form)
    (other-forms :accessor other-forms-of :initarg :other-forms)))
 
@@ -303,7 +303,7 @@
 
 ;;;; PROGN
 
-(defclass progn-form (form implicit-progn-mixin)
+(defclass progn-form (walked-form implicit-progn-mixin)
   ())
 
 (defwalker-handler progn (form parent env)
@@ -315,7 +315,7 @@
 
 ;;;; PROGV
 
-(defclass progv-form (form implicit-progn-mixin)
+(defclass progv-form (walked-form implicit-progn-mixin)
   ((variables-form :accessor variables-form-of :initarg :variables-form)
    (values-form :accessor values-form-of :initarg :values-form)))
 
@@ -336,7 +336,7 @@
 
 ;;;; SETQ
 
-(defclass setq-form (form)
+(defclass setq-form (walked-form)
   ((variable
     :accessor variable-of
     :initarg :variable)
@@ -373,7 +373,7 @@
 
 ;;;; SYMBOL-MACROLET
 
-(defclass symbol-macrolet-form (form binding-form-mixin implicit-progn-with-declare-mixin)
+(defclass symbol-macrolet-form (walked-form binding-form-mixin implicit-progn-with-declare-mixin)
   ())
 
 (defwalker-handler symbol-macrolet (form parent env)
@@ -394,7 +394,7 @@
 
 ;;;; TAGBODY/GO
 
-(defclass tagbody-form (form implicit-progn-mixin)
+(defclass tagbody-form (walked-form implicit-progn-mixin)
   ())
 
 (defwalker-handler tagbody (form parent env)
@@ -421,13 +421,13 @@
 (defunwalker-handler tagbody-form (body)
   `(tagbody ,@(unwalk-forms body)))
 
-(defclass go-tag-form (form)
+(defclass go-tag-form (walked-form)
   ((name :accessor name-of :initarg :name)))
 
 (defunwalker-handler go-tag-form (name)
   name)
 
-(defclass go-form (form)
+(defclass go-form (walked-form)
   ((jump-target :accessor jump-target-of :initarg :jump-target)
    (name :accessor name-of :initarg :name)
    (enclosing-tagbody :accessor enclosing-tagbody-of :initarg :enclosing-tagbody)))
@@ -445,7 +445,7 @@
 
 ;;;; THE
 
-(defclass the-form (form)
+(defclass the-form (walked-form)
   ((type :accessor type-of :initarg :type)
    (value :accessor value-of :initarg :value)))
 
@@ -459,7 +459,7 @@
 
 ;;;; UNWIND-PROTECT
 
-(defclass unwind-protect-form (form)
+(defclass unwind-protect-form (walked-form)
   ((protected-form :accessor protected-form-of :initarg :protected-form)
    (cleanup-form :accessor cleanup-form-of :initarg :cleanup-form)))
 
@@ -474,7 +474,7 @@
 
 ;;;; LOAD-TIME-VALUE
 
-(defclass load-time-value-form (form)
+(defclass load-time-value-form (walked-form)
   ((body :accessor body-of :initarg :body)
    (read-only :initform nil :accessor read-only-p :initarg :read-only)
    (value :accessor value-of)))

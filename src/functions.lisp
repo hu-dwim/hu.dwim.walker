@@ -6,7 +6,7 @@
 
 (in-package :cl-walker)
 
-(defclass application-form (form)
+(defclass application-form (walked-form)
   ((operator :accessor operator-of :initarg :operator)
    (arguments :accessor arguments-of :initarg :arguments)))
 
@@ -73,7 +73,7 @@
 
 ;;;; Functions
 
-(defclass function-form (form)
+(defclass function-form (walked-form)
   ())
 
 (defclass lambda-function-form (function-form implicit-progn-with-declare-mixin)
@@ -85,7 +85,7 @@
      ,@(unwalk-declarations declares)
      ,@(unwalk-forms body))))
 
-(defclass function-object-form (form)
+(defclass function-object-form (walked-form)
   ((name :accessor name-of :initarg :name)))
 
 (defunwalker-handler function-object-form (name)
@@ -159,7 +159,7 @@
                                (extend-env parsed)))))
       (values (nreverse result) env))))
 
-(defclass function-argument-form (form)
+(defclass function-argument-form (walked-form)
   ((name :accessor name-of :initarg :name)))
 
 (defmethod print-object ((argument function-argument-form) stream)
@@ -291,7 +291,7 @@
 
 ;;;; FLET/LABELS
 
-(defclass function-binding-form (form binding-form-mixin implicit-progn-with-declare-mixin)
+(defclass function-binding-form (walked-form binding-form-mixin implicit-progn-with-declare-mixin)
   ())
 
 (defclass flet-form (function-binding-form)

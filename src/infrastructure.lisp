@@ -275,14 +275,14 @@
          ,@body))
      ',class))
 
-(defclass form ()
+(defclass walked-form ()
   ((parent :accessor parent-of :initarg :parent)
    (source :accessor source-of :initarg :source)))
 
-(defmethod make-load-form ((object form) &optional env)
+(defmethod make-load-form ((object walked-form) &optional env)
   (make-load-form-saving-slots object :environment env))
 
-(defmethod print-object ((form form) stream)
+(defmethod print-object ((form walked-form) stream)
   (print-unreadable-object (form stream :type t :identity t)
     (when (slot-boundp form 'source)
       (let ((*print-readably* nil)

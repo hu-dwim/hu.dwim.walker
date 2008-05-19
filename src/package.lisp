@@ -72,7 +72,7 @@
    ;;;
    ;;; walker
    ;;;
-   #:form
+   #:walked-form
    #:walk-ast
    #:walk-form
    #:walk-lambda-like

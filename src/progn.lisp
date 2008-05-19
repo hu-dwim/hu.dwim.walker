@@ -16,7 +16,7 @@
   ((bindings :accessor bindings-of :initarg :bindings)))
 
 
-(defclass declaration-form (form)
+(defclass declaration-form (walked-form)
   ())
 
 (defclass optimize-declaration-form (declaration-form)
