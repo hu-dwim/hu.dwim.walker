@@ -251,6 +251,8 @@
   (gethash name table))
 
 (defun (setf walker-handler-definition) (handler name &optional (table *walker-handlers*))
+  (when (gethash name table)
+    (simple-style-warning "Redefining walker handler for ~S" name))
   (setf (gethash name table) handler))
 
 (defmacro defwalker-handler (name (form parent lexenv)
