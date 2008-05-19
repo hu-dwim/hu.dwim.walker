@@ -37,11 +37,10 @@
   (block nil
     (destructuring-bind (op &rest args)
         form
-      (when (and (consp op)
-                 (eq 'cl:lambda (car op)))
+      (when (lambda-form? op)
         (return
           (with-form-object (application lambda-application-form :parent parent :source form)
-            (setf (operator-of application) (walk-form op application env)
+            (setf (operator-of application) (walk-lambda op application env)
                   (arguments-of application) (mapcar (lambda (form)
                                                        (walk-form form application env))
                                                      args)))))
@@ -62,7 +61,7 @@
                             (when (and *warn-for-undefined-references*
                                        (symbolp op)
                                        (not (function-name? op)))
-                              (funcall *undefined-reference-handler* :function op))
+                              (undefined-reference :function op))
                             (make-instance 'free-application-form))))))
         (setf (operator-of app) op
               (parent-of app) parent
@@ -105,8 +104,7 @@
   ())
 
 (defwalker-handler function (form parent env)
-  (if (and (listp (second form))
-           (eql 'cl:lambda (first (second form))))
+  (if (lambda-form? (second form))
       ;; (function (lambda ...))
       (walk-lambda (second form) parent env)
       ;; (function foo)

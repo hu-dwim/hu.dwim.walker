@@ -23,7 +23,7 @@
 
 (defun walk-form (form &optional (parent nil) (env (make-walk-environment)))
   "Walk FORM and return a CLOS based AST that represents it."
-  (funcall (find-walker-handler form) form parent env))
+  (funcall (find-walker-handler* form) form parent env))
 
 (defgeneric unwalk-form (form)
   (:documentation "Unwalk FORM and return a list representation."))
@@ -36,31 +36,62 @@
       #+sbcl(eq (sb-int:info :variable :kind name) :special)
       #+lispworks(eq (cl::variable-information name) :special)))
 
-(defparameter *function-name?*     '%function-name?)
-(defparameter *macro-name?*        'macro-function)
-(defparameter *macroexpand-1*      'macroexpand-1)
-(defparameter *symbol-macro-name?* '%symbol-macro-name?)
-(defparameter *constant-name?*     '%constant-name?)
-(defparameter *undefined-reference-handler* 'undefined-reference-handler)
+(defvar *walker-context*)
+
+#+nil
+(defclass-star:defclass* walker-context ()
+  ((find-walker-handler         (find-walker-handler-of *walker-context*))
+   (function-name?              (function-name?-of *walker-context*))
+   (macro-name?                 (macro-name?-of *walker-context*))
+   (macroexpand-1               (macroexpand-1-of *walker-context*))
+   (symbol-macro-name?          (symbol-macro-name?-of *walker-context*))
+   (constant-name?              (constant-name?-of *walker-context*))
+   (lambda-form?                (lambda-form?-of *walker-context*))
+   (undefined-reference-handler (undefined-reference-handler-of *walker-context*))))
+
+;; macroexpansion of the above defclass*
+(defclass walker-context ()
+  ((find-walker-handler :initform (find-walker-handler-of *walker-context*) :accessor find-walker-handler-of :initarg :find-walker-handler)
+   (function-name? :initform (function-name?-of *walker-context*) :accessor function-name?-of :initarg :function-name?)
+   (macro-name? :initform (macro-name?-of *walker-context*) :accessor macro-name?-of :initarg :macro-name?)
+   (macroexpand-1 :initform (macroexpand-1-of *walker-context*) :accessor macroexpand-1-of :initarg :macroexpand-1)
+   (symbol-macro-name? :initform (symbol-macro-name?-of *walker-context*) :accessor symbol-macro-name?-of :initarg :symbol-macro-name?)
+   (constant-name? :initform (constant-name?-of *walker-context*) :accessor constant-name?-of :initarg :constant-name?)
+   (lambda-form? :initform (lambda-form?-of *walker-context*) :accessor lambda-form?-of :initarg :lambda-form?)
+   (undefined-reference-handler :initform (undefined-reference-handler-of *walker-context*) :accessor undefined-reference-handler-of :initarg
+                                :undefined-reference-handler)))
+
+(setf *walker-context* (make-instance 'walker-context
+                                      :find-walker-handler         'find-walker-handler
+                                      :function-name?              '%function-name?
+                                      :macro-name?                 'macro-function
+                                      :macroexpand-1               'macroexpand-1
+                                      :symbol-macro-name?          '%symbol-macro-name?
+                                      :constant-name?              '%constant-name?
+                                      :lambda-form?                '%lambda-form?
+                                      :undefined-reference-handler 'undefined-reference-handler))
+
+(defun find-walker-handler* (name)
+  (funcall (find-walker-handler-of *walker-context*) name))
 
 (defun function-name? (name)
-  (funcall *function-name?* name))
+  (funcall (function-name?-of *walker-context*) name))
 
 (defun %function-name? (name)
   (or #+sbcl(eq (sb-int:info :function :kind name) :function)
       (fboundp name)))
 
 (defun macro-name? (name &optional env)
-  (funcall *macro-name?* name env))
+  (funcall (macro-name?-of *walker-context*) name env))
 
 (defun symbol-macro-name? (name &optional env)
-  (funcall *symbol-macro-name?* name env))
+  (funcall (symbol-macro-name?-of *walker-context*) name env))
 
 (defun %symbol-macro-name? (name &optional env)
   (nth-value 1 (macroexpand-1 name env)))
 
 (defun constant-name? (name &optional env)
-  (funcall *constant-name?* name env))
+  (funcall (constant-name?-of *walker-context*) name env))
 
 (defun %constant-name? (form &optional env)
   (declare (ignore env))
@@ -69,31 +100,28 @@
       (not (or (symbolp form)
                (consp form)))))
 
+(defun lambda-form? (form &optional env)
+  (funcall (lambda-form?-of *walker-context*) form env))
+
+(defun %lambda-form? (form &optional env)
+  (declare (ignore env))
+  (and (consp form)
+       (eq 'cl:lambda (car form))))
+
 (defun walker-macroexpand-1 (form &optional env)
-  (funcall *macroexpand-1* form env))
+  (funcall (macroexpand-1-of *walker-context*) form env))
 
 (defun undefined-reference-handler (type name)
   (ecase type
     (:function (warn 'undefined-function-reference :name name))
     (:variable (warn 'undefined-variable-reference :name name))))
 
-(defmacro with-walker-configuration ((&key (function-name? '*function-name?*)
-                                           (macro-name? '*macro-name?*)
-                                           (symbol-macro-name? '*symbol-macro-name?*)
-                                           (constant-name? '*constant-name?*)
-                                           (macroexpand-1 '*macroexpand-1*)
-                                           (warn-for-undefined-references '*warn-for-undefined-references*)
-                                           (undefined-reference-handler '*undefined-reference-handler*)
-                                           (handlers '*walker-handlers*))
-                                     &body body)
-  `(let ((*warn-for-undefined-references* ,warn-for-undefined-references)
-         (*undefined-reference-handler* ,undefined-reference-handler)
-         (*function-name?* ,function-name?)
-         (*macro-name?* ,macro-name?)
-         (*symbol-macro-name?* ,symbol-macro-name?)
-         (*constant-name?* ,constant-name?)
-         (*macroexpand-1* ,macroexpand-1)
-         (*walker-handlers* ,handlers))
+(defun undefined-reference (type name)
+  (funcall (undefined-reference-handler-of *walker-context*) type name))
+
+(defmacro with-walker-configuration ((&rest args) &body body)
+  "See the WALKER-CONTEXT class for possible arguments."
+  `(let ((*walker-context* (make-instance 'walker-context ,@args)))
      ,@body))
 
 ;;;
@@ -181,9 +209,6 @@
 
 (defparameter *walker-handlers* (make-hash-table :test 'eq))
 
-(defun copy-walker-handlers ()
-  (copy-hash-table *walker-handlers*))
-
 (define-condition undefined-reference (style-warning)
   ((enclosing-code :accessor enclosing-code-of :initform nil)
    (name :accessor name-of :initarg :name)))
@@ -222,10 +247,16 @@
   (:method ((form t))
     (gethash '+atom-marker+ *walker-handlers*)))
 
+(defun walker-handler-definition (name &optional (table *walker-handlers*))
+  (gethash name table))
+
+(defun (setf walker-handler-definition) (handler name &optional (table *walker-handlers*))
+  (setf (gethash name table) handler))
+
 (defmacro defwalker-handler (name (form parent lexenv)
                              &body body)
   `(progn
-     (setf (gethash ',name *walker-handlers*)
+     (setf (walker-handler-definition ',name)
            (named-lambda ,(format-symbol *package* "WALKER-HANDLER/~A" name)
                (,form ,parent ,lexenv)
              (declare (ignorable ,parent ,lexenv))
@@ -234,7 +265,7 @@
 
 (defmacro defwalker-handler-alias (from-name to-name)
   `(progn
-     (setf (gethash ',to-name *walker-handlers*) (gethash ',from-name *walker-handlers*))
+     (setf (walker-handler-definition ',to-name) (walker-handler-definition ',from-name))
      ',to-name))
 
 (defmacro defunwalker-handler (class (&rest slots) &body body)
