@@ -61,8 +61,7 @@
       ((symbol-macro-name? form lexenv)
        (walk-form (walker-macroexpand-1 form lexenv) parent env))
       (t
-       (when (and *warn-for-undefined-references*
-                  (not (special-variable-name? form)))
+       (unless (special-variable-name? form)
          (undefined-reference :variable form))
        (make-instance 'free-variable-reference-form :name form
                       :parent parent :source form)))))

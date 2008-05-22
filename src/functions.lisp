@@ -58,8 +58,7 @@
                       (if (lookup-in-walkenv :unwalked-function op env)
                           (make-instance 'unwalked-lexical-application-form)
                           (progn
-                            (when (and *warn-for-undefined-references*
-                                       (symbolp op)
+                            (when (and (symbolp op)
                                        (not (function-name? op)))
                               (undefined-reference :function op))
                             (make-instance 'free-application-form))))))

@@ -18,9 +18,6 @@
 (defun macroexpand-all (form &optional (env (make-empty-lexical-environment)))
   (unwalk-form (walk-form form nil (make-walk-environment env))))
 
-(defvar *warn-for-undefined-references* t
-  "When non-NIL, any references to undefined functions or variables will signal a warning.")
-
 (defun walk-form (form &optional (parent nil) (env (make-walk-environment)))
   "Walk FORM and return a CLOS based AST that represents it."
   (funcall (find-walker-handler* form) form parent env))
@@ -117,7 +114,8 @@
     (:variable (warn 'undefined-variable-reference :name name))))
 
 (defun undefined-reference (type name)
-  (funcall (undefined-reference-handler-of *walker-context*) type name))
+  (awhen (undefined-reference-handler-of *walker-context*)
+    (funcall it type name)))
 
 (defmacro with-walker-configuration ((&rest args) &body body)
   "See the WALKER-CONTEXT class for possible arguments."
