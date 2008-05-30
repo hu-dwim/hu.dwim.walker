@@ -35,24 +35,25 @@
 
 (defwalker-handler application (form parent env)
   (block nil
-    (destructuring-bind (op &rest args)
-        form
+    (destructuring-bind (op &rest args) form
       (when (lambda-form? op)
         (return
-          (with-form-object (application lambda-application-form :parent parent :source form)
+          (with-form-object (application lambda-application-form :parent parent)
             (setf (operator-of application) (walk-lambda op application env)
                   (arguments-of application) (mapcar (lambda (form)
                                                        (walk-form form application env))
                                                      args)))))
       (let ((lexenv (cdr env)))
         (awhen (lookup-in-walkenv :macro op env)
-          (return (walk-form (funcall it form lexenv) parent env)))
+          (let ((*inside-macroexpansion* t))
+            (return (walk-form (funcall it form lexenv) parent env))))
         (when (and (symbolp op)
                    (macro-name? op lexenv))
           (multiple-value-bind (expansion expanded?)
               (walker-macroexpand-1 form lexenv)
             (when expanded?
-              (return (walk-form expansion parent env))))))
+              (let ((*inside-macroexpansion* t))
+                (return (walk-form expansion parent env)))))))
       (let ((app (aif (lookup-in-walkenv :function op env)
                       (make-instance 'walked-lexical-application-form :code it)
                       (if (lookup-in-walkenv :unwalked-function op env)
@@ -113,12 +114,10 @@
                              'unwalked-lexical-function-object-form
                              'free-function-object-form))
                      :name (second form)
-                     :parent parent :source form)))
+                     :parent parent)))
 
 (defun walk-lambda (form parent env)
-  (with-form-object (ast-node lambda-function-form
-                              :parent parent
-                              :source form)
+  (with-form-object (ast-node lambda-function-form :parent parent)
     (walk-lambda-like ast-node (second form) (cddr form) env)))
 
 (defun walk-lambda-like (ast-node args body env)
@@ -143,14 +142,14 @@
                                      (if allow-specializers
                                          (walk-specialized-argument-form argument parent env)
                                          (make-instance 'required-function-argument-form
-                                                        :name argument :parent parent :source argument)))
+                                                        :name argument :parent parent)))
                                     (&optional
                                      (walk-optional-argument argument parent env))
                                     (&allow-other-keys
                                      (make-instance 'allow-other-keys-function-argument-form
-                                                    :parent parent :source nil))
+                                                    :parent parent))
                                     (&rest (make-instance 'rest-function-argument-form :name argument
-                                                          :parent parent :source argument))
+                                                          :parent parent))
                                     (&key
                                      (walk-keyword-argument argument parent env)))))
                              (when parsed
@@ -185,8 +184,7 @@
                  :specializer (if (listp form)
                                   (second form)
                                   t)
-                 :parent parent
-                 :source form))
+                 :parent parent))
 
 (defunwalker-handler specialized-function-argument-form (name specializer)
   (if (eq specializer t)
@@ -202,7 +200,6 @@
       (ensure-list form)
     (with-form-object (arg optional-function-argument-form
                            :parent parent
-                           :source form
                            :name name
                            :supplied-p-parameter supplied-p-parameter)
       (setf (default-value-of arg) (walk-form default-value arg env)))))
@@ -236,7 +233,6 @@
                        nil)))
       (with-form-object (arg keyword-function-argument-form
                              :parent parent
-                             :source form
                              :name name
                              :keyword-name keyword
                              :supplied-p-parameter supplied-p-parameter)
@@ -299,7 +295,7 @@
 (defwalker-handler flet (form parent env)
   (destructuring-bind (binds &body body)
       (cdr form)
-    (with-form-object (flet flet-form :parent parent :source form)
+    (with-form-object (flet flet-form :parent parent)
       ;; build up the objects for the bindings in the original env
       (loop
          :for (name args . body) :in binds
@@ -332,7 +328,7 @@
 (defwalker-handler labels (form parent env)
   (destructuring-bind (binds &body body)
       (cdr form)
-    (with-form-object (labels labels-form :parent parent :source form :bindings '())
+    (with-form-object (labels labels-form :parent parent :bindings '())
       ;; we need to walk over the bindings twice. the first pass
       ;; creates some 'empty' lambda objects in the environment so
       ;; that walked-lexical-application-form and walked-lexical-function-object-form
@@ -340,10 +336,10 @@
       ;; actual bodies of the form filling in the previously created
       ;; objects.
       (loop
+         :for entry :in binds
          :for (name arguments . body) :in binds
-         :for lambda = (make-instance 'lambda-function-form
-                                      :parent labels
-                                      :source (list* name arguments body))
+         :for lambda = (with-current-form entry
+                    (make-instance 'lambda-function-form :parent labels))
          :do (progn
                (push (cons name lambda) (bindings-of labels))
                (augment-walkenv! env :function name lambda)))

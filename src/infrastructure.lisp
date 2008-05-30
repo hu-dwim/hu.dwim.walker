@@ -18,9 +18,20 @@
 (defun macroexpand-all (form &optional (env (make-empty-lexical-environment)))
   (unwalk-form (walk-form form nil (make-walk-environment env))))
 
+(defparameter *current-form* nil)
+(defparameter *inside-macroexpansion* nil)
+
+(defmacro with-current-form (form &body body)
+  `(let ((*current-form* (if *inside-macroexpansion*
+                             *current-form*
+                             ,form)))
+     ,@body))
+
 (defun walk-form (form &optional (parent nil) (env (make-walk-environment)))
   "Walk FORM and return a CLOS based AST that represents it."
-  (funcall (find-walker-handler* form) form parent env))
+  (let ((*current-form* (or *current-form*
+                            form)))
+    (funcall (find-walker-handler* form) form parent env)))
 
 (defgeneric unwalk-form (form)
   (:documentation "Unwalk FORM and return a list representation."))
@@ -44,7 +55,8 @@
    (symbol-macro-name?          (symbol-macro-name?-of *walker-context*))
    (constant-name?              (constant-name?-of *walker-context*))
    (lambda-form?                (lambda-form?-of *walker-context*))
-   (undefined-reference-handler (undefined-reference-handler-of *walker-context*))))
+   (undefined-reference-handler (undefined-reference-handler-of *walker-context*))
+   (store-source?               (store-source? *walker-context*) :type boolean)))
 
 ;; macroexpansion of the above defclass*
 (defclass walker-context ()
@@ -56,7 +68,8 @@
    (constant-name? :initform (constant-name?-of *walker-context*) :accessor constant-name?-of :initarg :constant-name?)
    (lambda-form? :initform (lambda-form?-of *walker-context*) :accessor lambda-form?-of :initarg :lambda-form?)
    (undefined-reference-handler :initform (undefined-reference-handler-of *walker-context*) :accessor undefined-reference-handler-of :initarg
-                                :undefined-reference-handler)))
+                                :undefined-reference-handler)
+   (store-source? :initform (store-source? *walker-context*) :accessor store-source? :initarg :store-source? :type boolean)))
 
 (setf *walker-context* (make-instance 'walker-context
                                       :find-walker-handler         'find-walker-handler
@@ -66,7 +79,8 @@
                                       :symbol-macro-name?          '%symbol-macro-name?
                                       :constant-name?              '%constant-name?
                                       :lambda-form?                '%lambda-form?
-                                      :undefined-reference-handler 'undefined-reference-handler))
+                                      :undefined-reference-handler 'undefined-reference-handler
+                                      :store-source?                t))
 
 (defun find-walker-handler* (name)
   (funcall (find-walker-handler-of *walker-context*) name))
@@ -260,7 +274,8 @@
            (named-lambda ,(format-symbol *package* "WALKER-HANDLER/~A" name)
                (,form ,parent ,lexenv)
              (declare (ignorable ,parent ,lexenv))
-             ,@body))
+             (with-current-form ,form
+               ,@body)))
      ',name))
 
 (defmacro defwalker-handler-alias (from-name to-name)
@@ -277,7 +292,7 @@
 
 (defclass walked-form ()
   ((parent :accessor parent-of :initarg :parent)
-   (source :accessor source-of :initarg :source)))
+   (source :initform *current-form* :accessor source-of :initarg :source)))
 
 (defmethod make-load-form ((object walked-form) &optional env)
   (make-load-form-saving-slots object :environment env))
@@ -318,9 +333,10 @@
         (dolist (declaration declarations)
           (assert (eq (first declaration) 'declare))
           (dolist (entry (rest declaration))
-            (let ((newdecls nil))
-              (setf (values env newdecls) (walk-declaration entry env parent))
-              (appendf walked-declarations newdecls)))))
+            (with-current-form entry
+              (let ((newdecls nil))
+                (setf (values env newdecls) (walk-declaration entry env parent))
+                (appendf walked-declarations newdecls))))))
       (values body env documentation walked-declarations))))
 
 (defun parse-macro-definition (name lambda-list body &optional lexenv)

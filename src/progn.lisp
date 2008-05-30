@@ -95,8 +95,8 @@
                       (eql (car form) 'function))
                  (second form)
                  nil)))
-      (macrolet ((make-declaration (varname formclass &rest rest)
-                   `(make-instance ,formclass :parent parent :source (list type ,varname) ,@rest))
+      (macrolet ((make-declaration (formclass &rest rest)
+                   `(make-instance ,formclass :parent parent ,@rest))
                  (extend-env ((var list) newdeclare &rest datum)
                    `(dolist (,var ,list)
                       (push ,newdeclare declares)
@@ -106,43 +106,41 @@
           (case type
             (dynamic-extent
              (extend-env (var arguments)
-                         (make-declaration var 'dynamic-extent-declaration-form :name var)
+                         (make-declaration 'dynamic-extent-declaration-form :name var)
                          var `(dynamic-extent)))
             (ftype
              (extend-env (function-name (cdr arguments))
                          (make-instance 'ftype-declaration-form
                                         :parent parent
-                                        :source `(ftype ,(first arguments) function-name)
                                         :name function-name
                                         :type (first arguments))
                          function-name `(ftype ,(first arguments))))
             ((ignore ignorable)
              (extend-env (var arguments)
                          (aif (function-name var)
-                              (make-declaration var 'function-ignorable-declaration-form :name it)
-                              (make-declaration var 'variable-ignorable-declaration-form :name var))
+                              (make-declaration 'function-ignorable-declaration-form :name it)
+                              (make-declaration 'variable-ignorable-declaration-form :name var))
                          var `(,type)))
             (inline
               (extend-env (function arguments)
-                          (make-declaration function 'function-ignorable-declaration-form :name function)
+                          (make-declaration 'function-ignorable-declaration-form :name function)
                           function `(inline)))
             (notinline
              (extend-env (function arguments)
-                         (make-declaration function 'notinline-declaration-form :name function)
+                         (make-declaration 'notinline-declaration-form :name function)
                          function `(notinline)))
             (optimize
              (extend-env (optimize-spec arguments)
-                         (make-declaration optimize-spec 'optimize-declaration-form :specification optimize-spec)
+                         (make-declaration 'optimize-declaration-form :specification optimize-spec)
                          'optimize optimize-spec))
             (special
              (extend-env (var arguments)
-                         (make-declaration var 'special-variable-declaration-form :name var)
+                         (make-declaration 'special-variable-declaration-form :name var)
                          var `(special)))
             (type
              (extend-env (var (rest arguments))
                          (make-instance 'type-declaration-form
                                         :parent parent
-                                        :source `(type ,(first arguments) ,var)
                                         :name var
                                         :type (first arguments))
                          var `(type ,(first arguments))))

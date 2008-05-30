@@ -48,23 +48,20 @@
   (let ((lexenv (cdr env)))
     (cond
       ((constant-name? form)
-       (make-instance 'constant-form :value form
-                      :parent parent :source form))
+       (make-instance 'constant-form :value form :parent parent))
       ((lookup-in-walkenv :variable form env)
-       (make-instance 'walked-lexical-variable-reference-form :name form
-                      :parent parent :source form))
+       (make-instance 'walked-lexical-variable-reference-form :name form :parent parent))
       ((lookup-in-walkenv :unwalked-variable form env)
-       (make-instance 'unwalked-lexical-variable-reference-form :name form
-                      :parent parent :source form))
+       (make-instance 'unwalked-lexical-variable-reference-form :name form :parent parent))
       ((lookup-in-walkenv :symbol-macro form env)
-       (walk-form (lookup-in-walkenv :symbol-macro form env) parent env))
+       (let ((*inside-macroexpansion* t))
+         (walk-form (lookup-in-walkenv :symbol-macro form env) parent env)))
       ((symbol-macro-name? form lexenv)
        (walk-form (walker-macroexpand-1 form lexenv) parent env))
       (t
        (unless (special-variable-name? form)
          (undefined-reference :variable form))
-       (make-instance 'free-variable-reference-form :name form
-                      :parent parent :source form)))))
+       (make-instance 'free-variable-reference-form :name form :parent parent)))))
 
 ;;;; BLOCK/RETURN-FROM
 
@@ -74,9 +71,7 @@
 (defwalker-handler block (form parent env)
   (destructuring-bind (block-name &rest body)
       (cdr form)
-    (with-form-object (block block-form
-                       :parent parent :source form
-                       :name block-name)
+    (with-form-object (block block-form :parent parent :name block-name)
       (setf (body-of block) (walk-implict-progn block
                                                 body
                                                 (augment-walkenv env :block block-name block))))))
@@ -95,7 +90,7 @@
 
 (defun walk-return (block-name value form parent env)
   (if (lookup-in-walkenv :block block-name env)
-      (with-form-object (return-from return-from-form :parent parent :source form
+      (with-form-object (return-from return-from-form :parent parent
                                      :target-block (lookup-in-walkenv :block block-name env))
         (setf (result-of return-from) (walk-form value return-from env)))
       (restart-case
@@ -126,7 +121,7 @@
 (defwalker-handler catch (form parent env)
   (destructuring-bind (tag &body body)
       (cdr form)
-    (with-form-object (catch catch-form :parent parent :source form)
+    (with-form-object (catch catch-form :parent parent)
       (setf (tag-of catch) (walk-form tag catch env)
             (body-of catch) (walk-implict-progn catch body env)))))
 
@@ -140,7 +135,7 @@
 (defwalker-handler throw (form parent env)
   (destructuring-bind (tag &optional (result '(values)))
       (cdr form)
-    (with-form-object (throw throw-form :parent parent :source form)
+    (with-form-object (throw throw-form :parent parent)
       (setf (tag-of throw) (walk-form tag throw env)
             (value-of throw) (walk-form result throw env)))))
 
@@ -155,7 +150,7 @@
 (defwalker-handler eval-when (form parent env)
   (destructuring-bind (times &body body)
       (cdr form)
-    (with-form-object (eval-when eval-when-form :parent parent :source form)
+    (with-form-object (eval-when eval-when-form :parent parent)
       (setf (eval-when-times eval-when) times
             (body-of eval-when) (walk-implict-progn eval-when body env)))))
 
@@ -171,7 +166,7 @@
    (else :accessor else-of :initarg :else)))
 
 (defwalker-handler if (form parent env)
-  (with-form-object (if if-form :parent parent :source form)
+  (with-form-object (if if-form :parent parent)
     (setf (condition-of if) (walk-form (second form) if env)
           (then-of if) (walk-form (third form) if env)
           (else-of if) (walk-form (fourth form) if env))))
@@ -188,11 +183,12 @@
   ())
 
 (defwalker-handler let (form parent env)
-  (with-form-object (let let-form :parent parent :source form)
+  (with-form-object (let let-form :parent parent)
     (setf (bindings-of let) (mapcar (lambda (binding)
-                                      (destructuring-bind (var &optional initial-value)
-                                          (ensure-list binding)
-                                        (cons var (walk-form initial-value let env))))
+                                      (with-current-form binding
+                                        (destructuring-bind (var &optional initial-value)
+                                            (ensure-list binding)
+                                          (cons var (walk-form initial-value let env)))))
                                     (second form)))
     (multiple-value-bind (b e d declarations)
         (split-body (cddr form) env :parent let :declare t)
@@ -219,7 +215,7 @@
   ())
 
 (defwalker-handler let* (form parent env)
-  (with-form-object (let* let*-form :parent parent :source form :bindings '())
+  (with-form-object (let* let*-form :parent parent :bindings '())
     (dolist* ((var &optional initial-value) (mapcar #'ensure-list (second form)))
       (push (cons var (walk-form initial-value let* env)) (bindings-of let*))
       (augment-walkenv! env :variable var :dummy))
@@ -240,7 +236,7 @@
   ())
 
 (defwalker-handler locally (form parent env)
-  (with-form-object (locally locally-form :parent parent :source form)
+  (with-form-object (locally locally-form :parent parent)
     (multiple-value-setf ((body-of locally) _ (declares-of locally))
       (walk-implict-progn locally (cdr form) env :declare t))))
 
@@ -254,8 +250,8 @@
   ())
 
 (defwalker-handler macrolet (form parent env)
-  (with-form-object (macrolet macrolet-form :parent parent :source form
-                              :bindings '())
+  ;; TODO is there any point in constructing a macrolet form if we macroexpand the body anyways?
+  (with-form-object (macrolet macrolet-form :parent parent :bindings '())
     (dolist* ((name args &body body) (second form))
       (let ((handler (parse-macro-definition name args body (cdr env))))
         (augment-walkenv! env :macro name handler)
@@ -277,7 +273,7 @@
    (arguments :accessor arguments-of :initarg :arguments)))
 
 (defwalker-handler multiple-value-call (form parent env)
-  (with-form-object (m-v-c multiple-value-call-form :parent parent :source form)
+  (with-form-object (m-v-c multiple-value-call-form :parent parent)
     (setf (function-designator-of m-v-c) (walk-form (second form) m-v-c env)
           (arguments-of m-v-c) (mapcar (lambda (f) (walk-form f m-v-c env))
                                        (cddr form)))))
@@ -292,7 +288,7 @@
    (other-forms :accessor other-forms-of :initarg :other-forms)))
 
 (defwalker-handler multiple-value-prog1 (form parent env)
-  (with-form-object (m-v-p1 multiple-value-prog1-form :parent parent :source form)
+  (with-form-object (m-v-p1 multiple-value-prog1-form :parent parent)
     (setf (first-form-of m-v-p1) (walk-form (second form) m-v-p1 env)
           (other-forms-of m-v-p1) (mapcar (lambda (f) (walk-form f m-v-p1 env))
                                        (cddr form)))))
@@ -306,7 +302,7 @@
   ())
 
 (defwalker-handler progn (form parent env)
-  (with-form-object (progn progn-form :parent parent :source form)
+  (with-form-object (progn progn-form :parent parent)
     (setf (body-of progn) (walk-implict-progn progn (cdr form) env))))
 
 (defunwalker-handler progn-form (body)
@@ -319,7 +315,7 @@
    (values-form :accessor values-form-of :initarg :values-form)))
 
 (defwalker-handler progv (form parent env)
-  (with-form-object (progv progv-form :parent parent :source form)
+  (with-form-object (progv progv-form :parent parent)
     (setf (variables-form-of progv) (walk-form (cadr form) progv env))
     (setf (values-form-of progv) (walk-form (caddr form) progv env))
     (setf (body-of progv) (walk-implict-progn progv (cdddr form) env))
@@ -331,7 +327,7 @@
 ;;;; QUOTE
 
 (defwalker-handler quote (form parent env)
-  (make-instance 'constant-form :parent parent :source form :value (second form)))
+  (make-instance 'constant-form :parent parent :value (second form)))
 
 ;;;; SETQ
 
@@ -359,12 +355,12 @@
         (destructuring-bind (type variable value)
             (first effective-code)
           (ecase type
-            (setq (with-form-object (setq setq-form :parent parent :source form)
+            (setq (with-form-object (setq setq-form :parent parent)
                     (setf (variable-of setq) (walk-form variable setq env))
                     (setf (value-of setq) (walk-form value setq env))))
             (setf (walk-form (first effective-code) parent env))))
         ;; multiple forms
-        (with-form-object (progn progn-form :parent parent :source form)
+        (with-form-object (progn progn-form :parent parent)
           (setf (body-of progn) (walk-implict-progn progn effective-code env))))))
 
 (defunwalker-handler setq-form (variable value)
@@ -376,8 +372,7 @@
   ())
 
 (defwalker-handler symbol-macrolet (form parent env)
-  (with-form-object (symbol-macrolet symbol-macrolet-form :parent parent :source form
-                                     :bindings '())
+  (with-form-object (symbol-macrolet symbol-macrolet-form :parent parent :bindings '())
     (dolist* ((symbol expansion) (second form))
       (augment-walkenv! env :symbol-macro symbol expansion)
       (push (cons symbol expansion) (bindings-of symbol-macrolet)))
@@ -397,7 +392,7 @@
   ())
 
 (defwalker-handler tagbody (form parent env)
-  (with-form-object (tagbody tagbody-form :parent parent :source form :body (cdr form))
+  (with-form-object (tagbody tagbody-form :parent parent :body (cdr form))
     (augment-walkenv! env :tagbody 'enclosing-tagbody tagbody)
     (flet ((go-tag-p (form)
              (or (symbolp form) (integerp form))))
@@ -411,9 +406,10 @@
       (loop
          :for part :on (body-of tagbody)
          :if (go-tag-p (car part))
-           :do (setf (car part) (make-instance 'go-tag-form :parent tagbody
-                                               :source (car part)
-                                               :name (car part)))
+         :do (setf (car part) (with-current-form (car part)
+                                (make-instance 'go-tag-form
+                                               :parent tagbody
+                                               :name (car part))))
          :else
            :do (setf (car part) (walk-form (car part) tagbody env))))))
 
@@ -434,7 +430,6 @@
 (defwalker-handler go (form parent env)
   (make-instance 'go-form
                  :parent parent
-                 :source form
                  :name (second form)
                  :jump-target (lookup-in-walkenv :tag (second form) env)
                  :enclosing-tagbody (lookup-in-walkenv :tagbody 'enclosing-tagbody env)))
@@ -449,8 +444,7 @@
    (value :accessor value-of :initarg :value)))
 
 (defwalker-handler the (form parent env)
-  (with-form-object (the the-form :parent parent :source form
-                                  :type (second form))
+  (with-form-object (the the-form :parent parent :type (second form))
     (setf (value-of the) (walk-form (third form) the env))))
 
 (defunwalker-handler the-form (type value)
@@ -463,8 +457,7 @@
    (cleanup-form :accessor cleanup-form-of :initarg :cleanup-form)))
 
 (defwalker-handler unwind-protect (form parent env)
-  (with-form-object (unwind-protect unwind-protect-form :parent parent
-                                    :source form)
+  (with-form-object (unwind-protect unwind-protect-form :parent parent)
     (setf (protected-form-of unwind-protect) (walk-form (second form) unwind-protect env)
           (cleanup-form-of unwind-protect) (walk-implict-progn unwind-protect (cddr form) env))))
 
