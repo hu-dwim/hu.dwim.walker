@@ -82,6 +82,12 @@
 (defunwalker-handler unknown-declaration-form (source)
   source)
 
+(defvar *known-declaration-types* (append
+                                   #+sbcl
+                                   '(sb-ext:muffle-conditions
+                                     )
+                                   ))
+
 (defun walk-declaration (declaration environment parent)
   (let ((declares nil))
     (flet ((function-name (form)
@@ -141,9 +147,10 @@
                                         :type (first arguments))
                          var `(type ,(first arguments))))
             (t
-             (simple-style-warning "Ignoring unknown declaration ~S while walking forms. If it's a type declaration, then use the full form to avoid the warning: `(type ,type ,@variables)!"
-                                   declaration)
-             (push (make-instance 'unknown-declaration-form :parent parent :source declaration) declares))))))
+             (unless (member type *known-declaration-types* :test #'eq)
+               (simple-style-warning "Ignoring unknown declaration ~S while walking forms. If it's a type declaration, then use the full form to avoid this warning: `(type ,type ,@variables), or you can also (pushnew ~S ~S)."
+                                     declaration type '*known-declaration-types*))
+             (push (make-instance 'unknown-declaration-form :parent parent) declares))))))
     (values environment declares)))
 
 (defun unwalk-declarations (decls)
