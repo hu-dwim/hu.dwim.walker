@@ -9,10 +9,10 @@
 (defsuite* (test/utils :in test))
 
 (deftest test-collect-variable-references (form expected-count)
-  (bind ((*warn-for-undefined-references* nil)
-         (ast (walk-form form)))
-    (is (= expected-count
-           (length (collect-variable-references ast))))))
+  (with-walker-configuration (:undefined-reference-handler nil)
+    (bind ((ast (walk-form form)))
+      (is (= expected-count
+             (length (collect-variable-references ast)))))))
 
 (deftest test/utils/collect-variable-references/1 ()
   (loop

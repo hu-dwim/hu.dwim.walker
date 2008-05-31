@@ -25,7 +25,7 @@
 
 (defmacro define-walk-unwalk-test (name &body body)
   `(deftest ,name ()
-     (bind ((*warn-for-undefined-references* nil))
+     (with-walker-configuration (:undefined-reference-handler nil)
        ,@(loop
             :for entry :in body
             :collect (if (and (consp entry)
@@ -73,10 +73,16 @@
   (check-walk-unwalk
    '(lambda () (declare))
    '#'(lambda ()))
-  (with-expected-failures
-    (check-walk-unwalk
-     '(lambda () (declare (ignorable)))
-     '#'(lambda ()))))
+  (check-walk-unwalk
+   '(macrolet ((x (&body body)
+                `(locally
+                     (declare (unknown abc))
+                   ,@body)))
+     (x 42))
+   '(locally (locally (declare (unknown abc)) 42)))
+  (check-walk-unwalk
+   '(lambda () (declare (ignorable)))
+   '#'(lambda ())))
 
 (define-walk-unwalk-test test/lambda-function
   #'(lambda (x y) (y x))

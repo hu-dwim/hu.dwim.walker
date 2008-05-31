@@ -15,7 +15,7 @@
         ))
 
 (import
- '(*warn-for-undefined-references*)
+ '()
  :cl-walker-test)
 
 (in-package :cl-walker-test)
