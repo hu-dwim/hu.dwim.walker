@@ -85,6 +85,16 @@
      ,@(unwalk-declarations declares)
      ,@(unwalk-forms body))))
 
+(defclass named-lambda-function-form (lambda-function-form)
+  ((special-form :accessor special-form-of :initarg :special-form)
+   (name :accessor name-of :initarg :name)))
+
+(defunwalker-handler named-lambda-function-form (special-form name arguments body declares)
+  `(function
+    (,special-form ,name ,(unwalk-lambda-list arguments)
+     ,@(unwalk-declarations declares)
+     ,@(unwalk-forms body))))
+
 (defclass function-object-form (walked-form)
   ((name :accessor name-of :initarg :name)))
 
@@ -104,17 +114,29 @@
   ())
 
 (defwalker-handler function (form parent env)
-  (if (lambda-form? (second form))
-      ;; (function (lambda ...))
-      (walk-lambda (second form) parent env)
-      ;; (function foo)
-      (make-instance (if (lookup-in-walkenv :function (second form) env)
-                         'walked-lexical-function-object-form
-                         (if (lookup-in-walkenv :unwalked-function (second form) env)
-                             'unwalked-lexical-function-object-form
-                             'free-function-object-form))
-                     :name (second form)
-                     :parent parent)))
+  (cond
+    ((lambda-form? (second form))
+     ;; (function (lambda ...))
+     (walk-lambda (second form) parent env))
+    #+sbcl
+    ((and (consp (second form))
+          (eq (first (second form)) 'sb-int:named-lambda))
+     (let ((named-lambda-form (second form)))
+       (with-form-object (node named-lambda-function-form
+                               :special-form (first named-lambda-form)
+                               :name (second named-lambda-form)
+                               :parent parent)
+         (walk-lambda-like node (third named-lambda-form)
+                           (nthcdr 3 named-lambda-form) env))))
+    (t
+     ;; (function foo)
+     (make-instance (if (lookup-in-walkenv :function (second form) env)
+                        'walked-lexical-function-object-form
+                        (if (lookup-in-walkenv :unwalked-function (second form) env)
+                            'unwalked-lexical-function-object-form
+                            'free-function-object-form))
+                    :name (second form)
+                    :parent parent))))
 
 (defun walk-lambda (form parent env)
   (with-form-object (ast-node lambda-function-form :parent parent)
