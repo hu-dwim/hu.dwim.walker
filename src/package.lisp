@@ -75,6 +75,7 @@
    #:walked-form
    #:walk-ast
    #:walk-form
+   #:walk-lambda
    #:walk-lambda-like
    #:unwalk-form
    #:unwalk-forms
