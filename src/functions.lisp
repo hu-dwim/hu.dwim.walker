@@ -139,8 +139,9 @@
                     :parent parent))))
 
 (defun walk-lambda (form parent env)
-  (with-form-object (ast-node lambda-function-form :parent parent)
-    (walk-lambda-like ast-node (second form) (cddr form) env)))
+  (with-current-form form
+    (with-form-object (ast-node lambda-function-form :parent parent)
+      (walk-lambda-like ast-node (second form) (cddr form) env))))
 
 (defun walk-lambda-like (ast-node args body env)
   (multiple-value-setf ((arguments-of ast-node) env)
