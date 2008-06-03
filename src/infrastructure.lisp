@@ -269,14 +269,14 @@
 
 (defmacro defwalker-handler (name (form parent lexenv)
                              &body body)
-  `(progn
-     (setf (walker-handler-definition ',name)
-           (named-lambda ,(format-symbol *package* "WALKER-HANDLER/~A" name)
-               (,form ,parent ,lexenv)
-             (declare (ignorable ,parent ,lexenv))
-             (with-current-form ,form
-               ,@body)))
-     ',name))
+  (let ((function-name (format-symbol *package* "WALKER-HANDLER/~A" name)))
+    `(progn
+       (defun ,function-name (,form ,parent ,lexenv)
+         (declare (ignorable ,parent ,lexenv))
+         (with-current-form ,form
+           ,@body))
+       (setf (walker-handler-definition ',name) ',function-name)
+       ',name)))
 
 (defmacro defwalker-handler-alias (from-name to-name)
   `(progn
