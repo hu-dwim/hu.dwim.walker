@@ -45,7 +45,10 @@
   ()
   (:documentation "A reference to a local variable defined in the lexical environment outside of the form passed to walk-form."))
 
-(defclass free-variable-reference-form (variable-reference-form)
+(defclass special-variable-reference-form (variable-reference-form)
+  ())
+
+(defclass free-variable-reference-form (special-variable-reference-form)
   ())
 
 (defwalker-handler +atom-marker+ (form parent env)
@@ -53,18 +56,30 @@
     (cond
       ((constant-name? form)
        (make-instance 'constant-form :value form :parent parent))
-      ((lookup-in-walkenv :variable form env)
-       (make-instance 'walked-lexical-variable-reference-form :name form :parent parent))
-      ((lookup-in-walkenv :unwalked-variable form env)
-       (make-instance 'unwalked-lexical-variable-reference-form :name form :parent parent))
       ((lookup-in-walkenv :symbol-macro form env)
        (let ((*inside-macroexpansion* t))
          (walk-form (lookup-in-walkenv :symbol-macro form env) parent env)))
       ((symbol-macro-name? form lexenv)
        (walk-form (walker-macroexpand-1 form lexenv) parent env))
+      ((or (special-variable-name? form)
+           (loop
+              :for node = parent :then (parent-of node)
+              :while node
+              :do (progn
+                    (when (and (typep node 'implicit-progn-with-declare-mixin)
+                               (progn
+                                 (find-if (lambda (declare)
+                                            (and (typep declare 'special-variable-declaration-form)
+                                                 (eq (name-of declare) form)))
+                                          (declares-of node))))
+                      (return t)))))
+       (make-instance 'special-variable-reference-form :name form :parent parent))
+      ((lookup-in-walkenv :variable form env)
+       (make-instance 'walked-lexical-variable-reference-form :name form :parent parent))
+      ((lookup-in-walkenv :unwalked-variable form env)
+       (make-instance 'unwalked-lexical-variable-reference-form :name form :parent parent))
       (t
-       (unless (special-variable-name? form)
-         (undefined-reference :variable form))
+       (undefined-reference :variable form)
        (make-instance 'free-variable-reference-form :name form :parent parent)))))
 
 ;;;; BLOCK/RETURN-FROM
@@ -199,10 +214,11 @@
       (declare (ignore b e d))
       (loop
          :for (var . value) :in (bindings-of let)
-         :do (unless (find-if (lambda (declaration)
-                                (and (typep declaration 'special-variable-declaration-form)
-                                     (eq var (name-of declaration))))
-                              declarations)
+         :do (unless (or (special-variable-name? var)
+                         (find-if (lambda (declaration)
+                                    (and (typep declaration 'special-variable-declaration-form)
+                                         (eq var (name-of declaration))))
+                                  declarations))
                ;; TODO audit this part, :dummy? check other occurrances, too!
                (augment-walkenv! env :variable var :dummy)))
       (walk-implict-progn let (cddr form) env :declare t))))

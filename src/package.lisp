@@ -109,6 +109,7 @@
    #:lexical-variable-reference-form
    #:walked-lexical-variable-reference-form
    #:unwalked-lexical-variable-reference-form
+   #:special-variable-reference-form
    #:free-variable-reference-form
 
    #:application-form
