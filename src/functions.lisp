@@ -146,8 +146,7 @@
 (defun walk-lambda-like (ast-node args body env)
   (multiple-value-setf ((arguments-of ast-node) env)
     (walk-lambda-list args ast-node env))
-  (multiple-value-setf ((body-of ast-node) _ (declares-of ast-node))
-    (walk-implict-progn ast-node body env :declare t))
+  (walk-implict-progn ast-node body env :declare t)
   ast-node)
 
 (defun walk-lambda-list (lambda-list parent env &key allow-specializers macro-p)
@@ -325,15 +324,14 @@
          :collect (cons name (walk-form `(lambda ,args ,@body) flet env)) :into bindings
          :finally (setf (bindings-of flet) bindings))
       ;; walk the body in the new env
-      (multiple-value-setf ((body-of flet) _ (declares-of flet))
-        (walk-implict-progn flet
-                            body
-                            (loop
-                               :with env = env
-                               :for (name . lambda) :in (bindings-of flet)
-                               :do (augment-walkenv! env :function name lambda)
-                               :finally (return env))
-                            :declare t)))))
+      (walk-implict-progn flet
+                          body
+                          (loop
+                             :with env = env
+                             :for (name . lambda) :in (bindings-of flet)
+                             :do (augment-walkenv! env :function name lambda)
+                             :finally (return env))
+                          :declare t))))
 
 ;; TODO factor out stuff in flet-form and labels-form
 (defunwalker-handler flet-form (bindings body declares)
@@ -376,8 +374,7 @@
          :do (setf (body-of lambda) (body-of tmp-lambda)
                    (arguments-of lambda) (arguments-of tmp-lambda)
                    (declares-of lambda) (declares-of tmp-lambda)))
-      (multiple-value-setf ((body-of labels) _ (declares-of labels))
-        (walk-implict-progn labels body env :declare t)))))
+      (walk-implict-progn labels body env :declare t))))
 
 (defunwalker-handler labels-form (bindings body declares)
   `(labels ,(mapcar (lambda (bind)

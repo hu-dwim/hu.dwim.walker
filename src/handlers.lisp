@@ -72,9 +72,9 @@
   (destructuring-bind (block-name &rest body)
       (cdr form)
     (with-form-object (block block-form :parent parent :name block-name)
-      (setf (body-of block) (walk-implict-progn block
-                                                body
-                                                (augment-walkenv env :block block-name block))))))
+      (walk-implict-progn block
+                          body
+                          (augment-walkenv env :block block-name block)))))
 
 (defunwalker-handler block-form (name body)
   `(block ,name ,@(unwalk-forms body)))
@@ -122,8 +122,8 @@
   (destructuring-bind (tag &body body)
       (cdr form)
     (with-form-object (catch catch-form :parent parent)
-      (setf (tag-of catch) (walk-form tag catch env)
-            (body-of catch) (walk-implict-progn catch body env)))))
+      (setf (tag-of catch) (walk-form tag catch env))
+      (walk-implict-progn catch body env))))
 
 (defunwalker-handler catch-form (tag body)
   `(catch ,(unwalk-form tag) ,@(unwalk-forms body)))
@@ -151,8 +151,8 @@
   (destructuring-bind (times &body body)
       (cdr form)
     (with-form-object (eval-when eval-when-form :parent parent)
-      (setf (eval-when-times eval-when) times
-            (body-of eval-when) (walk-implict-progn eval-when body env)))))
+      (setf (eval-when-times eval-when) times)
+      (walk-implict-progn eval-when body env))))
 
 (defunwalker-handler eval-when-form (body eval-when-times)
   `(eval-when ,eval-when-times
@@ -201,8 +201,7 @@
                               declarations)
                ;; TODO audit this part, :dummy? check other occurrances, too!
                (augment-walkenv! env :variable var :dummy)))
-      (multiple-value-setf ((body-of let) _ (declares-of let))
-                           (walk-implict-progn let (cddr form) env :declare t)))))
+      (walk-implict-progn let (cddr form) env :declare t))))
 
 (defunwalker-handler let-form (bindings body declares)
   `(let ,(mapcar (lambda (bind)
@@ -220,8 +219,7 @@
       (push (cons var (walk-form initial-value let* env)) (bindings-of let*))
       (augment-walkenv! env :variable var :dummy))
     (setf (bindings-of let*) (nreverse (bindings-of let*)))
-    (multiple-value-setf ((body-of let*) _ (declares-of let*))
-      (walk-implict-progn let* (cddr form) env :declare t))))
+    (walk-implict-progn let* (cddr form) env :declare t)))
 
 (defunwalker-handler let*-form (bindings body declares)
   `(let* ,(mapcar (lambda (bind)
@@ -237,8 +235,7 @@
 
 (defwalker-handler locally (form parent env)
   (with-form-object (locally locally-form :parent parent)
-    (multiple-value-setf ((body-of locally) _ (declares-of locally))
-      (walk-implict-progn locally (cdr form) env :declare t))))
+    (walk-implict-progn locally (cdr form) env :declare t)))
 
 (defunwalker-handler locally-form (body declares)
   `(locally ,@(unwalk-declarations declares)
@@ -257,8 +254,7 @@
         (augment-walkenv! env :macro name handler)
         (push (cons name handler) (bindings-of macrolet))))
     (setf (bindings-of macrolet) (nreverse (bindings-of macrolet)))
-    (multiple-value-setf ((body-of macrolet) _ (declares-of macrolet))
-      (walk-implict-progn macrolet (cddr form) env :declare t))))
+    (walk-implict-progn macrolet (cddr form) env :declare t)))
 
 (defunwalker-handler macrolet-form (body bindings declares)
   ;; We ignore the bindings, because the expansion has already taken
@@ -303,7 +299,7 @@
 
 (defwalker-handler progn (form parent env)
   (with-form-object (progn progn-form :parent parent)
-    (setf (body-of progn) (walk-implict-progn progn (cdr form) env))))
+    (walk-implict-progn progn (cdr form) env)))
 
 (defunwalker-handler progn-form (body)
   `(progn ,@(unwalk-forms body)))
@@ -318,7 +314,7 @@
   (with-form-object (progv progv-form :parent parent)
     (setf (variables-form-of progv) (walk-form (cadr form) progv env))
     (setf (values-form-of progv) (walk-form (caddr form) progv env))
-    (setf (body-of progv) (walk-implict-progn progv (cdddr form) env))
+    (walk-implict-progn progv (cdddr form) env)
     progv))
 
 (defunwalker-handler progv-form (body variables-form values-form)
@@ -361,7 +357,7 @@
             (setf (walk-form (first effective-code) parent env))))
         ;; multiple forms
         (with-form-object (progn progn-form :parent parent)
-          (setf (body-of progn) (walk-implict-progn progn effective-code env))))))
+          (walk-implict-progn progn effective-code env)))))
 
 (defunwalker-handler setq-form (variable value)
   `(setq ,(unwalk-form variable) ,(unwalk-form value)))
@@ -377,8 +373,7 @@
       (augment-walkenv! env :symbol-macro symbol expansion)
       (push (cons symbol expansion) (bindings-of symbol-macrolet)))
     (setf (bindings-of symbol-macrolet) (nreverse (bindings-of symbol-macrolet)))
-    (multiple-value-setf ((body-of symbol-macrolet) _ (declares-of symbol-macrolet))
-      (walk-implict-progn symbol-macrolet (cddr form) env :declare t))))
+    (walk-implict-progn symbol-macrolet (cddr form) env :declare t)))
 
 (defunwalker-handler symbol-macrolet-form (body bindings declares)
   ;; We ignore the bindings, because the expansion has already taken
@@ -459,7 +454,9 @@
 (defwalker-handler unwind-protect (form parent env)
   (with-form-object (unwind-protect unwind-protect-form :parent parent)
     (setf (protected-form-of unwind-protect) (walk-form (second form) unwind-protect env)
-          (cleanup-form-of unwind-protect) (walk-implict-progn unwind-protect (cddr form) env))))
+          (cleanup-form-of unwind-protect) (mapcar (lambda (form)
+                                                     (walk-form form unwind-protect env))
+                                                   (cddr form)))))
 
 (defunwalker-handler unwind-protect-form (protected-form cleanup-form)
   `(unwind-protect ,(unwalk-form protected-form) ,@(unwalk-forms cleanup-form)))

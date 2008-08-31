@@ -10,7 +10,7 @@
   ((body :accessor body-of :initarg :body)))
 
 (defclass implicit-progn-with-declare-mixin (implicit-progn-mixin)
-  ((declares :accessor declares-of :initarg :declares)))
+  ((declares :initform nil :accessor declares-of :initarg :declares)))
 
 (defclass binding-form-mixin ()
   ((bindings :accessor bindings-of :initarg :bindings)))
@@ -146,7 +146,6 @@
                          var `(type ,(first arguments))))
             (t
              (unless (member type *known-declaration-types* :test #'eq)
-               
                (simple-style-warning "Ignoring unknown declaration ~S while walking forms. If it's a type declaration, then use the full form to avoid this warning: `(type ,type ,@variables), or you can also (pushnew ~S ~S)."
                                      declaration type '*known-declaration-types*))
              (push (make-instance 'unknown-declaration-form :parent parent
@@ -161,15 +160,19 @@
       (list `(declare ,@(unwalk-forms decls)))))
 
 (defun walk-implict-progn (parent forms env &key docstring declare)
+  (assert (and (typep parent 'implicit-progn-mixin)
+               (or (not declare)
+                   (typep parent 'implicit-progn-with-declare-mixin))))
   (handler-bind ((undefined-reference
                   (lambda (condition)
                     (unless (enclosing-code-of condition)
-                      (setf (enclosing-code-of condition) `(progn ,@forms))))))
+                      (setf (enclosing-code-of condition) `(some-implicit-progn-form ,@forms))))))
     (multiple-value-bind (body env docstring declarations)
         (split-body forms env :parent parent :docstring docstring :declare declare)
-      (values (mapcar (lambda (form)
-                        (walk-form form parent env))
-                      body)
-              docstring
-              declarations))))
+      (when declare
+        (setf (declares-of parent) declarations))
+      (setf (body-of parent) (mapcar (lambda (form)
+                                       (walk-form form parent env))
+                                     body))
+      docstring)))
 
