@@ -20,6 +20,10 @@
         (cons   `(quote ,value))
         (t value))))
 
+(defmethod print-object ((node constant-form) stream)
+  (print-unreadable-object (node stream :type t :identity t)
+    (format stream "~S" (value-of node))))
+
 (defclass variable-reference-form (walked-form)
   ((name :accessor name-of :initarg :name)))
 
