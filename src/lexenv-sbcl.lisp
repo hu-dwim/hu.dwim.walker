@@ -15,18 +15,21 @@
 ;;;
 ;;; iteration
 ;;;
-(defun iterate-variables-in-lexenv (visitor lexenv &key include-ignored)
+(defun iterate-variables-in-lexenv (visitor lexenv &key include-ignored? include-specials?)
   (loop
      :for entry :in (sb-c::lexenv-vars lexenv)
      :for name = (first entry)
      :for definition = (rest entry)
      :for ignored? = (and (typep definition 'sb-c::lambda-var)
                           (sb-c::lambda-var-ignorep definition))
+     :for special? = (typep definition 'sb-c::global-var)
      :unless (and (consp definition)
                   (eq 'sb-sys::macro (first definition)))
-     :do (when (or (not ignored?)
-                   include-ignored)
-           (funcall visitor name ignored?))))
+     :do (when (and (or (not ignored?)
+                        include-ignored?)
+                    (or (not special?)
+                        include-specials?))
+           (funcall visitor name :ignored? ignored? :special? special?))))
 
 (defun iterate-functions-in-lexenv (visitor lexenv)
   (loop

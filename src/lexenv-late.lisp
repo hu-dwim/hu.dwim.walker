@@ -8,7 +8,7 @@
 
 (defparameter *lexical-environment-functions*
   '((make-empty-lexical-environment  "Returns an empty lexical environment useful for testing and playing around in the repl.")
-    (iterate-variables-in-lexenv     "(funcall VISITOR name ignored?) for each variable definition in LEXENV.")
+    (iterate-variables-in-lexenv     "(funcall VISITOR name &key ignored? special?) for each variable definition in LEXENV.")
     (iterate-functions-in-lexenv     "(funcall VISITOR name) for each function definition in LEXENV.")
     (iterate-macros-in-lexenv        "(funcall VISITOR name macro-function) for each macro definition in LEXENV.")
     (iterate-symbol-macros-in-lexenv "(funcall VISITOR name macro-function) for each symbol macro definition in LEXENV.")
@@ -88,34 +88,39 @@
 ;;;
 ;;; variables
 ;;;
-(defmacro do-variables-in-lexenv ((lexenv name &optional (ignored? (gensym) ignored-provided?))
+(defmacro do-variables-in-lexenv ((lexenv name &optional
+                                          (ignored? (gensym) ignored-provided?)
+                                          (special? (gensym) special-provided?))
                                   &body body)
   `(iterate-variables-in-lexenv
-    (lambda (,name ,ignored?)
-      ,@(unless ignored-provided?
-        `((declare (ignore ,ignored?))))
+    (lambda (,name &key ((:ignored? ,ignored?) nil) ((:special? ,special?) nil))
+      (declare (ignorable ,@(unless ignored-provided? (list ignored?))
+                          ,@(unless special-provided? (list special?))))
       ,@body)
     ,lexenv
-    :include-ignored ,ignored-provided?))
+    :include-ignored? ,ignored-provided?
+    :include-specials? ,special-provided?))
 
-(defun collect-variables-in-lexenv (lexenv &key include-ignored filter)
+(defun collect-variables-in-lexenv (lexenv &key include-ignored? include-specials? filter)
   (let ((result (list)))
     (iterate-variables-in-lexenv
-     (lambda (name ignored?)
+     (lambda (name &key ignored? special? &allow-other-keys)
        (when (or (not filter)
-                 (funcall filter name ignored?))
+                 (funcall filter name :ignored? ignored? :special? special?))
          (push name result)))
      lexenv
-     :include-ignored include-ignored)
+     :include-ignored? include-ignored?
+     :include-specials? include-specials?)
     (nreverse result)))
 
-(defun find-variable-in-lexenv (name-to-find lexenv &key include-ignored)
+(defun find-variable-in-lexenv (name-to-find lexenv &key include-ignored? include-specials?)
   (iterate-variables-in-lexenv
-   (lambda (name ignored?)
+   (lambda (name &key ignored? &allow-other-keys)
      (when (eq name name-to-find)
        (return-from find-variable-in-lexenv (values name ignored?))))
    lexenv
-   :include-ignored include-ignored)
+   :include-ignored? include-ignored?
+   :include-specials? include-specials?)
   (values nil))
 
 ;;;
