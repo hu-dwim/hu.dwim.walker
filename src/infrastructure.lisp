@@ -325,16 +325,20 @@
             (*print-length* 4))
         (format stream "~S" (source-of form))))))
 
-(defmacro with-form-object ((variable type &rest initargs)
-                            &body body)
+(defmacro make-form-object (type parent &rest initargs)
   (with-unique-names (custom-type)
-    `(let* ((,custom-type (awhen (ast-node-type-mapping-of *walker-context*)
-                            (gethash ',type it)))
-            (,variable (if ,custom-type
-                           (make-instance ,custom-type ,@initargs)
-                           (make-instance ',type ,@initargs))))
-       ,@body
-       ,variable)))
+    (appendf initargs `(:parent ,parent))
+    `(let ((,custom-type (awhen (ast-node-type-mapping-of *walker-context*)
+                           (gethash ,type it))))
+       (if ,custom-type
+           (make-instance ,custom-type ,@initargs)
+           (make-instance ,type ,@initargs)))))
+
+(defmacro with-form-object ((variable type parent &rest initargs)
+                            &body body)
+  `(let ((,variable (make-form-object ,type ,parent ,@initargs)))
+     ,@body
+     ,variable))
 
 (defmacro multiple-value-setf (places form)
   `(let (_)

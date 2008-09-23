@@ -96,7 +96,7 @@
                  (second form)
                  nil)))
       (macrolet ((make-declaration (formclass &rest rest)
-                   `(make-instance ,formclass :parent parent ,@rest))
+                   `(make-form-object ,formclass parent ,@rest))
                  (extend-env ((var list) newdeclare &rest datum)
                    `(dolist (,var ,list)
                       (push ,newdeclare declares)
@@ -110,10 +110,9 @@
                          var `(dynamic-extent)))
             (ftype
              (extend-env (function-name (cdr arguments))
-                         (make-instance 'ftype-declaration-form
-                                        :parent parent
-                                        :name function-name
-                                        :type (first arguments))
+                         (make-form-object 'ftype-declaration-form parent
+                                           :name function-name
+                                           :type (first arguments))
                          function-name `(ftype ,(first arguments))))
             ((ignore ignorable)
              (extend-env (var arguments)
@@ -139,17 +138,16 @@
                          var `(special)))
             (type
              (extend-env (var (rest arguments))
-                         (make-instance 'type-declaration-form
-                                        :parent parent
-                                        :name var
-                                        :type (first arguments))
+                         (make-form-object 'type-declaration-form parent
+                                           :name var
+                                           :type (first arguments))
                          var `(type ,(first arguments))))
             (t
              (unless (member type *known-declaration-types* :test #'eq)
                (simple-style-warning "Ignoring unknown declaration ~S while walking forms. If it's a type declaration, then use the full form to avoid this warning: `(type ,type ,@variables), or you can also (pushnew ~S ~S)."
                                      declaration type '*known-declaration-types*))
-             (push (make-instance 'unknown-declaration-form :parent parent
-                                  :declaration-form declaration)
+             (push (make-form-object 'unknown-declaration-form parent
+                                     :declaration-form declaration)
                    declares))))))
     (values environment declares)))
 
