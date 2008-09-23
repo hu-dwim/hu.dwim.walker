@@ -20,6 +20,4 @@
 
 (in-package :cl-walker-test)
 
-(in-root-suite)
-
-(defsuite* test)
+(defsuite* (test :in root-suite))
