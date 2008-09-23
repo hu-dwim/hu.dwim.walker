@@ -56,7 +56,8 @@
    (constant-name?              (constant-name?-of *walker-context*))
    (lambda-form?                (lambda-form?-of *walker-context*))
    (undefined-reference-handler (undefined-reference-handler-of *walker-context*))
-   (store-source?               (store-source? *walker-context*) :type boolean)))
+   (store-source?               (store-source? *walker-context*) :type boolean)
+   (ast-node-type-mapping       (ast-node-type-mapping-of *walker-context*) :documentation "Should be an 'eq hashtable mapping from the cl-walker node class name to a custom class")))
 
 ;; macroexpansion of the above defclass*
 (defclass walker-context ()
@@ -69,7 +70,8 @@
    (lambda-form? :initform (lambda-form?-of *walker-context*) :accessor lambda-form?-of :initarg :lambda-form?)
    (undefined-reference-handler :initform (undefined-reference-handler-of *walker-context*) :accessor undefined-reference-handler-of :initarg
                                 :undefined-reference-handler)
-   (store-source? :initform (store-source? *walker-context*) :accessor store-source? :initarg :store-source? :type boolean)))
+   (store-source? :initform (store-source? *walker-context*) :accessor store-source? :initarg :store-source? :type boolean)
+   (ast-node-type-mapping :initform (ast-node-type-mapping-of *walker-context*) :accessor ast-node-type-mapping-of :initarg :ast-node-type-mapping :documentation "Should be an 'eq hashtable mapping from the cl-walker node class name to a custom class")))
 
 (setf *walker-context* (make-instance 'walker-context
                                       :find-walker-handler         'find-walker-handler
@@ -80,7 +82,26 @@
                                       :constant-name?              '%constant-name?
                                       :lambda-form?                '%lambda-form?
                                       :undefined-reference-handler 'undefined-reference-handler
-                                      :store-source?                t))
+                                      :store-source?               t
+                                      :ast-node-type-mapping       nil))
+
+(defun collect-standard-walked-form-subclasses ()
+  "Returns a list of all the subclasses of cl-walker:walked-form whose name is in the cl-walker package. This is useful if you want to generate a complete AST-NODE-TYPE-MAPPING hashtable with a mixin in the class of each walked node."
+  (let ((class-direct-subclasses (or (and (find-package :closer-mop)
+                                          (find-symbol (symbol-name '#:class-direct-subclasses) :closer-mop))
+                                     #+sbcl 'sb-mop:class-direct-subclasses
+                                     #-sbcl (error "Please provide a CLASS-DIRECT-SUBCLASSES for your lisp or load closer-mop"))))
+    (remove-duplicates
+     (remove-if (lambda (class)
+                  (not (eq (symbol-package (class-name class)) #.(find-package :cl-walker))))
+                (labels ((collect-subclasses (class)
+                           (let ((direct-subclasses (funcall class-direct-subclasses class)))
+                             (nconc
+                              (copy-list direct-subclasses)
+                              (loop
+                                 :for subclass :in direct-subclasses
+                                 :nconc (collect-subclasses subclass))))))
+                  (collect-subclasses (find-class 'walked-form)))))))
 
 (defun find-walker-handler* (name)
   (funcall (find-walker-handler-of *walker-context*) name))
@@ -306,9 +327,14 @@
 
 (defmacro with-form-object ((variable type &rest initargs)
                             &body body)
-  `(let ((,variable (make-instance ',type ,@initargs)))
-     ,@body
-     ,variable))
+  (with-unique-names (custom-type)
+    `(let* ((,custom-type (awhen (ast-node-type-mapping-of *walker-context*)
+                            (gethash ',type it)))
+            (,variable (if ,custom-type
+                           (make-instance ,custom-type ,@initargs)
+                           (make-instance ',type ,@initargs))))
+       ,@body
+       ,variable)))
 
 (defmacro multiple-value-setf (places form)
   `(let (_)

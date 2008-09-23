@@ -198,4 +198,5 @@
    #:operator-of
    #:arguments-of
 
+   #:collect-standard-walked-form-subclasses
    ))
