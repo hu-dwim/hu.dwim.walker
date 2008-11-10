@@ -12,7 +12,9 @@
   (:use :common-lisp :alexandria)
 
   (:shadow
-   #:type-of)
+   #:type-of
+   #:eval
+   )
 
   (:export
 
@@ -200,3 +202,9 @@
 
    #:collect-standard-walked-form-subclasses
    ))
+
+(in-package :cl-walker)
+
+(defun eval (form)
+  (let (#+sbcl(sb-ext:*evaluator-mode* :interpret))
+    (cl:eval form)))
