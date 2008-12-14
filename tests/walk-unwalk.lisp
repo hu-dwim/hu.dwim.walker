@@ -84,6 +84,13 @@
    '(lambda () (declare (ignorable)))
    '#'(lambda ())))
 
+(deftest test/macro/1 ()
+  (finishes
+    (walk-form '(macrolet ((foo ((some-complex-args &optional (even-more-compelx 42)))
+                            `(bar ,some-complex-args ,even-more-compelx)))
+                 (foo (1 2)))
+               nil (make-walk-environment))))
+
 (define-walk-unwalk-test test/lambda-function
   #'(lambda (x y) (y x))
   #'(lambda (x &key y z) (z (y x)))
