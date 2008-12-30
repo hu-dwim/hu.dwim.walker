@@ -6,13 +6,15 @@
 
 (in-package :cl-walker)
 
-(defgeneric walk-ast (form visitor)
+(defgeneric map-ast (visitor form)
   (:method-combination progn)
-  (:method :around (form visitor)
-    (when (funcall visitor form)
-      (call-next-method))
-     (values))
-  (:method progn ((form t) visitor)
+  (:method :around (visitor form)
+    (let ((new (funcall visitor form)))
+      (if (eq new form)
+          (call-next-method)
+          new)
+      new))
+  (:method progn (visitor (form t))
     ;; a primary method with a huge NOP
     ))
 
@@ -20,10 +22,10 @@
              `(progn
                 ,@(loop
                      :for (type . accessors) :in entries
-                     :collect `(defmethod walk-ast progn ((form ,type) visitor)
+                     :collect `(defmethod map-ast progn (visitor (form ,type))
                                  ,@(loop
                                       :for accessor :in accessors
-                                      :collect `(walk-ast (,accessor form) visitor)))))))
+                                      :collect `(map-ast visitor (,accessor form))))))))
   (frob
    (cons                      car cdr)
    (application-form          operator-of arguments-of)
@@ -46,9 +48,9 @@
 
 (defun collect-variable-references (top-form &key (type 'variable-reference-form))
   (let ((result (list)))
-    (walk-ast top-form
-              (lambda (form)
-                (when (typep form type)
-                  (push form result))
-                t))
+    (map-ast (lambda (form)
+               (when (typep form type)
+                 (push form result))
+               form)
+             top-form)
     result))
