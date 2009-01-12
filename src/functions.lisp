@@ -315,7 +315,8 @@
       ;; build up the objects for the bindings in the original env
       (loop
          :for (name args . body) :in binds
-         :collect (cons name (walk-form `(lambda ,args ,@body) flet env)) :into bindings
+         :collect (cons name (with-form-object (lambda-node 'lambda-function-form flet)
+                               (walk-lambda-like lambda-node args body env))) :into bindings
          :finally (setf (bindings-of flet) bindings))
       ;; walk the body in the new env
       (walk-implict-progn flet
