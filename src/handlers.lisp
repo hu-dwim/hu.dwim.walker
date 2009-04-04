@@ -205,10 +205,11 @@
 (defwalker-handler let (form parent env)
   (with-form-object (let 'let-form parent)
     (setf (bindings-of let) (mapcar (lambda (binding)
-                                      (with-current-form binding
-                                        (destructuring-bind (var &optional initial-value)
-                                            (ensure-list binding)
-                                          (cons var (walk-form initial-value let env)))))
+                                      (when binding
+                                        (with-current-form binding
+                                          (destructuring-bind (var &optional initial-value)
+                                              (ensure-list binding)
+                                            (cons var (walk-form initial-value let env))))))
                                     (second form)))
     (multiple-value-bind (b e d declarations)
         (split-body (cddr form) env :parent let :declare t)
