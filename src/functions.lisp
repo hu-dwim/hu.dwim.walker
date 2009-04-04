@@ -142,7 +142,7 @@
     (with-form-object (ast-node 'lambda-function-form parent)
       (walk-lambda-like ast-node (second form) (cddr form) env))))
 
-(defun walk-lambda-like (ast-node args body env)
+(defun %walk-lambda-like (ast-node args body env)
   (multiple-value-setf ((arguments-of ast-node) env)
     (walk-lambda-list args ast-node env))
   (walk-implict-progn ast-node body env :declare t)

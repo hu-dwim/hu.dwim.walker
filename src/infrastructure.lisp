@@ -59,6 +59,8 @@
 
 (defvar *walker-context*)
 
+;; KLUDGE this is ugly. a contextl based slution would be much cleaner, but that's a rather heavy dependency...
+
 #+nil
 (defclass-star:defclass* walker-context ()
   ((find-walker-handler         (find-walker-handler-of *walker-context*))
@@ -68,6 +70,7 @@
    (symbol-macro-name?          (symbol-macro-name?-of *walker-context*))
    (constant-name?              (constant-name?-of *walker-context*))
    (lambda-form?                (lambda-form?-of *walker-context*))
+   (lambda-like-walker          (lambda-like-walker-of *walker-context*))
    (undefined-reference-handler (undefined-reference-handler-of *walker-context*))
    (store-source?               (store-source? *walker-context*) :type boolean)
    (ast-node-type-mapping       (ast-node-type-mapping-of *walker-context*) :documentation "Should be an 'eq hashtable mapping from the cl-walker node class name to a custom class")))
@@ -81,6 +84,7 @@
    (symbol-macro-name? :initform (symbol-macro-name?-of *walker-context*) :accessor symbol-macro-name?-of :initarg :symbol-macro-name?)
    (constant-name? :initform (constant-name?-of *walker-context*) :accessor constant-name?-of :initarg :constant-name?)
    (lambda-form? :initform (lambda-form?-of *walker-context*) :accessor lambda-form?-of :initarg :lambda-form?)
+   (lambda-like-walker :initform (lambda-like-walker-of *walker-context*) :accessor lambda-like-walker-of :initarg :lambda-like-walker)
    (undefined-reference-handler :initform (undefined-reference-handler-of *walker-context*) :accessor undefined-reference-handler-of :initarg
                                 :undefined-reference-handler)
    (store-source? :initform (store-source? *walker-context*) :accessor store-source? :initarg :store-source? :type boolean)
@@ -94,6 +98,7 @@
                                       :symbol-macro-name?          '%symbol-macro-name?
                                       :constant-name?              '%constant-name?
                                       :lambda-form?                '%lambda-form?
+                                      :lambda-like-walker          '%walk-lambda-like
                                       :undefined-reference-handler 'undefined-reference-handler
                                       :store-source?               t
                                       :ast-node-type-mapping       nil))
@@ -152,6 +157,9 @@
   (declare (ignore env))
   (and (consp form)
        (eq 'cl:lambda (car form))))
+
+(defun walk-lambda-like (ast-node args body env)
+  (funcall (lambda-like-walker-of *walker-context*) ast-node args body env))
 
 (defun walker-macroexpand-1 (form &optional env)
   (funcall (macroexpand-1-of *walker-context*) form env))
