@@ -40,9 +40,22 @@
   (mapcar #'unwalk-form forms))
 
 (defun special-variable-name? (name)
-  (or (boundp name)
-      #+sbcl(eq (sb-int:info :variable :kind name) :special)
-      #+lispworks(eq (cl::variable-information name) :special)))
+  (and (symbolp name)
+       (not (keywordp name))
+       (not (member name '(t nil) :test #'eq))
+       (or (boundp name)
+           #+sbcl(eq (sb-int:info :variable :kind name) :special)
+           #+lispworks(eq (cl::variable-information name) :special)
+           ;; This is the only portable way to check if a symbol is
+           ;; declared special, without being boundp, i.e. (defvar 'foo).
+           ;; Maybe we should make it optional with a compile-time flag?
+           #+nil
+           (eval `((lambda ()
+                     (flet ((func ()
+                              (symbol-value ',var)))
+                       (let ((,var t))
+                         (declare (ignorable ,var))
+                         (ignore-errors (func))))))))))
 
 (defvar *walker-context*)
 
