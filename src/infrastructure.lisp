@@ -27,8 +27,10 @@
                              ,form)))
      ,@body))
 
-(defun walk-form (form &optional (parent nil) (env (make-walk-environment)))
+(defun walk-form (form &optional (parent nil) env)
   "Walk FORM and return a CLOS based AST that represents it."
+  (unless env
+    (setf env (make-walk-environment)))
   (let ((*current-form* (or *current-form*
                             form)))
     (funcall (find-walker-handler* form) form parent env)))
