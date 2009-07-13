@@ -122,6 +122,7 @@
    #:lambda-application-form
 
    #:function-object-form
+   #:function-definition-form
    #:lexical-function-object-form
    #:walked-lexical-function-object-form
    #:unwalked-lexical-function-object-form

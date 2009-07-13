@@ -91,6 +91,20 @@
      ,@(unwalk-declarations declares)
      ,@(unwalk-forms body))))
 
+(defclass function-definition-form (lambda-function-form)
+  ((name :accessor name-of :initarg :name)))
+
+(defwalker-handler defun (form parent env)
+  (with-form-object (node 'function-definition-form parent
+                          :name (second form))
+    (walk-lambda-like node (third form)
+                      (nthcdr 3 form) env)))
+
+(defunwalker-handler function-definition-form (form name arguments body declares)
+  `(defun ,name ,(unwalk-lambda-list arguments) 
+     ,@(unwalk-declarations declares)
+     ,@(unwalk-forms body)))
+
 (defclass named-lambda-function-form (lambda-function-form)
   ((special-form :accessor special-form-of :initarg :special-form)
    (name :accessor name-of :initarg :name)))
