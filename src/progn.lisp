@@ -9,11 +9,8 @@
 (defclass implicit-progn-mixin ()
   ((body :accessor body-of :initarg :body)))
 
-(defmethod print-object ((argument implicit-progn-mixin) stream)
-  (print-unreadable-object (argument stream :type t :identity t)
-    (if (slot-boundp argument 'body)
-        (format stream "~A" (body-of argument))
-        (write-string "#<unbound body>" stream))))
+(defprint-object implicit-progn-mixin
+  (format t "~A" (body-of -self-)))
 
 (defclass implicit-progn-with-declare-mixin (implicit-progn-mixin)
   ((declares :initform nil :accessor declares-of :initarg :declares)))

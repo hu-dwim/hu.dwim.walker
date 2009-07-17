@@ -21,9 +21,8 @@
         (cons   `(quote ,value))
         (t value))))
 
-(defmethod print-object ((node constant-form) stream)
-  (print-unreadable-object (node stream :type t :identity t)
-    (format stream "~S" (value-of node))))
+(defprint-object constant-form
+  (format t "!~S" (value-of -self-)))
 
 (defclass variable-reference-form (walked-form)
   ((name :accessor name-of :initarg :name)))
@@ -31,9 +30,8 @@
 (defunwalker-handler variable-reference-form (name)
   name)
 
-(defmethod print-object ((v variable-reference-form) stream)
-  (print-unreadable-object (v stream :type t :identity t)
-    (format stream "~S" (name-of v))))
+(defprint-object variable-reference-form
+  (format t "!~S" (name-of -self-)))
 
 (defclass lexical-variable-reference-form (variable-reference-form)
   ())
@@ -328,6 +326,23 @@
 
 (defunwalker-handler progn-form (body)
   `(progn ,@(unwalk-forms body)))
+
+(defprint-object progn-form
+  (let ((body (body-of -self-)))
+    (pprint-logical-block (*standard-output* body :prefix "(" :suffix ")")
+      (princ "progn")
+      (pprint-indent :block 1)
+      (pprint-newline :mandatory)
+      (pprint-exit-if-list-exhausted)
+      (loop
+         :with first? = t
+         :for el = (pprint-pop)
+         :do
+         (unless first?
+           (pprint-newline :mandatory))
+         (princ el)
+         (pprint-exit-if-list-exhausted)
+         (setf first? nil)))))
 
 ;;;; PROGV
 

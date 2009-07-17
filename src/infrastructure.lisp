@@ -341,15 +341,14 @@
 (defmethod make-load-form ((object walked-form) &optional env)
   (make-load-form-saving-slots object :environment env))
 
-(defmethod print-object ((form walked-form) stream)
-  (print-unreadable-object (form stream :type t :identity t)
-    (if (and (slot-boundp form 'source)
-             (source-of form))
-        (let ((*print-readably* nil)
-              (*print-level* 0)
-              (*print-length* 4))
-          (format stream "~S" (source-of form)))
-        (call-next-method))))
+(defprint-object walked-form
+  (if (and (slot-boundp -self- 'source)
+           (source-of -self-))
+      (let ((*print-readably* nil)
+            (*print-level* 0)
+            (*print-length* 4))
+        (format t "~S" (source-of -self-)))
+      (call-next-method)))
 
 (defmacro make-form-object (type parent &rest initargs)
   (with-unique-names (custom-type)

@@ -220,3 +220,36 @@ that it creates a fresh binding."
             rest-variable-name
             whole-variable-name
             env-variable-name)))
+
+;; from cl-def
+(defmacro defprint-object (&whole whole class-name* &body body)
+  "Define a PRINT-OBJECT method using PRINT-UNREADABLE-OBJECT.
+  An example:
+  (def print-object parenscript-dispatcher ; could be (parenscript-dispatcher :identity nil)
+    (when (cachep self)
+      (princ \"cached\")
+      (princ \" \"))
+    (princ (parenscript-file self)))"
+  (with-unique-names (stream printing)
+    (let ((args (ensure-list class-name*)))
+      (destructuring-bind (class-name &key (identity t) (type t) with-package (muffle-errors t))
+          args
+        (multiple-value-bind (body declarations documentation)
+            (parse-body body :documentation t :whole whole)
+          `(defmethod print-object ((-self- ,class-name) ,stream)
+             ,@(when documentation
+                     (list documentation))
+             ,@declarations
+             (print-unreadable-object (-self- ,stream :type ,type :identity ,identity)
+               (let ((*standard-output* ,stream))
+                 (block ,printing
+                   (,@(if muffle-errors
+                          `(handler-bind ((error (lambda (error)
+                                                   (declare (ignore error))
+                                                   (write-string "<<error printing object>>")
+                                                   (return-from ,printing)))))
+                          `(progn))
+                      (let (,@(when with-package `((*package* ,(find-package with-package)))))
+                        ,@body)))))
+             ;; primary PRINT-OBJECT methods are supposed to return the object
+             -self-))))))

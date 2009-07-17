@@ -10,14 +10,21 @@
   ((operator :accessor operator-of :initarg :operator)
    (arguments :accessor arguments-of :initarg :arguments)))
 
-(defmethod print-object ((argument application-form) stream)
-  (print-unreadable-object (argument stream :type t :identity t)
-    (if (slot-boundp argument 'operator)
-        (format stream "~A" (operator-of argument))
-        (write-string "#<unbound operator>" stream))))
-
 (defunwalker-handler application-form (operator arguments)
   (cons operator (unwalk-forms arguments)))
+
+(defprint-object application-form
+  ;; the bang sign is a weak try... but at least mark it somehow that it's not a normal sexp...
+  (princ "!(")
+  (princ (operator-of -self-))
+  (princ " ")
+  (let ((first t))
+    (dolist (arg (arguments-of -self-))
+      (unless first
+        (princ " "))
+      (princ arg)
+      (setf first nil)))
+  (princ ")"))
 
 (defclass lexical-application-form (application-form)
   ((code :accessor code-of :initarg :code)))
@@ -199,11 +206,8 @@
 (defclass function-argument-form (walked-form)
   ((name :accessor name-of :initarg :name)))
 
-(defmethod print-object ((argument function-argument-form) stream)
-  (print-unreadable-object (argument stream :type t :identity t)
-    (if (slot-boundp argument 'name)
-        (format stream "~S" (name-of argument))
-        (write-string "#<unbound name>" stream))))
+(defprint-object function-argument-form
+  (format t "~S" (name-of argument)))
 
 (defclass required-function-argument-form (function-argument-form)
   ())
