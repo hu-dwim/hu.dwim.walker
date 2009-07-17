@@ -207,7 +207,7 @@
   ((name :accessor name-of :initarg :name)))
 
 (defprint-object function-argument-form
-  (format t "~S" (name-of argument)))
+  (format t "~S" (name-of -self-)))
 
 (defclass required-function-argument-form (function-argument-form)
   ())
