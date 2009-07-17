@@ -340,11 +340,13 @@
 
 (defmethod print-object ((form walked-form) stream)
   (print-unreadable-object (form stream :type t :identity t)
-    (when (slot-boundp form 'source)
-      (let ((*print-readably* nil)
-            (*print-level* 0)
-            (*print-length* 4))
-        (format stream "~S" (source-of form))))))
+    (if (and (slot-boundp form 'source)
+             (source-of form))
+        (let ((*print-readably* nil)
+              (*print-level* 0)
+              (*print-length* 4))
+          (format stream "~S" (source-of form)))
+        (call-next-method))))
 
 (defmacro make-form-object (type parent &rest initargs)
   (with-unique-names (custom-type)

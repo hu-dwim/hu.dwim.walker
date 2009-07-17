@@ -10,6 +10,12 @@
   ((operator :accessor operator-of :initarg :operator)
    (arguments :accessor arguments-of :initarg :arguments)))
 
+(defmethod print-object ((argument application-form) stream)
+  (print-unreadable-object (argument stream :type t :identity t)
+    (if (slot-boundp argument 'operator)
+        (format stream "~A" (operator-of argument))
+        (write-string "#<unbound operator>" stream))))
+
 (defunwalker-handler application-form (operator arguments)
   (cons operator (unwalk-forms arguments)))
 
