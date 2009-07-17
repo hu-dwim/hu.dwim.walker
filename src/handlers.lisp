@@ -13,7 +13,8 @@
 
 (defunwalker-handler constant-form (value)
   (if (or (eq value t)
-          (eq value nil))
+          (eq value nil)
+          (keywordp value))
       value
       (typecase value
         (symbol `(quote ,value))

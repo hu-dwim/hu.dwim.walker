@@ -149,6 +149,7 @@
   (declare (ignore env))
   (or (eq form t)
       (eq form nil)
+      (keywordp form)
       (not (or (symbolp form)
                (consp form)))))
 
