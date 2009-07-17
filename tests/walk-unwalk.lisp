@@ -44,7 +44,8 @@
   (is (typep (walk-form 'nil) 'constant-form)))
 
 (define-walk-unwalk-test test/variable
-  var)
+  var
+  :var)
 
 (define-walk-unwalk-test test/application
   (* 2 3)
@@ -96,6 +97,7 @@
   #'(lambda (x &key y z) (z (y x)))
   #'(lambda (&optional x y) (list x y))
   #'(lambda (x &rest args) (apply x args))
+  #'(lambda (object &key (a nil a?)) (values))
   #'(lambda (object &key a b &allow-other-keys) (values))
   #'(lambda (&optional x y &rest args &key a b &allow-other-keys) 42))
 
