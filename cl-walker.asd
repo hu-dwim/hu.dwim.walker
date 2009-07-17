@@ -14,6 +14,9 @@
 (in-package #:cl-walker.system)
 
 (defsystem :cl-walker
+  :version "1.0"
+  :author ("Attila Lendvai <attila.lendvai@gmail.com>")
+  :maintainer ("Attila Lendvai <attila.lendvai@gmail.com>")
   :depends-on (:alexandria)
   :components ((:static-file "cl-walker.asd")
                (:module "src"
