@@ -432,7 +432,10 @@
                    ;; augment the lexenv with the macro's variables, so
                    ;; that we don't get free variable warnings while
                    ;; walking the body of the macro.
-                   (augment-lexenv! :variable variable lexenv)))
+                   (when (symbolp variable)
+                     ;; TODO protect against brokenness, see TEST/MACRO/1
+                     ;; it does not handle destructuring bind, which is available for macro lambda args
+                     (augment-lexenv! :variable variable lexenv))))
                (mapcar (lambda (form)
                          (macroexpand-all form lexenv))
                        body))))))))
