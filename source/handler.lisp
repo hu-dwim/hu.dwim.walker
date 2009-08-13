@@ -1,10 +1,10 @@
 ;;; -*- mode: Lisp; Syntax: Common-Lisp; -*-
 ;;;
-;;; Copyright (c) 2008 by the authors.
+;;; Copyright (c) 2009 by the authors.
 ;;;
 ;;; See COPYING for details.
 
-(in-package :cl-walker)
+(in-package :hu.dwim.walker)
 
 ;;;; Atoms
 
@@ -191,7 +191,9 @@
           (else-of if) (walk-form (fourth form) if env))))
 
 (defunwalker-handler if-form (condition then else)
-  `(if ,(unwalk-form condition) ,(unwalk-form then) ,(unwalk-form else)))
+  `(if ,(unwalk-form condition) ,(unwalk-form then)
+       ,@(awhen (unwalk-form else)
+           (list it))))
 
 ;;;; LET/LET*
 

@@ -1,10 +1,10 @@
 ;;; -*- mode: Lisp; Syntax: Common-Lisp; -*-
 ;;;
-;;; Copyright (c) 2008 by the authors.
+;;; Copyright (c) 2009 by the authors.
 ;;;
 ;;; See COPYING for details.
 
-(in-package :cl-walker-test)
+(in-package :hu.dwim.walker.test)
 
 (defsuite* (test/utils :in test))
 

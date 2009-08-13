@@ -1,20 +1,20 @@
 ;;; -*- mode: Lisp; Syntax: Common-Lisp; -*-
 ;;;
-;;; Copyright (c) 2008 by the authors.
+;;; Copyright (c) 2009 by the authors.
 ;;;
 ;;; See COPYING for details.
 
-(in-package :cl-walker)
+(in-package :hu.dwim.walker)
 
-;;;
-;;; SBCL
-;;;
+;;;;;;
+;;; Empty environment
+
 (defun make-empty-lexical-environment ()
   (sb-kernel:make-null-lexenv))
 
-;;;
-;;; iteration
-;;;
+;;;;;;
+;;; Iteration
+
 (defun iterate-variables-in-lexenv (visitor lexenv &key include-ignored? include-specials?)
   (loop
      :for entry :in (sb-c::lexenv-vars lexenv)
@@ -78,9 +78,9 @@
      :for name = (first entry)
      :do (funcall visitor name)))
 
-;;;
-;;; augmentation
-;;;
+;;;;;;
+;;; Augmentation
+
 (defun augment-lexenv-with-variable (name lexenv &key special ignored)
   (let ((var (if special
                  (sb-c::make-global-var :%source-name name)

@@ -1,14 +1,14 @@
 ;;; -*- mode: Lisp; Syntax: Common-Lisp; -*-
 ;;;
-;;; Copyright (c) 2008 by the authors.
+;;; Copyright (c) 2009 by the authors.
 ;;;
 ;;; See COPYING for details.
 
-(in-package :cl-walker-test)
+(in-package :hu.dwim.walker.test)
 
 (defsuite* (test/lexenv :in test))
 
-;; TODO would be better to use macroexpand-all for this, because stefil's errors get to cl:compile
+;; TODO would be better to use macroexpand-all for this, because stefil's errors get to compile
 ;; which aborts at the first failure and skips the other assertions
 (defun compile* (form)
   (handler-bind ((warning #'muffle-warning)

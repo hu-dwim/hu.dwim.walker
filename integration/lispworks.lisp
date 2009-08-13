@@ -1,10 +1,16 @@
 ;;; -*- mode: Lisp; Syntax: Common-Lisp; -*-
 ;;;
-;;; Copyright (c) 2008 by the authors.
+;;; Copyright (c) 2009 by the authors.
 ;;;
 ;;; See COPYING for details.
 
-(in-package :cl-walker)
+(in-package :hu.dwim.walker)
+
+#+(and lispworks macosx)
+(progn
+
+(defwalker-handler compiler::internal-the (form parent env)
+  (walk-form (third form) parent env)))
 
 #|
 

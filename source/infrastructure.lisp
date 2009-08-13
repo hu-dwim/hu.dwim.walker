@@ -1,10 +1,10 @@
 ;;; -*- mode: Lisp; Syntax: Common-Lisp; -*-
 ;;;
-;;; Copyright (c) 2008 by the authors.
+;;; Copyright (c) 2009 by the authors.
 ;;;
 ;;; See COPYING for details.
 
-(in-package :cl-walker)
+(in-package :hu.dwim.walker)
 
 (define-condition walker-error (error)
   ())
@@ -41,13 +41,17 @@
 (defun unwalk-forms (forms)
   (mapcar #'unwalk-form forms))
 
+(defun eval (form)
+  (let (#+sbcl(sb-ext:*evaluator-mode* :interpret))
+    (common-lisp:eval form)))
+
 (defun special-variable-name? (name)
   (and (symbolp name)
        (not (keywordp name))
        (not (member name '(t nil) :test #'eq))
        (or (boundp name)
            #+sbcl(eq (sb-int:info :variable :kind name) :special)
-           #+lispworks(eq (cl::variable-information name) :special)
+           #+lispworks(eq (common-lisp::variable-information name) :special)
            ;; This is the only portable way to check if a symbol is
            ;; declared special, without being boundp, i.e. (defvar 'foo).
            ;; Maybe we should make it optional with a compile-time flag?
@@ -64,7 +68,7 @@
 ;; KLUDGE this is ugly. a contextl based slution would be much cleaner, but that's a rather heavy dependency...
 
 #+nil
-(defclass-star:defclass* walker-context ()
+(hu.dwim.defclass-star:defclass* walker-context ()
   ((find-walker-handler         (find-walker-handler-of *walker-context*))
    (function-name?              (function-name?-of *walker-context*))
    (macro-name?                 (macro-name?-of *walker-context*))
@@ -75,7 +79,7 @@
    (lambda-like-walker          (lambda-like-walker-of *walker-context*))
    (undefined-reference-handler (undefined-reference-handler-of *walker-context*))
    (store-source?               (store-source? *walker-context*) :type boolean)
-   (ast-node-type-mapping       (ast-node-type-mapping-of *walker-context*) :documentation "Should be an 'eq hashtable mapping from the cl-walker node class name to a custom class")))
+   (ast-node-type-mapping       (ast-node-type-mapping-of *walker-context*) :documentation "Should be an 'eq hashtable mapping from the hu.dwim.walker node class name to a custom class")))
 
 ;; macroexpansion of the above defclass*
 (defclass walker-context ()
@@ -90,7 +94,7 @@
    (undefined-reference-handler :initform (undefined-reference-handler-of *walker-context*) :accessor undefined-reference-handler-of :initarg
                                 :undefined-reference-handler)
    (store-source? :initform (store-source? *walker-context*) :accessor store-source? :initarg :store-source? :type boolean)
-   (ast-node-type-mapping :initform (ast-node-type-mapping-of *walker-context*) :accessor ast-node-type-mapping-of :initarg :ast-node-type-mapping :documentation "Should be an 'eq hashtable mapping from the cl-walker node class name to a custom class")))
+   (ast-node-type-mapping :initform (ast-node-type-mapping-of *walker-context*) :accessor ast-node-type-mapping-of :initarg :ast-node-type-mapping :documentation "Should be an 'eq hashtable mapping from the hu.dwim.walker node class name to a custom class")))
 
 (setf *walker-context* (make-instance 'walker-context
                                       :find-walker-handler         'find-walker-handler
@@ -106,14 +110,14 @@
                                       :ast-node-type-mapping       nil))
 
 (defun collect-standard-walked-form-subclasses ()
-  "Returns a list of all the subclasses of cl-walker:walked-form whose name is in the cl-walker package. This is useful if you want to generate a complete AST-NODE-TYPE-MAPPING hashtable with a mixin in the class of each walked node."
+  "Returns a list of all the subclasses of hu.dwim.walker:walked-form whose name is in the hu.dwim.walker package. This is useful if you want to generate a complete AST-NODE-TYPE-MAPPING hashtable with a mixin in the class of each walked node."
   (let ((class-direct-subclasses (or (and (find-package :closer-mop)
                                           (find-symbol (symbol-name '#:class-direct-subclasses) :closer-mop))
                                      #+sbcl 'sb-mop:class-direct-subclasses
                                      #-sbcl (error "Please provide a CLASS-DIRECT-SUBCLASSES for your lisp or load closer-mop"))))
     (remove-duplicates
      (remove-if (lambda (class)
-                  (not (eq (symbol-package (class-name class)) #.(find-package :cl-walker))))
+                  (not (eq (symbol-package (class-name class)) #.(find-package :hu.dwim.walker))))
                 (labels ((collect-subclasses (class)
                            (let ((direct-subclasses (funcall class-direct-subclasses class)))
                              (nconc
@@ -159,7 +163,7 @@
 (defun %lambda-form? (form &optional env)
   (declare (ignore env))
   (and (consp form)
-       (eq 'cl:lambda (car form))))
+       (eq 'lambda (car form))))
 
 (defun walk-lambda-like (ast-node args body env)
   (funcall (lambda-like-walker-of *walker-context*) ast-node args body env))

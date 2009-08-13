@@ -1,10 +1,10 @@
 ;;; -*- mode: Lisp; Syntax: Common-Lisp; -*-
 ;;;
-;;; Copyright (c) 2008 by the authors.
+;;; Copyright (c) 2009 by the authors.
 ;;;
 ;;; See COPYING for details.
 
-(in-package :cl-walker)
+(in-package :hu.dwim.walker)
 
 (defclass application-form (walked-form)
   ((operator :accessor operator-of :initarg :operator)
@@ -93,10 +93,9 @@
   ((arguments :accessor arguments-of :initarg :arguments)))
 
 (defunwalker-handler lambda-function-form (arguments body declares)
-  `(function
-    (lambda ,(unwalk-lambda-list arguments)
-     ,@(unwalk-declarations declares)
-     ,@(unwalk-forms body))))
+  `#'(lambda ,(unwalk-lambda-list arguments)
+       ,@(unwalk-declarations declares)
+       ,@(unwalk-forms body)))
 
 (defclass function-definition-form (lambda-function-form)
   ((name :accessor name-of :initarg :name)))
@@ -249,7 +248,7 @@
 (defunwalker-handler optional-function-argument-form (name supplied-p-parameter)
   (let ((default-value (awhen (default-value-of -form-)
                          (unwalk-form it))))
-    (cond ((and name supplied-p-parameter)
+    (cond ((and name default-value supplied-p-parameter)
            `(,name ,default-value ,supplied-p-parameter))
           ((and name default-value)
            `(,name ,default-value))
@@ -361,7 +360,7 @@
   `(flet ,(mapcar (lambda (bind)
                     (cons (car bind)
                           ;; remove (function (lambda ...)) of the function bindings
-                          (cdadr (unwalk-form (cdr bind)))))
+                          (cdr (unwalk-form (cdr bind)))))
                   bindings)
      ,@(unwalk-declarations declares)
      ,@(unwalk-forms body)))
@@ -407,4 +406,3 @@
                     bindings)
      ,@(unwalk-declarations declares)
      ,@(unwalk-forms body)))
-

@@ -1,10 +1,12 @@
 ;;; -*- mode: Lisp; Syntax: Common-Lisp; -*-
 ;;;
-;;; Copyright (c) 2008 by the authors.
+;;; Copyright (c) 2009 by the authors.
 ;;;
 ;;; See COPYING for details.
 
-(in-package :cl-walker)
+(in-package :hu.dwim.walker)
+
+(declaim (ftype (function () t) make-empty-lexical-environment))
 
 (defparameter *lexical-environment-functions*
   '((make-empty-lexical-environment  "Returns an empty lexical environment useful for testing and playing around in the repl.")
