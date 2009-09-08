@@ -48,41 +48,42 @@
 
 (defwalker-handler application (form parent env)
   (block nil
-    (destructuring-bind (op &rest args) form
-      (when (lambda-form? op)
-        (return
-          (with-form-object (application 'lambda-application-form parent)
-            (setf (operator-of application) (walk-lambda op application env)
-                  (arguments-of application) (mapcar (lambda (form)
-                                                       (walk-form form application env))
-                                                     args)))))
-      (let ((lexenv (cdr env)))
-        (awhen (lookup-in-walkenv :macro op env)
-          (let ((*inside-macroexpansion* t))
-            (return (walk-form (funcall it form lexenv) parent env))))
-        (when (and (symbolp op)
-                   (macro-name? op lexenv))
-          (multiple-value-bind (expansion expanded?)
-              (walker-macroexpand-1 form lexenv)
-            (when expanded?
-              (let ((*inside-macroexpansion* t))
-                (return (walk-form expansion parent env)))))))
-      (let ((app (aif (lookup-in-walkenv :function op env)
-                      (make-instance 'walked-lexical-application-form :code it)
-                      (if (lookup-in-walkenv :unwalked-function op env)
-                          (make-instance 'unwalked-lexical-application-form)
-                          (progn
-                            (when (and (symbolp op)
-                                       (not (function-name? op)))
-                              (undefined-reference :function op))
-                            (make-instance 'free-application-form))))))
-        (setf (operator-of app) op
-              (parent-of app) parent
-              (source-of app) form
-              (arguments-of app) (mapcar (lambda (form)
-                                           (walk-form form app env))
-                                         args))
-        app))))
+    (destructuring-bind (op &rest args) (coerce-to-form form)
+      (flet ((walk-args (application)
+               (loop
+                  for index :from 1
+                  for arg :in args
+                  collect (walk-form arg application env))))
+        (when (lambda-form? op)
+          (return
+            (with-form-object (application 'lambda-application-form parent)
+              (setf (operator-of application) (walk-lambda op application env)
+                    (arguments-of application) (walk-args application)))))
+        (let ((lexenv (cdr env)))
+          (awhen (lookup-in-walkenv :macro op env)
+            (let ((*inside-macroexpansion* t))
+              (return (walk-form (funcall it form lexenv) parent env))))
+          (when (and (symbolp op)
+                     (macro-name? op lexenv))
+            (multiple-value-bind (expansion expanded?)
+                (walker-macroexpand-1 form lexenv)
+              (when expanded?
+                (let ((*inside-macroexpansion* t))
+                  (return (walk-form expansion parent env)))))))
+        (let ((app (aif (lookup-in-walkenv :function op env)
+                        (make-instance 'walked-lexical-application-form :code it)
+                        (if (lookup-in-walkenv :unwalked-function op env)
+                            (make-instance 'unwalked-lexical-application-form)
+                            (progn
+                              (when (and (symbolp op)
+                                         (not (function-name? op)))
+                                (undefined-reference :function op))
+                              (make-instance 'free-application-form))))))
+          (setf (operator-of app) op
+                (parent-of app) parent
+                (source-of app) form
+                (arguments-of app) (walk-args app))
+          app)))))
 
 ;;;; Functions
 

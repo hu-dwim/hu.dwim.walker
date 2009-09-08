@@ -35,6 +35,10 @@
                             form)))
     (funcall (find-walker-handler* form) form parent env)))
 
+(defgeneric coerce-to-form (form)
+  (:method (form)
+    form))
+
 (defgeneric unwalk-form (form)
   (:documentation "Unwalk FORM and return a list representation."))
 

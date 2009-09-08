@@ -51,7 +51,8 @@
   ())
 
 (defwalker-handler +atom-marker+ (form parent env)
-  (let ((lexenv (cdr env)))
+  (let ((lexenv (cdr env))
+        (form (coerce-to-form form)))
     (cond
       ((constant-name? form)
        (make-form-object 'constant-form parent :value form))
@@ -209,11 +210,11 @@
                                       (when binding
                                         (with-current-form binding
                                           (destructuring-bind (var &optional initial-value)
-                                              (ensure-list binding)
+                                              (ensure-list (coerce-to-form binding))
                                             (cons var (walk-form initial-value let env))))))
-                                    (second form)))
+                                    (coerce-to-form (second (coerce-to-form form)))))
     (multiple-value-bind (b e d declarations)
-        (split-body (cddr form) env :parent let :declare t)
+        (split-body (cddr (coerce-to-form form)) env :parent let :declare t)
       (declare (ignore b e d))
       (loop
          :for (var . value) :in (bindings-of let)
@@ -223,8 +224,8 @@
                                          (eq var (name-of declaration))))
                                   declarations))
                ;; TODO audit this part, :dummy? check other occurrances, too!
-               (augment-walkenv! env :variable var :dummy)))
-      (walk-implict-progn let (cddr form) env :declare t))))
+               (augment-walkenv! env :variable (coerce-to-form var) :dummy)))
+      (walk-implict-progn let (cddr (coerce-to-form form)) env :declare t))))
 
 (defunwalker-handler let-form (bindings body declares)
   `(let ,(mapcar (lambda (bind)

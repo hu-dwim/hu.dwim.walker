@@ -167,13 +167,12 @@
   (handler-bind ((undefined-reference
                   (lambda (condition)
                     (unless (enclosing-code-of condition)
-                      (setf (enclosing-code-of condition) `(some-implicit-progn-form ,@forms))))))
+                      (setf (enclosing-code-of condition) `(some-implicit-progn-form ,@(coerce-to-form forms)))))))
     (multiple-value-bind (body env docstring declarations)
-        (split-body forms env :parent parent :docstring docstring :declare declare)
+        (split-body (coerce-to-form forms) env :parent parent :docstring docstring :declare declare)
       (when declare
         (setf (declares-of parent) declarations))
       (setf (body-of parent) (mapcar (lambda (form)
                                        (walk-form form parent env))
-                                     body))
+                                     (coerce-to-form body)))
       docstring)))
-
