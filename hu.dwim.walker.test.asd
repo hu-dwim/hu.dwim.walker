@@ -2,11 +2,11 @@
 ;;;
 ;;; Copyright (c) 2009 by the authors.
 ;;;
-;;; See COPYING for details.
-
-(in-package :asdf)
+;;; See LICENCE for details.
 
 (load-system :hu.dwim.asdf)
+
+(in-package :hu.dwim.asdf)
 
 (defsystem :hu.dwim.walker.test
   :class hu.dwim.test-system
