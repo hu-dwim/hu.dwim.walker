@@ -2,7 +2,7 @@
 ;;;
 ;;; Copyright (c) 2009 by the authors.
 ;;;
-;;; See COPYING for details.
+;;; See LICENCE for details.
 
 (in-package :common-lisp-user)
 
