@@ -62,7 +62,11 @@
   (locally (declare (zork)))
   (locally (declare (optimize speed) (optimize (debug 2))))
   (locally (declare (ignorable a) (ignorable b)))
-  (locally (declare (dynamic-extent a) (ignorable b))))
+  (locally (declare (dynamic-extent a) (ignorable b)))
+  (tagbody
+     (declare (optimize speed))
+   :tag1 (+ 1 1)
+   :tag2 (+ 2 2)))
 
 (deftest test/declare/2 ()
   (signals style-warning
