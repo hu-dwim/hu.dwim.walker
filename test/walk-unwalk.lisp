@@ -62,17 +62,19 @@
   (locally (declare (zork)))
   (locally (declare (optimize speed) (optimize (debug 2))))
   (locally (declare (ignorable a) (ignorable b)))
-  (locally (declare (dynamic-extent a) (ignorable b)))
-  (tagbody
-     (declare (optimize speed))
-   :tag1 (+ 1 1)
-   :tag2 (+ 2 2)))
+  (locally (declare (dynamic-extent a) (ignorable b))))
 
 (deftest test/declare/2 ()
   (signals style-warning
     (walk-form '(locally (declare (zork)))))
   (signals style-warning
-    (walk-form '(locally (declare (integer x))))))
+    (walk-form '(locally (declare (integer x)))))
+  ;; declare is not allowed in a tagbody
+  (signals error
+    (walk-form '(tagbody
+                   (declare (optimize speed))
+                 :tag1 (+ 1 1)
+                 :tag2 (+ 2 2)))))
 
 (deftest test/declare/3 ()
   (check-walk-unwalk
@@ -130,6 +132,7 @@
   (if (pred x) (f x) (f-tail y #(1 2 3))))
 
 (define-walk-unwalk-test test/walk-unwalk/flet
+  (flet ((empty ())))
   (flet ((sq (x)
            (* x x)))
     (+ (sq 3) (sq 4)))
@@ -139,7 +142,12 @@
     (prline "hello")
     (prline "world")))
 
+(deftest test/walk-unwalk/flet/errors ()
+  (signals error
+    (walk-form '(flet ((empty))))))
+
 (define-walk-unwalk-test test/walk-unwalk/labels
+  (labels ((empty ())))
   (labels ((fac-acc (n acc)
              (if (zerop n)
                  (land acc)
@@ -151,6 +159,10 @@
            (oddp (n)
              (if (zerop n) nil (evenp (1- n)))))
     (oddp 666)))
+
+(deftest test/walk-unwalk/labels/errors ()
+  (signals error
+    (walk-form '(labels ((empty))))))
 
 (define-walk-unwalk-test test/walk-unwalk/let
   (let ((a 2) (b 3) (c 4))
@@ -221,3 +233,42 @@
        (progn (with-call/cc* (walk-the-plank))
               (pushed-off-the-plank))
     (save-life)))
+
+;;; bugs
+
+(deftest test/walk-unwalk/macrolet-over-flet ()
+  (check-walk-unwalk
+   '(macrolet ((foo () 'bar))
+     (flet ((foo ()))
+       (foo)))
+   ;; Used to be:
+   ;; (locally
+   ;;   (flet ((foo ()))
+   ;;     bar))
+   '(locally
+     (flet ((foo ()))
+       (foo)))))
+
+(defmacro global-macro-foo ()
+  'bar)
+
+(deftest test/walk-unwalk/macro-over-flet ()
+  (check-walk-unwalk
+   '(flet ((global-macro-foo ()))
+     (global-macro-foo))
+   ;; Used to be:
+   ;; (flet ((global-macro-foo ()))
+   ;;   bar)
+   '(flet ((global-macro-foo ()))
+     (global-macro-foo))))
+
+(deftest test/walk-unwalk/let-over-symbol-macrolet ()
+  (check-walk-unwalk
+   '(let (foo)
+     (symbol-macrolet ((foo 'bar))
+       foo))
+   ;; Used to (wrongly) be the following before a bugfix:
+   ;; (LET ((FOO NIL))
+   ;;   (LOCALLY FOO))
+   '(let ((foo ()))
+     (locally 'bar))))
