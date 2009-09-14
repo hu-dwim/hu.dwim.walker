@@ -56,11 +56,20 @@
     (cond
       ((constant-name? form)
        (make-form-object 'constant-form parent :value form))
-      ((lookup-in-walkenv :symbol-macro form env)
-       (let ((*inside-macroexpansion* t))
-         (walk-form (lookup-in-walkenv :symbol-macro form env) parent env)))
+      ((member (lookup-in-walkenv nil form env) '(:variable :unwalked-variable :symbol-macro))
+       ;; OPTIMIZATION: lookup-in-walkenv is called twice
+       (ecase (lookup-in-walkenv nil form env)
+         (:variable
+          (make-form-object 'walked-lexical-variable-reference-form parent :name form))
+         (:unwalked-variable
+          (make-form-object 'unwalked-lexical-variable-reference-form parent :name form))
+         (:symbol-macro
+          (let ((*inside-macroexpansion* t))
+            (walk-form (lookup-in-walkenv :symbol-macro form env) parent env)))))
       ((symbol-macro-name? form lexenv)
        (walk-form (walker-macroexpand-1 form lexenv) parent env))
+      ;; FIXME special variable handling is most probably not good as it is:
+      ;; check proper behavior regarding the lexenv nesting and the parent walking below for (DECLARE (SPECIAL ...)) entries
       ((or (special-variable-name? form)
            (loop
               :for node = parent :then (parent-of node)
@@ -74,10 +83,6 @@
                                           (declares-of node))))
                       (return t)))))
        (make-form-object 'special-variable-reference-form parent :name form))
-      ((lookup-in-walkenv :variable form env)
-       (make-form-object 'walked-lexical-variable-reference-form parent :name form))
-      ((lookup-in-walkenv :unwalked-variable form env)
-       (make-form-object 'unwalked-lexical-variable-reference-form parent :name form))
       (t
        (undefined-reference :variable form)
        (make-form-object 'free-variable-reference-form parent :name form)))))
