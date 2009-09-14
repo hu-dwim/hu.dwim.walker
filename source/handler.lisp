@@ -526,7 +526,7 @@
   (with-form-object (load-time-value 'load-time-value-form parent
                                      :body form
                                      :read-only (third form))
-    (setf (body-of load-time-value) (walk-form (second form)))))
+    (setf (body-of load-time-value) (walk-form (second form) load-time-value))))
 
 (defunwalker-handler load-time-value-form (body read-only)
   `(load-time-value ,(unwalk-form body) ,read-only))
