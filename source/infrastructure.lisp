@@ -235,6 +235,7 @@
   `(setf ,env (augment-walkenv ,env ,type ,name ,datum ,@other-datum)))
 
 (defun lookup-in-walkenv (type name env &key (error-p nil) (default-value nil))
+  (check-type type (or null keyword))
   (%lookup (car env) type name :error-p error-p :default-value default-value))
 
 (defun %extend (environment type name datum &rest other-datum)
@@ -246,8 +247,12 @@
 (defun %lookup (environment type name &key (error-p nil) (default-value nil))
   (loop
      :for (.type .name . data) :in environment
-     :when (and (eql .type type) (eql .name name))
-       :return (values data t)
+     :when (and (or (null type)
+                    (eql .type type))
+                (eql .name name))
+       :return (if (null type)
+                   (values .type .name data)
+                   (values data t))
      :finally
        (if error-p
            (error "No value for ~S of type ~S in environment ~S was found."
