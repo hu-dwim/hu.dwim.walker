@@ -341,14 +341,20 @@
   ())
 
 (defwalker-handler flet (form parent env)
-  (destructuring-bind (binds &body body)
+  (destructuring-bind (bindings &body body)
       (cdr form)
     (with-form-object (flet 'flet-form parent)
       ;; build up the objects for the bindings in the original env
       (loop
-         :for (name args . body) :in binds
-         :collect (cons name (with-form-object (lambda-node 'lambda-function-form flet)
-                               (walk-lambda-like lambda-node args body env))) :into bindings
+         :for entry :in bindings
+         :for (name arguments . body) = entry
+         :collect (progn
+                    (when (< (length entry) 2)
+                      (error "Illegal FLET binding form ~S" entry))
+                    (cons name (when (or body
+                                         arguments)
+                                 (with-form-object (lambda-node 'lambda-function-form flet)
+                                   (walk-lambda-like lambda-node arguments body env))))) :into bindings
          :finally (setf (bindings-of flet) bindings))
       ;; walk the body in the new env
       (walk-implict-progn flet
@@ -362,10 +368,13 @@
 
 ;; TODO factor out stuff in flet-form and labels-form
 (defunwalker-handler flet-form (bindings body declares)
-  `(flet ,(mapcar (lambda (bind)
-                    (cons (car bind)
-                          ;; remove (function (lambda ...)) of the function bindings
-                          (cdr (unwalk-form (cdr bind)))))
+  `(flet ,(mapcar (lambda (binding)
+                    (cons (car binding)
+                          (if (cdr binding)
+                              ;; remove (function (lambda ...)) of the function bindings
+                              (rest (second (unwalk-form (cdr binding))))
+                              ;; empty args
+                              (list '()))))
                   bindings)
      ,@(unwalk-declarations declares)
      ,@(unwalk-forms body)))
@@ -374,7 +383,7 @@
   ())
 
 (defwalker-handler labels (form parent env)
-  (destructuring-bind (binds &body body)
+  (destructuring-bind (bindings &body body)
       (cdr form)
     (with-form-object (labels 'labels-form parent :bindings '())
       ;; we need to walk over the bindings twice. the first pass
@@ -384,30 +393,38 @@
       ;; actual bodies of the form filling in the previously created
       ;; objects.
       (loop
-         :for entry :in binds
-         :for (name arguments . body) :in binds
-         :for lambda = (with-current-form entry
-                    (make-form-object 'lambda-function-form labels))
+         :for entry :in bindings
+         :for (name arguments . body) :in bindings
+         :for lambda = (when (or body
+                            arguments)
+                    (with-current-form entry
+                      (make-form-object 'lambda-function-form labels)))
          :do (progn
+               (when (< (length entry) 2)
+                 (error "Illegal LABELS binding form ~S" entry))
                (push (cons name lambda) (bindings-of labels))
                (augment-walkenv! env :function name lambda)))
       (setf (bindings-of labels) (nreverse (bindings-of labels)))
       (loop
-         :for form :in binds
+         :for form :in bindings
          :for (arguments . body) = (cdr form)
          :for binding :in (bindings-of labels)
          :for lambda = (cdr binding)
-         :for tmp-lambda = (walk-lambda `(lambda ,arguments ,@body) labels env)
-         :do (setf (body-of lambda) (body-of tmp-lambda)
-                   (arguments-of lambda) (arguments-of tmp-lambda)
-                   (declares-of lambda) (declares-of tmp-lambda)))
+         :do (when lambda
+               (let ((tmp-lambda (walk-lambda `(lambda ,arguments ,@body) labels env)))
+                 (setf (body-of lambda) (body-of tmp-lambda)
+                       (arguments-of lambda) (arguments-of tmp-lambda)
+                       (declares-of lambda) (declares-of tmp-lambda)))))
       (walk-implict-progn labels body env :declare t))))
 
 (defunwalker-handler labels-form (bindings body declares)
-  `(labels ,(mapcar (lambda (bind)
-                      (cons (car bind)
-                            ;; remove (function (lambda ...)) of the function bindings
-                            (cdadr (unwalk-form (cdr bind)))))
+  `(labels ,(mapcar (lambda (binding)
+                      (cons (car binding)
+                            (if (cdr binding)
+                                ;; remove (function (lambda ...)) of the function bindings
+                                (cdadr (unwalk-form (cdr binding)))
+                                ;; empty args
+                                (list '()))))
                     bindings)
      ,@(unwalk-declarations declares)
      ,@(unwalk-forms body)))
