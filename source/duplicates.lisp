@@ -6,23 +6,6 @@
 
 (in-package :hu.dwim.walker)
 
-(defmacro if-bind (var test &body then/else)
-  (assert (first then/else)
-          (then/else)
-          "IF-BIND missing THEN clause.")
-  (destructuring-bind (then &optional else)
-      then/else
-    `(let ((,var ,test))
-       (if ,var ,then ,else))))
-
-(defmacro when-bind (var test &body body)
-  `(if-bind ,var ,test (progn ,@body)))
-
-(defmacro prog1-bind (var ret &body body)
-  `(let ((,var ,ret))
-    ,@body
-    ,var))
-
 (defmacro dolist* ((iterator list &optional return-value) &body body)
   "Like DOLIST but destructuring-binds the elements of LIST.
 
