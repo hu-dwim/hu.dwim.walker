@@ -9,8 +9,7 @@
 (defpackage :hu.dwim.walker
   (:documentation "A code walker for Common Lisp")
 
-  (:use :common-lisp
-        :alexandria)
+  (:use :hu.dwim.common-lisp)
 
   (:shadow #:type-of
            #:eval)
@@ -191,5 +190,3 @@
            #:arguments-of
 
            #:collect-standard-walked-form-subclasses))
-
-(in-package :hu.dwim.walker)
