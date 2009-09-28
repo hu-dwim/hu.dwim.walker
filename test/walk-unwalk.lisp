@@ -58,6 +58,12 @@
    (if p x y)
    id))
 
+(define-walk-unwalk-test test/lambda-list-parsing
+  (with-expected-failures
+    ;; FIXME &aux is not supported
+    #'(lambda (x &aux auxfoo)))
+  #'(lambda (x &rest args &key key1 (key2 nil key2?) (key3 42) &allow-other-keys)))
+
 (define-walk-unwalk-test test/declare/1
   (locally (declare (zork)))
   (locally (declare (optimize speed) (optimize (debug 2))))
