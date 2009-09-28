@@ -14,7 +14,7 @@
            "Levente Mészáros <levente.meszaros@gmail.com>")
   :licence "BSD / Public domain"
   :description "Common Lisp form walker and unwalker (to and from CLOS instances)"
-  :depends-on (:alexandria)
+  :depends-on (:hu.dwim.common-lisp)
   :components ((:file "package" :pathname "source/package")
                (:module "integration"
                 :depends-on ("package")
