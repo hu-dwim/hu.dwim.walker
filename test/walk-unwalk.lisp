@@ -47,6 +47,14 @@
   var
   :var)
 
+(deftest test/variable/bug1 ()
+  (let* ((walked (walk-form '(let ((v 0))
+                              (declare (type integer v))
+                              v)))
+         (body (body-of walked)))
+    (is (length= 1 body))
+    (is (typep (first body) 'walked-lexical-variable-reference-form))))
+
 (define-walk-unwalk-test test/application
   (* 2 3)
   (+ (* 3 3) (* 4 4)))
