@@ -235,7 +235,7 @@
   `(setf ,env (augment-walkenv ,env ,type ,name ,datum ,@other-datum)))
 
 (defun lookup-in-walkenv (type name env &key (error-p nil) (default-value nil))
-  (check-type type (or null keyword))
+  (check-type type (or null list keyword))
   (%lookup (car env) type name :error-p error-p :default-value default-value))
 
 (defun %extend (environment type name datum &rest other-datum)
@@ -247,10 +247,12 @@
 (defun %lookup (environment type name &key (error-p nil) (default-value nil))
   (loop
      :for (.type .name . data) :in environment
-     :when (and (or (null type)
-                    (eql .type type))
-                (eql .name name))
-       :return (if (null type)
+     :when (and (eq .name name)
+                (or (null type)
+                    (eq .type type)
+                    (and (listp type)
+                         (member .type type :test #'eq))))
+       :return (if (listp type)
                    (values .type .name data)
                    (values data t))
      :finally
