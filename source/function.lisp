@@ -253,7 +253,7 @@
 (defunwalker-handler optional-function-argument-form (name supplied-p-parameter)
   (let ((default-value (awhen (default-value-of -form-)
                          (unwalk-form it))))
-    (cond ((and name default-value supplied-p-parameter)
+    (cond ((and name supplied-p-parameter)
            `(,name ,default-value ,supplied-p-parameter))
           ((and name default-value)
            `(,name ,default-value))
