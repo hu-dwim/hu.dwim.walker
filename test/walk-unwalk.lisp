@@ -116,6 +116,7 @@
   #'(lambda (x y) (y x))
   #'(lambda (x &key y z) (z (y x)))
   #'(lambda (&optional x y) (list x y))
+  #'(lambda (&optional (x nil x-p)) x)
   #'(lambda (x &rest args) (apply x args))
   #'(lambda (object &key (a nil a?)) (values))
   #'(lambda (object &key a b &allow-other-keys) (values))
