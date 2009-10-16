@@ -19,6 +19,6 @@
   :components ((:module "test"
                 :components ((:file "ast" :depends-on ("package"))
                              (:file "lexenv" :depends-on ("package"))
-                             (:file "macros" :depends-on ("package"))
+                             (:file "macros" :depends-on ("package" "walk-unwalk"))
                              (:file "package")
                              (:file "walk-unwalk" :depends-on ("package"))))))
