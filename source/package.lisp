@@ -9,7 +9,7 @@
 (defpackage :hu.dwim.walker
   (:documentation "A code walker for Common Lisp")
 
-  (:use :hu.dwim.common-lisp)
+  (:use :hu.dwim.common)
 
   (:shadow #:type-of
            #:eval)
