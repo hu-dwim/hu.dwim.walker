@@ -8,10 +8,10 @@
 
 ;;;; Atoms
 
-(defclass constant-form (walked-form)
-  ((value :accessor value-of :initarg :value)))
+(def (class* e) constant-form (walked-form)
+  ((value)))
 
-(defunwalker-handler constant-form (value)
+(def unwalker constant-form (value)
   (if (or (eq value t)
           (eq value nil)
           (keywordp value))
@@ -21,62 +21,62 @@
         (cons   `(quote ,value))
         (t value))))
 
-(defprint-object constant-form
+(def print-object constant-form
   (format t "!~S" (value-of -self-)))
 
-(defclass variable-reference-form (walked-form)
-  ((name :accessor name-of :initarg :name)))
+(def (class* e) variable-reference-form (walked-form)
+  ((name)))
 
-(defunwalker-handler variable-reference-form (name)
+(def unwalker variable-reference-form (name)
   name)
 
-(defprint-object variable-reference-form
+(def print-object variable-reference-form
   (format t "!~S" (name-of -self-)))
 
-(defclass lexical-variable-reference-form (variable-reference-form)
+(def (class* e) lexical-variable-reference-form (variable-reference-form)
   ())
 
-(defclass walked-lexical-variable-reference-form (lexical-variable-reference-form)
+(def (class* e) walked-lexical-variable-reference-form (lexical-variable-reference-form)
   ()
   (:documentation "A reference to a local variable defined in the lexical environment inside the form passed to walk-form."))
 
-(defclass unwalked-lexical-variable-reference-form (lexical-variable-reference-form)
+(def (class* e) unwalked-lexical-variable-reference-form (lexical-variable-reference-form)
   ()
   (:documentation "A reference to a local variable defined in the lexical environment outside of the form passed to walk-form."))
 
-(defclass special-variable-reference-form (variable-reference-form)
+(def (class* e) special-variable-reference-form (variable-reference-form)
   ())
 
-(defclass free-variable-reference-form (special-variable-reference-form)
+(def (class* e) free-variable-reference-form (special-variable-reference-form)
   ())
 
-(defwalker-handler +atom-marker+ (form parent env)
-  (let ((lexenv (cdr env))
-        (form (coerce-to-form form)))
+(def walker +atom-marker+
+  (let ((lexenv (cdr -environment-))
+        (form (coerce-to-form -form-)))
     (cond
       ((constant-name? form)
-       (make-form-object 'constant-form parent :value form))
+       (make-form-object 'constant-form -parent- :value form))
       (t
-       (let ((closest-lexenv-entry (lookup-in-walkenv '(:variable :unwalked-variable :symbol-macro) form env)))
+       (let ((closest-lexenv-entry (-lookup- '(:variable :unwalked-variable :symbol-macro) form)))
          (cond
            (closest-lexenv-entry
-            ;; we check the closest entry in the lexenv with one of the listed types (i.e. skipping type DECLARE's), which is NOT THE SAME AS
-            ;; looking for each type individually in three separate calls to LOOKUP-IN-WALKENV!
+            ;; we check the closest entry in the lexenv with one of the listed types (i.e. skipping type DECLARE's). please note that it is NOT THE SAME AS
+            ;; looking for each type individually in three separate calls to LOOKUP!
             (ecase closest-lexenv-entry
               (:variable
-               (make-form-object 'walked-lexical-variable-reference-form parent :name form))
+               (make-form-object 'walked-lexical-variable-reference-form -parent- :name form))
               (:unwalked-variable
-               (make-form-object 'unwalked-lexical-variable-reference-form parent :name form))
+               (make-form-object 'unwalked-lexical-variable-reference-form -parent- :name form))
               (:symbol-macro
-               (let ((*inside-macroexpansion* t))
-                 (walk-form (lookup-in-walkenv :symbol-macro form env) parent env)))))
+               (bind ((*inside-macroexpansion* t))
+                 (recurse (-lookup- :symbol-macro form))))))
            ((symbol-macro-name? form lexenv)
-            (walk-form (walker-macroexpand-1 form lexenv) parent env))
+            (recurse (walker-macroexpand-1 form lexenv)))
            ;; FIXME special variable handling is most probably not good as it is:
            ;; check proper behavior regarding the lexenv nesting and the parent walking below for (DECLARE (SPECIAL ...)) entries
            ((or (special-variable-name? form)
                 (loop
-                   :for node = parent :then (parent-of node)
+                   :for node = -parent- :then (parent-of node)
                    :while node
                    :do (progn
                          (when (and (typep node 'implicit-progn-with-declare-mixin)
@@ -86,55 +86,50 @@
                                                       (eq (name-of declare) form)))
                                                (declares-of node))))
                            (return t)))))
-            (make-form-object 'special-variable-reference-form parent :name form))
+            (make-form-object 'special-variable-reference-form -parent- :name form))
            (t
-            (undefined-reference :variable form)
-            (make-form-object 'free-variable-reference-form parent :name form))))))))
+            (handle-undefined-reference :variable form)
+            (make-form-object 'free-variable-reference-form -parent- :name form))))))))
 
 ;;;; BLOCK/RETURN-FROM
 
-(defclass block-form (walked-form implicit-progn-mixin)
-  ((name :accessor name-of :initarg :name)))
+(def (class* e) block-form (named-walked-form implicit-progn-mixin)
+  ())
 
-(defwalker-handler block (form parent env)
-  (destructuring-bind (block-name &rest body)
-      (cdr form)
-    (with-form-object (block 'block-form parent
+(def walker block
+  (bind (((block-name &rest body) (cdr -form-)))
+    (with-form-object (block 'block-form -parent-
                              :name block-name)
       (walk-implict-progn block
                           body
-                          (augment-walkenv env :block block-name block)))))
+                          (-augment- :block block-name block)))))
 
-(defunwalker-handler block-form (name body)
-  `(block ,name ,@(unwalk-forms body)))
+(def unwalker block-form (name body)
+  `(block ,name ,@(recurse-on-body body)))
 
-(defclass return-from-form (walked-form)
-  ((target-block :initform nil :accessor target-block-of :initarg :target-block)
-   (result :accessor result-of :initarg :result)))
+(def (class* e) return-from-form (walked-form)
+  ((target-block nil)
+   (result)))
 
-(define-condition return-from-unknown-block (walker-error)
-  ((block-name :accessor block-name :initarg :block-name))
+(def (condition* e) return-from-unknown-block (walker-error)
+  ((block-name))
   (:report (lambda (condition stream)
-             (format stream "Unable to return from block named ~S." (block-name condition)))))
+             (format stream "Unable to return from block named ~S." (block-name-of condition)))))
 
-(defun walk-return (block-name value form parent env)
-  (if (lookup-in-walkenv :block block-name env)
-      (with-form-object (return-from 'return-from-form parent
-                                     :target-block (lookup-in-walkenv :block block-name env))
-        (setf (result-of return-from) (walk-form value return-from env)))
-      (restart-case
-          (error 'return-from-unknown-block :block-name block-name)
-        (add-block ()
-          :report "Add this block and continue."
-          (walk-form form parent (augment-walkenv env :block block-name :unknown-block))))))
+(def walker return-from
+  (bind (((block-name &optional (value '(values))) (rest -form-)))
+    (if (-lookup- :block block-name)
+        (with-form-object (return-from 'return-from-form -parent-
+                                       :target-block (-lookup- :block block-name))
+          (setf (result-of return-from) (recurse value return-from)))
+        (restart-case
+            (error 'return-from-unknown-block :block-name block-name)
+          (add-block ()
+            :report "Add this block and continue."
+            (recurse -form- -parent- (-augment- :block block-name :unknown-block)))))))
 
-(defwalker-handler return-from (form parent env)
-  (destructuring-bind (block-name &optional (value '(values)))
-      (cdr form)
-    (walk-return block-name value form parent env)))
-
-(defunwalker-handler return-from-form (target-block result)
-  (let* ((unwalked-result (unwalk-form result))
+(def unwalker return-from-form (target-block result)
+  (bind ((unwalked-result (recurse result))
          (result-form (if (equal unwalked-result '(values))
                           '()
                           (list unwalked-result))))
@@ -144,87 +139,82 @@
 
 ;;;; CATCH/THROW
 
-(defclass catch-form (walked-form implicit-progn-mixin)
-  ((tag :accessor tag-of :initarg :tag)))
+(def (class* e) catch-form (walked-form implicit-progn-mixin)
+  ((tag)))
 
-(defwalker-handler catch (form parent env)
-  (destructuring-bind (tag &body body)
-      (cdr form)
-    (with-form-object (catch 'catch-form parent)
-      (setf (tag-of catch) (walk-form tag catch env))
-      (walk-implict-progn catch body env))))
+(def walker catch
+  (bind (((tag &body body) (cdr -form-)))
+    (with-form-object (catch 'catch-form -parent-)
+      (setf (tag-of catch) (recurse tag catch))
+      (walk-implict-progn catch body -environment-))))
 
-(defunwalker-handler catch-form (tag body)
-  `(catch ,(unwalk-form tag) ,@(unwalk-forms body)))
+(def unwalker catch-form (tag body)
+  `(catch ,(recurse tag) ,@(recurse-on-body body)))
 
-(defclass throw-form (walked-form)
-  ((tag :accessor tag-of :initarg :tag)
-   (value :accessor value-of :initarg :value)))
+(def (class* e) throw-form (walked-form)
+  ((tag)
+   (value)))
 
-(defwalker-handler throw (form parent env)
-  (destructuring-bind (tag &optional (result '(values)))
-      (cdr form)
-    (with-form-object (throw 'throw-form parent)
-      (setf (tag-of throw) (walk-form tag throw env)
-            (value-of throw) (walk-form result throw env)))))
+(def walker throw
+  (bind (((tag &optional (result '(values))) (cdr -form-)))
+    (with-form-object (throw 'throw-form -parent-)
+      (setf (tag-of throw) (recurse tag throw)
+            (value-of throw) (recurse result throw)))))
 
-(defunwalker-handler throw-form (tag value)
-  `(throw ,(unwalk-form tag) ,(unwalk-form value)))
+(def unwalker throw-form (tag value)
+  `(throw ,(recurse tag) ,(recurse value)))
 
 ;;;; EVAL-WHEN
 
-(defclass eval-when-form (walked-form implicit-progn-mixin)
-  ((eval-when-times :accessor eval-when-times :initarg :eval-when-times)))
+(def (class* e) eval-when-form (walked-form implicit-progn-mixin)
+  ((eval-when-times)))
 
-(defwalker-handler eval-when (form parent env)
-  (destructuring-bind (times &body body)
-      (cdr form)
-    (with-form-object (eval-when 'eval-when-form parent)
-      (setf (eval-when-times eval-when) times)
-      (walk-implict-progn eval-when body env))))
+(def walker eval-when
+  (bind (((times &body body) (cdr -form-)))
+    (with-form-object (eval-when 'eval-when-form -parent-)
+      (setf (eval-when-times-of eval-when) times)
+      (walk-implict-progn eval-when body -environment-))))
 
-(defunwalker-handler eval-when-form (body eval-when-times)
+(def unwalker eval-when-form (body eval-when-times)
   `(eval-when ,eval-when-times
-     ,@(unwalk-forms body)))
+     ,@(recurse-on-body body)))
 
 ;;;; IF
 
-(defclass if-form (walked-form)
-  ((condition :accessor condition-of :initarg :condition)
-   (then :accessor then-of :initarg :then)
-   (else :accessor else-of :initarg :else)))
+(def (class* e) if-form (walked-form)
+  ((condition)
+   (then)
+   (else)))
 
-(defwalker-handler if (form parent env)
-  (with-form-object (if 'if-form parent)
-    (setf (condition-of if) (walk-form (second form) if env)
-          (then-of if) (walk-form (third form) if env)
-          (else-of if) (walk-form (fourth form) if env))))
+(def walker if
+  (with-form-object (if 'if-form -parent-)
+    (setf (condition-of if) (recurse (second -form-) if)
+          (then-of if) (recurse (third -form-) if)
+          (else-of if) (recurse (fourth -form-) if))))
 
-(defunwalker-handler if-form (condition then else)
-  `(if ,(unwalk-form condition) ,(unwalk-form then)
-       ,@(awhen (unwalk-form else)
+(def unwalker if-form (condition then else)
+  `(if ,(recurse condition)
+       ,(recurse then)
+       ,@(awhen (recurse else)
            (list it))))
 
 ;;;; LET/LET*
 
-(defclass variable-binding-form (walked-form binding-form-mixin implicit-progn-with-declare-mixin)
+(def (class* e) variable-binding-form (walked-form binding-form-mixin implicit-progn-with-declare-mixin)
   ())
 
-(defclass let-form (variable-binding-form)
+(def (class* e) let-form (variable-binding-form)
   ())
 
-(defwalker-handler let (form parent env)
-  (with-form-object (let 'let-form parent)
+(def walker let
+  (with-form-object (let 'let-form -parent-)
     (setf (bindings-of let) (mapcar (lambda (binding)
                                       (when binding
                                         (with-current-form binding
-                                          (destructuring-bind (var &optional initial-value)
-                                              (ensure-list (coerce-to-form binding))
-                                            (cons var (walk-form initial-value let env))))))
-                                    (coerce-to-form (second (coerce-to-form form)))))
-    (multiple-value-bind (b e d declarations)
-        (split-body (cddr (coerce-to-form form)) env :parent let :declare t)
-      (declare (ignore b e d))
+                                          (bind (((var &optional initial-value) (ensure-list (coerce-to-form binding))))
+                                            (cons var (recurse initial-value let))))))
+                                    (coerce-to-form (second -form-))))
+    (bind (((:values nil nil nil declarations) (split-body (cddr -form-) -environment- :parent let :declare t)))
       (loop
          :for (var . value) :in (bindings-of let)
          :do (unless (or (special-variable-name? var)
@@ -233,114 +223,115 @@
                                          (eq var (name-of declaration))))
                                   declarations))
                ;; TODO audit this part, :dummy? check other occurrances, too!
-               (augment-walkenv! env :variable (coerce-to-form var) :dummy)))
-      (walk-implict-progn let (cddr (coerce-to-form form)) env :declare t))))
+               (-augment- :variable (coerce-to-form var) :dummy)))
+      (walk-implict-progn let (cddr -form-) -environment- :declare t))))
 
-(defunwalker-handler let-form (bindings body declares)
+(def unwalker let-form (bindings body declares)
   `(let ,(mapcar (lambda (bind)
-                   (list (car bind) (unwalk-form (cdr bind))))
+                   (list (car bind) (recurse (cdr bind))))
                  bindings)
      ,@(unwalk-declarations declares)
-     ,@(unwalk-forms body)))
+     ,@(recurse-on-body body)))
 
-(defclass let*-form (variable-binding-form)
+(def (class* e) let*-form (variable-binding-form)
   ())
 
-(defwalker-handler let* (form parent env)
-  (with-form-object (let* 'let*-form parent
+(def walker let*
+  (with-form-object (let* 'let*-form -parent-
                           :bindings '())
-    (dolist* ((var &optional initial-value) (mapcar #'ensure-list (second form)))
-      (push (cons var (walk-form initial-value let* env)) (bindings-of let*))
-      (augment-walkenv! env :variable var :dummy))
+    (dolist* ((var &optional initial-value) (mapcar #'ensure-list (second -form-)))
+      (push (cons var (recurse initial-value let*)) (bindings-of let*))
+      (-augment- :variable var :dummy))
     (setf (bindings-of let*) (nreverse (bindings-of let*)))
-    (walk-implict-progn let* (cddr form) env :declare t)))
+    (walk-implict-progn let* (cddr -form-) -environment- :declare t)))
 
-(defunwalker-handler let*-form (bindings body declares)
+(def unwalker let*-form (bindings body declares)
   `(let* ,(mapcar (lambda (bind)
-                    (list (car bind) (unwalk-form (cdr bind))))
+                    (list (car bind) (recurse (cdr bind))))
                   bindings)
      ,@(unwalk-declarations declares)
-     ,@(unwalk-forms body)))
+     ,@(recurse-on-body body)))
 
 ;;;; LOCALLY
 
-(defclass locally-form (walked-form implicit-progn-with-declare-mixin)
+(def (class* e) locally-form (walked-form implicit-progn-with-declare-mixin)
   ())
 
-(defwalker-handler locally (form parent env)
-  (with-form-object (locally 'locally-form parent)
-    (walk-implict-progn locally (cdr form) env :declare t)))
+(def walker locally
+  (with-form-object (locally 'locally-form -parent-)
+    (walk-implict-progn locally (cdr -form-) -environment- :declare t)))
 
-(defunwalker-handler locally-form (body declares)
-  `(locally ,@(unwalk-declarations declares)
-     ,@(unwalk-forms body)))
+(def unwalker locally-form (body declares)
+  `(locally
+       ,@(unwalk-declarations declares)
+     ,@(recurse-on-body body)))
 
 ;;;; MACROLET
 
-(defclass macrolet-form (walked-form binding-form-mixin implicit-progn-with-declare-mixin)
+(def (class* e) macrolet-form (walked-form binding-form-mixin implicit-progn-with-declare-mixin)
   ())
 
-(defwalker-handler macrolet (form parent env)
+(def walker macrolet
   ;; TODO is there any point in constructing a macrolet form if we macroexpand the body anyways?
-  (with-form-object (macrolet 'macrolet-form parent
+  (with-form-object (macrolet 'macrolet-form -parent-
                               :bindings '())
-    (dolist* ((name args &body body) (second form))
-      (let ((handler (parse-macro-definition name args body (cdr env))))
-        (augment-walkenv! env :macro name handler)
+    (dolist* ((name args &body body) (second -form-))
+      (bind ((handler (parse-macro-definition name args body (cdr -environment-))))
+        (-augment- :macro name handler)
         (push (cons name handler) (bindings-of macrolet))))
     (setf (bindings-of macrolet) (nreverse (bindings-of macrolet)))
-    (walk-implict-progn macrolet (cddr form) env :declare t)))
+    (walk-implict-progn macrolet (cddr -form-) -environment- :declare t)))
 
-(defunwalker-handler macrolet-form (body bindings declares)
-  ;; We ignore the bindings, because the expansion has already taken
-  ;; place at walk-time.
-  (declare (ignore bindings))
-  `(locally ,@(unwalk-declarations declares) ,@(unwalk-forms body)))
+(def unwalker macrolet-form (body declares)
+  ;; We ignore the bindings, because the expansion has already taken place at walk-time.
+  `(locally ,@(unwalk-declarations declares) ,@(recurse-on-body body)))
 
 ;;;; MULTIPLE-VALUE-CALL
 
-(defclass multiple-value-call-form (walked-form)
-  ((function-designator :accessor function-designator-of :initarg :function-designator)
-   (arguments :accessor arguments-of :initarg :arguments)))
+(def (class* e) multiple-value-call-form (walked-form)
+  ((function-designator)
+   (arguments)))
 
-(defwalker-handler multiple-value-call (form parent env)
-  (with-form-object (m-v-c 'multiple-value-call-form parent)
-    (setf (function-designator-of m-v-c) (walk-form (second form) m-v-c env)
-          (arguments-of m-v-c) (mapcar (lambda (f) (walk-form f m-v-c env))
-                                       (cddr form)))))
+(def walker multiple-value-call
+  (with-form-object (m-v-c 'multiple-value-call-form -parent-)
+    (setf (function-designator-of m-v-c) (recurse (second -form-) m-v-c)
+          (arguments-of m-v-c) (mapcar (lambda (f)
+                                         (recurse f m-v-c))
+                                       (cddr -form-)))))
 
-(defunwalker-handler multiple-value-call-form (function-designator arguments)
-  `(multiple-value-call ,(unwalk-form function-designator) ,@(unwalk-forms arguments)))
+(def unwalker multiple-value-call-form (function-designator arguments)
+  `(multiple-value-call ,(recurse function-designator) ,@(recurse-on-body arguments)))
 
 ;;;; MULTIPLE-VALUE-PROG1
 
-(defclass multiple-value-prog1-form (walked-form)
-  ((first-form :accessor first-form-of :initarg :first-form)
-   (other-forms :accessor other-forms-of :initarg :other-forms)))
+(def (class* e) multiple-value-prog1-form (walked-form)
+  ((first-form)
+   (other-forms)))
 
-(defwalker-handler multiple-value-prog1 (form parent env)
-  (with-form-object (m-v-p1 'multiple-value-prog1-form parent)
-    (setf (first-form-of m-v-p1) (walk-form (second form) m-v-p1 env)
-          (other-forms-of m-v-p1) (mapcar (lambda (f) (walk-form f m-v-p1 env))
-                                       (cddr form)))))
+(def walker multiple-value-prog1
+  (with-form-object (m-v-p1 'multiple-value-prog1-form -parent-)
+    (setf (first-form-of m-v-p1) (recurse (second -form-) m-v-p1)
+          (other-forms-of m-v-p1) (mapcar (lambda (f)
+                                            (recurse f m-v-p1))
+                                       (cddr -form-)))))
 
-(defunwalker-handler multiple-value-prog1-form (first-form other-forms)
-  `(multiple-value-prog1 ,(unwalk-form first-form) ,@(unwalk-forms other-forms)))
+(def unwalker multiple-value-prog1-form (first-form other-forms)
+  `(multiple-value-prog1 ,(recurse first-form) ,@(recurse-on-body other-forms)))
 
 ;;;; PROGN
 
-(defclass progn-form (walked-form implicit-progn-mixin)
+(def (class* e) progn-form (walked-form implicit-progn-mixin)
   ())
 
-(defwalker-handler progn (form parent env)
-  (with-form-object (progn 'progn-form parent)
-    (walk-implict-progn progn (cdr form) env)))
+(def walker progn
+  (with-form-object (progn 'progn-form -parent-)
+    (walk-implict-progn progn (cdr -form-) -environment-)))
 
-(defunwalker-handler progn-form (body)
-  `(progn ,@(unwalk-forms body)))
+(def unwalker progn-form (body)
+  `(progn ,@(recurse-on-body body)))
 
-(defprint-object progn-form
-  (let ((body (body-of -self-)))
+(def print-object progn-form
+  (bind ((body (body-of -self-)))
     (pprint-logical-block (*standard-output* body :prefix "(" :suffix ")")
       (princ "progn")
       (pprint-indent :block 1)
@@ -358,179 +349,179 @@
 
 ;;;; PROGV
 
-(defclass progv-form (walked-form implicit-progn-mixin)
-  ((variables-form :accessor variables-form-of :initarg :variables-form)
-   (values-form :accessor values-form-of :initarg :values-form)))
+(def (class* e) progv-form (walked-form implicit-progn-mixin)
+  ((variables-form)
+   (values-form)))
 
-(defwalker-handler progv (form parent env)
-  (with-form-object (progv 'progv-form parent)
-    (setf (variables-form-of progv) (walk-form (cadr form) progv env))
-    (setf (values-form-of progv) (walk-form (caddr form) progv env))
-    (walk-implict-progn progv (cdddr form) env)
+(def walker progv
+  (with-form-object (progv 'progv-form -parent-)
+    (setf (variables-form-of progv) (recurse (cadr -form-) progv))
+    (setf (values-form-of progv) (recurse (caddr -form-) progv))
+    (walk-implict-progn progv (cdddr -form-) -environment-)
     progv))
 
-(defunwalker-handler progv-form (body variables-form values-form)
-  `(progv ,(unwalk-form variables-form) ,(unwalk-form values-form) ,@(unwalk-forms body)))
+(def unwalker progv-form (body variables-form values-form)
+  `(progv
+       ,(recurse variables-form)
+       ,(recurse values-form)
+     ,@(recurse-on-body body)))
 
 ;;;; QUOTE
 
-(defwalker-handler quote (form parent env)
-  (make-form-object 'constant-form parent
-                    :value (second form)))
+(def walker quote
+  (make-form-object 'constant-form -parent-
+                    :value (second -form-)))
 
 ;;;; SETQ
 
-(defclass setq-form (walked-form)
-  ((variable
-    :accessor variable-of
-    :initarg :variable)
-   (value
-    :accessor value-of
-    :initarg :value)))
+(def (class* e) setq-form (walked-form)
+  ((variable)
+   (value)))
 
-(defwalker-handler setq (form parent env)
+(def walker setq
   ;; the SETQ handler needs to be able to deal with symbol-macrolets
   ;; which haven't yet been expanded and may expand into something
   ;; requiring setf and not setq.
   (let ((effective-code '()))
     (loop
-       :for (name value) :on (cdr form) :by #'cddr
-       :do (push (aif (lookup-in-walkenv :symbol-macro name env)
+       :for (name value) :on (cdr -form-) :by #'cddr
+       :do (push (aif (-lookup- :symbol-macro name)
                       `(setf ,it ,value)
                       `(setq ,name ,value))
                  effective-code))
     (if (= 1 (length effective-code))
         ;; only one form, the "simple case"
-        (destructuring-bind (type variable value)
-            (first effective-code)
+        (bind (((type variable value) (first effective-code)))
           (ecase type
-            (setq (with-form-object (setq 'setq-form parent)
-                    (setf (variable-of setq) (walk-form variable setq env))
-                    (setf (value-of setq) (walk-form value setq env))))
-            (setf (walk-form (first effective-code) parent env))))
+            (setq (with-form-object (setq 'setq-form -parent-)
+                    (setf (variable-of setq) (recurse variable setq))
+                    (setf (value-of setq) (recurse value setq))))
+            (setf (recurse (first effective-code)))))
         ;; multiple forms
-        (with-form-object (progn 'progn-form parent)
-          (walk-implict-progn progn effective-code env)))))
+        (with-form-object (progn 'progn-form -parent-)
+          (walk-implict-progn progn effective-code -environment-)))))
 
-(defunwalker-handler setq-form (variable value)
-  `(setq ,(unwalk-form variable) ,(unwalk-form value)))
+(def unwalker setq-form (variable value)
+  `(setq ,(recurse variable) ,(recurse value)))
 
 ;;;; SYMBOL-MACROLET
 
-(defclass symbol-macrolet-form (walked-form binding-form-mixin implicit-progn-with-declare-mixin)
+(def (class* e) symbol-macrolet-form (walked-form
+                                      binding-form-mixin
+                                      implicit-progn-with-declare-mixin)
   ())
 
-(defwalker-handler symbol-macrolet (form parent env)
-  (with-form-object (symbol-macrolet 'symbol-macrolet-form parent
+(def walker symbol-macrolet
+  (with-form-object (symbol-macrolet 'symbol-macrolet-form -parent-
                                      :bindings '())
-    (dolist* ((symbol expansion) (second form))
-      (augment-walkenv! env :symbol-macro symbol expansion)
+    (dolist* ((symbol expansion) (second -form-))
+      (-augment- :symbol-macro symbol expansion)
       (push (cons symbol expansion) (bindings-of symbol-macrolet)))
-    (setf (bindings-of symbol-macrolet) (nreverse (bindings-of symbol-macrolet)))
-    (walk-implict-progn symbol-macrolet (cddr form) env :declare t)))
+    (nreversef (bindings-of symbol-macrolet))
+    (walk-implict-progn symbol-macrolet (cddr -form-) -environment- :declare t)))
 
-(defunwalker-handler symbol-macrolet-form (body bindings declares)
-  ;; We ignore the bindings, because the expansion has already taken
-  ;; place at walk-time.
-  (declare (ignore bindings))
-  `(locally ,@(unwalk-declarations declares) ,@(unwalk-forms body)))
+(def unwalker symbol-macrolet-form (body declares)
+  ;; We ignore the bindings, because the expansion has already taken place at walk-time.
+  `(locally ,@(unwalk-declarations declares) ,@(recurse-on-body body)))
 
 ;;;; TAGBODY/GO
 
-(defclass tagbody-form (walked-form implicit-progn-mixin)
+(def (class* e) tagbody-form (walked-form implicit-progn-mixin)
   ())
 
-(defwalker-handler tagbody (form parent env)
-  (with-form-object (tagbody 'tagbody-form parent
-                             :body (cdr form))
-    (augment-walkenv! env :tagbody 'enclosing-tagbody tagbody)
-    (flet ((go-tag-p (form)
-             (or (symbolp form) (integerp form))))
+(def walker tagbody
+  (with-form-object (tagbody 'tagbody-form -parent-
+                             :body (cdr -form-))
+    (-augment- :tagbody 'enclosing-tagbody tagbody)
+    (flet ((go-tag? (form)
+             (or (symbolp form)
+                 (integerp form))))
       ;; the loop below destructuivly modifies the body of tagbody,
       ;; since it's the same object as the source we need to copy it.
       (setf (body-of tagbody) (copy-list (body-of tagbody)))
       (loop
          :for part :on (body-of tagbody)
-         :if (go-tag-p (car part))
-           :do (augment-walkenv! env :tag (car part) (cdr part)))
+         :if (go-tag? (car part))
+           :do (-augment- :tag (car part) (cdr part)))
       (loop
          :for part :on (body-of tagbody)
-         :if (go-tag-p (car part))
-         :do (setf (car part) (with-current-form (car part)
-                                (make-form-object 'go-tag-form tagbody
-                                                  :name (car part))))
+         :if (go-tag? (car part))
+           :do (setf (car part) (with-current-form (car part)
+                                  (make-form-object 'go-tag-form tagbody
+                                                    :name (car part))))
          :else
-           :do (setf (car part) (walk-form (car part) tagbody env))))))
+           :do (setf (car part) (recurse (car part) tagbody))))))
 
-(defunwalker-handler tagbody-form (body)
-  `(tagbody ,@(unwalk-forms body)))
+(def unwalker tagbody-form (body)
+  `(tagbody ,@(recurse-on-body body)))
 
-(defclass go-tag-form (walked-form)
-  ((name :accessor name-of :initarg :name)))
+(def (class* e) go-tag-form (named-walked-form)
+  ())
 
-(defunwalker-handler go-tag-form (name)
+(def unwalker go-tag-form (name)
   name)
 
-(defclass go-form (walked-form)
-  ((jump-target :accessor jump-target-of :initarg :jump-target)
-   (name :accessor name-of :initarg :name)
-   (enclosing-tagbody :accessor enclosing-tagbody-of :initarg :enclosing-tagbody)))
+(def (class* e) go-form (named-walked-form)
+  ((jump-target)
+   (enclosing-tagbody)))
 
-(defwalker-handler go (form parent env)
-  (make-form-object 'go-form parent
-                    :name (second form)
-                    :jump-target (lookup-in-walkenv :tag (second form) env)
-                    :enclosing-tagbody (lookup-in-walkenv :tagbody 'enclosing-tagbody env)))
+(def walker go
+  (make-form-object 'go-form -parent-
+                    :name (second -form-)
+                    :jump-target (-lookup- :tag (second -form-))
+                    :enclosing-tagbody (-lookup- :tagbody 'enclosing-tagbody)))
 
-(defunwalker-handler go-form (name)
+(def unwalker go-form (name)
   `(go ,name))
 
 ;;;; THE
 
-(defclass the-form (walked-form)
-  ((type :accessor type-of :initarg :type)
-   (value :accessor value-of :initarg :value)))
+(def (class* e) the-form (walked-form)
+  ((type)
+   (value)))
 
-(defwalker-handler the (form parent env)
-  (with-form-object (the 'the-form parent
-                         :type (second form))
-    (setf (value-of the) (walk-form (third form) the env))))
+(def walker the
+  (with-form-object (the 'the-form -parent-
+                         :type (second -form-))
+    (setf (value-of the) (recurse (third -form-) the))))
 
-(defunwalker-handler the-form (type value)
-  `(the ,type ,(unwalk-form value)))
+(def unwalker the-form (type value)
+  `(the ,type ,(recurse value)))
 
 ;;;; UNWIND-PROTECT
 
-(defclass unwind-protect-form (walked-form)
-  ((protected-form :accessor protected-form-of :initarg :protected-form)
-   (cleanup-form :accessor cleanup-form-of :initarg :cleanup-form)))
+(def (class* e) unwind-protect-form (walked-form)
+  ((protected-form)
+   (cleanup-form)))
 
-(defwalker-handler unwind-protect (form parent env)
-  (with-form-object (unwind-protect 'unwind-protect-form parent)
-    (setf (protected-form-of unwind-protect) (walk-form (second form) unwind-protect env)
+(def walker unwind-protect
+  (with-form-object (unwind-protect 'unwind-protect-form -parent-)
+    (setf (protected-form-of unwind-protect) (recurse (second -form-) unwind-protect)
           (cleanup-form-of unwind-protect) (mapcar (lambda (form)
-                                                     (walk-form form unwind-protect env))
-                                                   (cddr form)))))
+                                                     (recurse form unwind-protect))
+                                                   (cddr -form-)))))
 
-(defunwalker-handler unwind-protect-form (protected-form cleanup-form)
-  `(unwind-protect ,(unwalk-form protected-form) ,@(unwalk-forms cleanup-form)))
+(def unwalker unwind-protect-form (protected-form cleanup-form)
+  `(unwind-protect ,(recurse protected-form) ,@(recurse-on-body cleanup-form)))
 
 ;;;; LOAD-TIME-VALUE
 
-(defclass load-time-value-form (walked-form)
-  ((body :accessor body-of :initarg :body)
-   (read-only :initform nil :accessor read-only-p :initarg :read-only)
-   (value :accessor value-of)))
+(def (class* e) load-time-value-form (walked-form)
+  ((body)
+   (read-only nil :accessor read-only? :type boolean)
+   (value)))
 
-(defmethod initialize-instance :after ((self load-time-value-form) &key)
+(def method initialize-instance :after ((self load-time-value-form) &key &allow-other-keys)
   (setf (value-of self) (eval (body-of self))))
 
-(defwalker-handler load-time-value (form parent env)
-  (assert (<= (length form) 3))
-  (with-form-object (load-time-value 'load-time-value-form parent
-                                     :body form
-                                     :read-only (third form))
-    (setf (body-of load-time-value) (walk-form (second form) load-time-value))))
+(def walker load-time-value
+  (assert (<= (length -form-) 3))
+  (with-form-object (load-time-value 'load-time-value-form -parent-
+                                     :body -form-
+                                     :read-only (third -form-))
+    (setf (body-of load-time-value) (recurse (second -form-) load-time-value
+                                             ;; intentionally walk the body in an empty environment
+                                             nil))))
 
-(defunwalker-handler load-time-value-form (body read-only)
-  `(load-time-value ,(unwalk-form body) ,read-only))
+(def unwalker load-time-value-form (body read-only)
+  `(load-time-value ,(recurse body) ,read-only))

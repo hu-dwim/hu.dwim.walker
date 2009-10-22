@@ -6,14 +6,14 @@
 
 (in-package :hu.dwim.walker)
 
-(defclass application-form (walked-form)
-  ((operator :accessor operator-of :initarg :operator)
-   (arguments :accessor arguments-of :initarg :arguments)))
+(def (class* e) application-form (walked-form)
+  ((operator)
+   (arguments)))
 
-(defunwalker-handler application-form (operator arguments)
-  (cons operator (unwalk-forms arguments)))
+(def unwalker application-form (operator arguments)
+  (cons operator (recurse-on-body arguments)))
 
-(defprint-object application-form
+(def print-object application-form
   ;; the bang sign is a weak try... but at least mark it somehow that it's not a normal sexp...
   (princ "!(")
   (princ (operator-of -self-))
@@ -26,158 +26,160 @@
       (setf first nil)))
   (princ ")"))
 
-(defclass lexical-application-form (application-form)
-  ((code :accessor code-of :initarg :code)))
+(def (class* e) lexical-application-form (application-form)
+  ((code)))
 
-(defclass walked-lexical-application-form (lexical-application-form)
+(def (class* e) walked-lexical-application-form (lexical-application-form)
   ())
 
-(defclass unwalked-lexical-application-form (lexical-application-form)
+(def (class* e) unwalked-lexical-application-form (lexical-application-form)
   ())
 
-(defclass free-application-form (application-form)
+(def (class* e) free-application-form (application-form)
   ())
 
-(defclass lambda-application-form (application-form)
+(def (class* e) lambda-application-form (application-form)
   ())
 
-(defunwalker-handler lambda-application-form (operator arguments)
-  ;; The cadr is for getting rid of (function ...) which we can't have
-  ;; at the beginning of a form.
-  (cons (cadr (unwalk-form operator)) (unwalk-forms arguments)))
+(def unwalker lambda-application-form (operator arguments)
+  ;; KLUDGE: The cadr is for getting rid of (function ...) which we can't have at the beginning of a form.
+  (cons (cadr (recurse operator)) (recurse-on-body arguments)))
 
-(defwalker-handler application (form parent env)
-  (block nil
-    (destructuring-bind (op &rest args) (coerce-to-form form)
-      (flet ((walk-args (application)
-               (loop
-                  for index :from 1
-                  for arg :in args
-                  collect (walk-form arg application env))))
-        (when (lambda-form? op)
-          (return
-            (with-form-object (application 'lambda-application-form parent)
-              (setf (operator-of application) (walk-lambda op application env)
-                    (arguments-of application) (walk-args application)))))
-        (let ((lexenv (cdr env)))
-          (multiple-value-bind (innermost-lexical-definition-type _ expander)
-              (lookup-in-walkenv nil op env)
-            (declare (ignore _))
-            (awhen (eq :macro innermost-lexical-definition-type)
-              (let ((*inside-macroexpansion* t))
-                (return (walk-form (funcall expander form lexenv) parent env))))
-            (when (and (symbolp op)
-                       (macro-name? op lexenv)
-                       (not (member innermost-lexical-definition-type '(:function :unwalked-function))))
-              (multiple-value-bind (expansion expanded?)
-                  (walker-macroexpand-1 form lexenv)
-                (when expanded?
-                  (let ((*inside-macroexpansion* t))
-                    (return (walk-form expansion parent env))))))))
-        (let ((app (aif (lookup-in-walkenv :function op env)
-                        (make-instance 'walked-lexical-application-form :code it)
-                        (if (lookup-in-walkenv :unwalked-function op env)
-                            (make-instance 'unwalked-lexical-application-form)
-                            (progn
-                              (when (and (symbolp op)
-                                         (not (function-name? op)))
-                                (undefined-reference :function op))
-                              (make-instance 'free-application-form))))))
-          (setf (operator-of app) op
-                (parent-of app) parent
-                (source-of app) form
-                (arguments-of app) (walk-args app))
-          app)))))
+(def walker application
+  (bind (((operator &rest args) -form-))
+    (flet ((walk-arguments (application-form)
+             (loop
+                for index :from 1
+                for arg :in args
+                collect (recurse arg application-form))))
+      (when (lambda-form? operator)
+        (return
+          (with-form-object (application 'lambda-application-form -parent-)
+            (setf (operator-of application) (walk-lambda operator application -environment-)
+                  (arguments-of application) (walk-arguments application)))))
+      (bind ((lexenv (cdr -environment-))
+             ((:values innermost-lexical-definition-type nil expander) (-lookup- nil operator)))
+        (awhen (eq :macro innermost-lexical-definition-type)
+          (bind ((*inside-macroexpansion* t)
+                 (expansion (funcall expander -form- lexenv)))
+            (return (recurse expansion))))
+        (when (and (symbolp operator)
+                   (macro-name? operator lexenv)
+                   (not (member innermost-lexical-definition-type '(:function :unwalked-function))))
+          (bind (((:values expansion expanded?) (walker-macroexpand-1 -form- lexenv)))
+            (when expanded?
+              (bind ((*inside-macroexpansion* t))
+                (return (recurse expansion)))))))
+      (bind ((application-form (aif (-lookup- :function operator)
+                                    (make-instance 'walked-lexical-application-form :code it)
+                                    (if (-lookup- :unwalked-function operator)
+                                        (make-instance 'unwalked-lexical-application-form)
+                                        (progn
+                                          (when (and (symbolp operator)
+                                                     (not (function-name? operator)))
+                                            (handle-undefined-reference :function operator))
+                                          (make-instance 'free-application-form))))))
+        (setf (operator-of application-form) operator)
+        (setf (parent-of application-form) -parent-)
+        (setf (source-of application-form) -form-)
+        (setf (arguments-of application-form) (walk-arguments application-form))
+        application-form))))
 
 ;;;; Functions
 
-(defclass function-form (walked-form)
+(def (class* e) function-form (walked-form)
   ())
 
-(defclass lambda-function-form (function-form implicit-progn-with-declare-mixin)
-  ((arguments :accessor arguments-of :initarg :arguments)))
+(def (class* e) lambda-function-form (function-form implicit-progn-with-declare-mixin)
+  ((arguments)))
 
-(defunwalker-handler lambda-function-form (arguments body declares)
+(def unwalker lambda-function-form (arguments body declares)
   `#'(lambda ,(unwalk-lambda-list arguments)
        ,@(unwalk-declarations declares)
-       ,@(unwalk-forms body)))
+       ,@(recurse-on-body body)))
 
-(defclass function-definition-form (lambda-function-form)
-  ((name :accessor name-of :initarg :name)))
+(def (class* e) function-definition-form (lambda-function-form)
+  ((name)))
 
-(defwalker-handler defun (form parent env)
-  (with-form-object (node 'function-definition-form parent
-                          :name (second form))
-    (walk-lambda-like node (third form)
-                      (nthcdr 3 form) env)))
+(def walker defun
+  (with-form-object (node 'function-definition-form -parent-
+                          :name (second -form-))
+    ;; TODO finish fixing the defun docstring bug...
+    #+nil
+    (bind (((:values remaining-forms declarations doc-string) (parse-body (nthcdr 3 form) :documentation t :whole form)))
+      (walk-lambda-like node (third form) remaining-forms env
+                        :declarations declarations
+                        :documentation doc-string))
+    (walk-lambda-like node (third -form-)
+                      (nthcdr 3 -form-) -environment-)))
 
-(defunwalker-handler function-definition-form (form name arguments body declares)
+(def unwalker function-definition-form (form name arguments body declares)
   `(defun ,name ,(unwalk-lambda-list arguments) 
      ,@(unwalk-declarations declares)
-     ,@(unwalk-forms body)))
+     ,@(recurse-on-body body)))
 
-(defclass named-lambda-function-form (lambda-function-form)
-  ((special-form :accessor special-form-of :initarg :special-form)
-   (name :accessor name-of :initarg :name)))
+(def (class* e) named-lambda-function-form (lambda-function-form)
+  ((special-form)
+   (name)))
 
-(defunwalker-handler named-lambda-function-form (special-form name arguments body declares)
+(def unwalker named-lambda-function-form (special-form name arguments body declares)
   `(function
     (,special-form ,name ,(unwalk-lambda-list arguments)
      ,@(unwalk-declarations declares)
-     ,@(unwalk-forms body))))
+     ,@(recurse-on-body body))))
 
-(defclass function-object-form (walked-form)
-  ((name :accessor name-of :initarg :name)))
+(def (class* e) function-object-form (walked-form)
+  ((name)))
 
-(defunwalker-handler function-object-form (name)
+(def unwalker function-object-form (name)
   `(function ,name))
 
-(defclass lexical-function-object-form (function-object-form)
+(def (class* e) lexical-function-object-form (function-object-form)
   ())
 
-(defclass walked-lexical-function-object-form (lexical-function-object-form)
+(def (class* e) walked-lexical-function-object-form (lexical-function-object-form)
   ())
 
-(defclass unwalked-lexical-function-object-form (lexical-function-object-form)
+(def (class* e) unwalked-lexical-function-object-form (lexical-function-object-form)
   ())
 
-(defclass free-function-object-form (function-object-form)
+(def (class* e) free-function-object-form (function-object-form)
   ())
 
-(defwalker-handler function (form parent env)
+(def walker function
   (cond
-    ((lambda-form? (second form))
-     ;; (function (lambda ...))
-     (walk-lambda (second form) parent env))
+    ((lambda-form? (second -form-))
+     ;; specially handling the list (function (lambda ...))
+     (walk-lambda (second -form-) -parent- -environment-))
     #+sbcl
-    ((and (consp (second form))
-          (eq (first (second form)) 'sb-int:named-lambda))
-     (let ((named-lambda-form (second form)))
-       (with-form-object (node 'named-lambda-function-form parent
+    ((and (consp (second -form-))
+          (eq (first (second -form-)) 'sb-int:named-lambda))
+     (bind ((named-lambda-form (second -form-)))
+       (with-form-object (node 'named-lambda-function-form -parent-
                                :special-form (first named-lambda-form)
                                :name (second named-lambda-form))
          (walk-lambda-like node (third named-lambda-form)
-                           (nthcdr 3 named-lambda-form) env))))
+                           (nthcdr 3 named-lambda-form) -environment-))))
     (t
      ;; (function foo)
-     (make-form-object (if (lookup-in-walkenv :function (second form) env)
-                           'walked-lexical-function-object-form
-                           (if (lookup-in-walkenv :unwalked-function (second form) env)
-                               'unwalked-lexical-function-object-form
-                               'free-function-object-form))
-                       parent
-                       :name (second form)))))
+     (bind ((function-name (second -form-)))
+       (make-form-object (if (-lookup- :function function-name)
+                             'walked-lexical-function-object-form
+                             (if (-lookup- :unwalked-function function-name)
+                                 'unwalked-lexical-function-object-form
+                                 'free-function-object-form))
+                         -parent-
+                         :name function-name)))))
 
 (defun walk-lambda (form parent env)
-  (with-current-form form
-    (with-form-object (ast-node 'lambda-function-form parent)
-      (walk-lambda-like ast-node (second form) (cddr form) env))))
+  (with-form-object (ast-node 'lambda-function-form parent)
+    (walk-lambda-like ast-node (second form) (cddr form) env)))
 
-(defun %walk-lambda-like (ast-node args body env)
-  (multiple-value-setf ((arguments-of ast-node) env)
-    (walk-lambda-list args ast-node env))
-  (walk-implict-progn ast-node body env :declare t)
-  ast-node)
+(def layered-function walk-lambda-like (ast-node args body env)
+  (:method (ast-node args body env)
+    (setf (values (arguments-of ast-node) env) (walk-lambda-list args ast-node env))
+    (walk-implict-progn ast-node body env :declare t)
+    ast-node))
 
 (defun walk-lambda-list (lambda-list parent env &key allow-specializers macro-p)
   (declare (ignore macro-p))
@@ -207,20 +209,20 @@
                                (extend-env parsed)))))
       (values (nreverse result) env))))
 
-(defclass function-argument-form (walked-form)
-  ((name :accessor name-of :initarg :name)))
+(def (class* e) function-argument-form (walked-form)
+  ((name)))
 
-(defprint-object function-argument-form
+(def print-object function-argument-form
   (format t "~S" (name-of -self-)))
 
-(defclass required-function-argument-form (function-argument-form)
+(def (class* e) required-function-argument-form (function-argument-form)
   ())
 
-(defunwalker-handler required-function-argument-form (name)
+(def unwalker required-function-argument-form (name)
   name)
 
-(defclass specialized-function-argument-form (required-function-argument-form)
-  ((specializer :accessor specializer-of :initarg :specializer)))
+(def (class* e) specialized-function-argument-form (required-function-argument-form)
+  ((specializer)))
 
 (defun walk-specialized-argument-form (form parent env)
   (declare (ignore env))
@@ -232,27 +234,28 @@
                                      (second form)
                                      t)))
 
-(defunwalker-handler specialized-function-argument-form (name specializer)
+(def unwalker specialized-function-argument-form (name specializer)
   (if (eq specializer t)
       name
       `(,name ,specializer)))
 
-(defclass optional-function-argument-form (function-argument-form)
-  ((default-value :initform nil :accessor default-value-of :initarg :default-value)
-   (supplied-p-parameter :accessor supplied-p-parameter :initarg :supplied-p-parameter)))
+(def (class* e) optional-function-argument-form (function-argument-form)
+  ((default-value nil)
+   (supplied-p-parameter)))
 
 (defun walk-optional-argument (form parent env)
+  ;; TODO report bind bug: (bind (((name &optional (default-value nil default-value-supplied?) supplied-p-parameter) (ensure-list form))) )
   (destructuring-bind (name &optional (default-value nil default-value-supplied?) supplied-p-parameter)
       (ensure-list form)
     (with-form-object (arg 'optional-function-argument-form parent
                            :name name
                            :supplied-p-parameter supplied-p-parameter)
       (when default-value-supplied?
-        (setf (default-value-of arg) (walk-form default-value arg env))))))
+        (setf (default-value-of arg) (walk-form default-value :parent arg :environment env))))))
 
-(defunwalker-handler optional-function-argument-form (name supplied-p-parameter)
-  (let ((default-value (awhen (default-value-of -form-)
-                         (unwalk-form it))))
+(def unwalker optional-function-argument-form (name supplied-p-parameter)
+  (bind ((default-value (awhen (default-value-of -form-)
+                          (recurse it))))
     (cond ((and name supplied-p-parameter)
            `(,name ,default-value ,supplied-p-parameter))
           ((and name default-value)
@@ -260,10 +263,10 @@
           (name name)
           (t (error "Invalid optional argument")))))
 
-(defclass keyword-function-argument-form (function-argument-form)
-  ((keyword-name :accessor keyword-name-of :initarg :keyword-name)
-   (default-value :initform nil :accessor default-value-of :initarg :default-value)
-   (supplied-p-parameter :accessor supplied-p-parameter :initarg :supplied-p-parameter)))
+(def (class* e) keyword-function-argument-form (function-argument-form)
+  ((keyword-name)
+   (default-value nil)
+   (supplied-p-parameter)))
 
 (defun effective-keyword-name-of (k)
   (or (keyword-name-of k)
@@ -283,11 +286,11 @@
                              :keyword-name keyword
                              :supplied-p-parameter supplied-p-parameter)
         (when default-value-supplied?
-          (setf (default-value-of arg) (walk-form default-value arg env)))))))
+          (setf (default-value-of arg) (walk-form default-value :parent arg :environment env)))))))
 
-(defunwalker-handler keyword-function-argument-form (keyword-name name default-value supplied-p-parameter)
-  (let ((default-value (awhen (default-value-of -form-)
-                         (unwalk-form it))))
+(def unwalker keyword-function-argument-form (keyword-name name default-value supplied-p-parameter)
+  (bind ((default-value (awhen (default-value-of -form-)
+                          (recurse it))))
     (cond ((and keyword-name name supplied-p-parameter)
            `((,keyword-name ,name) ,default-value ,supplied-p-parameter))
           ((and name supplied-p-parameter)
@@ -297,16 +300,16 @@
           (name name)
           (t (error "Invalid keyword argument")))))
 
-(defclass allow-other-keys-function-argument-form (function-argument-form)
+(def (class* e) allow-other-keys-function-argument-form (function-argument-form)
   ())
 
-(defunwalker-handler allow-other-keys-function-argument-form ()
+(def unwalker allow-other-keys-function-argument-form ()
   '&allow-other-keys)
 
-(defclass rest-function-argument-form (function-argument-form)
+(def (class* e) rest-function-argument-form (function-argument-form)
   ())
 
-(defunwalker-handler rest-function-argument-form (name)
+(def unwalker rest-function-argument-form (name)
   name)
 
 (defun unwalk-lambda-list (arguments)
@@ -334,16 +337,15 @@
 
 ;;;; FLET/LABELS
 
-(defclass function-binding-form (walked-form binding-form-mixin implicit-progn-with-declare-mixin)
+(def (class* e) function-binding-form (walked-form binding-form-mixin implicit-progn-with-declare-mixin)
   ())
 
-(defclass flet-form (function-binding-form)
+(def (class* e) flet-form (function-binding-form)
   ())
 
-(defwalker-handler flet (form parent env)
-  (destructuring-bind (bindings &body body)
-      (cdr form)
-    (with-form-object (flet 'flet-form parent)
+(def walker flet
+  (bind (((bindings &body body) (cdr -form-)))
+    (with-form-object (flet 'flet-form -parent-)
       ;; build up the objects for the bindings in the original env
       (loop
          :for entry :in bindings
@@ -354,38 +356,36 @@
                     (cons name (when (or body
                                          arguments)
                                  (with-form-object (lambda-node 'lambda-function-form flet)
-                                   (walk-lambda-like lambda-node arguments body env))))) :into bindings
+                                   (walk-lambda-like lambda-node arguments body -environment-))))) :into bindings
          :finally (setf (bindings-of flet) bindings))
       ;; walk the body in the new env
       (walk-implict-progn flet
                           body
                           (loop
-                             :with env = env
-                             :for (name . lambda) :in (bindings-of flet)
-                             :do (augment-walkenv! env :function name lambda)
-                             :finally (return env))
+                             :for (name . body) :in (bindings-of flet)
+                             :do (-augment- :function name body)
+                             :finally (return -environment-))
                           :declare t))))
 
 ;; TODO factor out stuff in flet-form and labels-form
-(defunwalker-handler flet-form (bindings body declares)
+(def unwalker flet-form (bindings body declares)
   `(flet ,(mapcar (lambda (binding)
                     (cons (car binding)
                           (if (cdr binding)
                               ;; remove (function (lambda ...)) of the function bindings
-                              (rest (second (unwalk-form (cdr binding))))
+                              (rest (second (recurse (cdr binding))))
                               ;; empty args
                               (list '()))))
                   bindings)
      ,@(unwalk-declarations declares)
-     ,@(unwalk-forms body)))
+     ,@(recurse-on-body body)))
 
-(defclass labels-form (function-binding-form)
+(def (class* e) labels-form (function-binding-form)
   ())
 
-(defwalker-handler labels (form parent env)
-  (destructuring-bind (bindings &body body)
-      (cdr form)
-    (with-form-object (labels 'labels-form parent :bindings '())
+(def walker labels
+  (bind (((bindings &body body) (cdr -form-)))
+    (with-form-object (labels 'labels-form -parent- :bindings '())
       ;; we need to walk over the bindings twice. the first pass
       ;; creates some 'empty' lambda objects in the environment so
       ;; that walked-lexical-application-form and walked-lexical-function-object-form
@@ -403,7 +403,7 @@
                (when (< (length entry) 2)
                  (error "Illegal LABELS binding form ~S" entry))
                (push (cons name lambda) (bindings-of labels))
-               (augment-walkenv! env :function name lambda)))
+               (-augment- :function name lambda)))
       (setf (bindings-of labels) (nreverse (bindings-of labels)))
       (loop
          :for form :in bindings
@@ -411,20 +411,20 @@
          :for binding :in (bindings-of labels)
          :for lambda = (cdr binding)
          :do (when lambda
-               (let ((tmp-lambda (walk-lambda `(lambda ,arguments ,@body) labels env)))
+               (let ((tmp-lambda (walk-lambda `(lambda ,arguments ,@body) labels -environment-)))
                  (setf (body-of lambda) (body-of tmp-lambda)
                        (arguments-of lambda) (arguments-of tmp-lambda)
                        (declares-of lambda) (declares-of tmp-lambda)))))
-      (walk-implict-progn labels body env :declare t))))
+      (walk-implict-progn labels body -environment- :declare t))))
 
-(defunwalker-handler labels-form (bindings body declares)
+(def unwalker labels-form (bindings body declares)
   `(labels ,(mapcar (lambda (binding)
                       (cons (car binding)
                             (if (cdr binding)
                                 ;; remove (function (lambda ...)) of the function bindings
-                                (cdadr (unwalk-form (cdr binding)))
+                                (cdadr (recurse (cdr binding)))
                                 ;; empty args
                                 (list '()))))
                     bindings)
      ,@(unwalk-declarations declares)
-     ,@(unwalk-forms body)))
+     ,@(recurse-on-body body)))

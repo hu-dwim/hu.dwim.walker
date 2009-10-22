@@ -9,7 +9,7 @@
 ;;;;;;
 ;;; Empty environment
 
-(defun make-empty-lexical-environment ()
+(def function make-empty-lexical-environment ()
   (sb-kernel:make-null-lexenv))
 
 ;;;;;;

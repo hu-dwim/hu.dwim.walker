@@ -9,16 +9,22 @@
 (defpackage :hu.dwim.walker
   (:documentation "A code walker for Common Lisp")
 
-  (:use :hu.dwim.common)
+  (:use :alexandria
+        :anaphora
+        :contextl
+        :hu.dwim.common-lisp
+        :hu.dwim.def
+        :hu.dwim.defclass-star
+        :hu.dwim.util
+        :metabang-bind)
 
   (:shadow #:type-of
            #:eval)
 
-  (:export ;; environment
+  (:export ;; environment (intentionally kept here instead of definer export, because they need to be implemented on some platforms)
            #:make-empty-lexical-environment
            #:lookup-in-lexenv
            #:macroexpand-all
-           #:with-walker-configuration
 
            #:do-variables-in-lexenv
            #:do-functions-in-lexenv
@@ -55,26 +61,16 @@
            ;; conditions
            #:walker-error
            #:simple-walker-error
-           #:undefined-reference
-           #:undefined-variable-reference
-           #:undefined-function-reference
            #:return-from-unknown-block
            #:illegal-lambda-list
 
            ;; walker
-           #:walked-form
            #:map-ast
-           #:walk-form
            #:walk-lambda
            #:walk-lambda-like
-           #:unwalk-form
-           #:unwalk-forms
            #:unwalk-lambda-list
            #:make-walk-environment
 
-           #:defwalker-handler
-           #:find-walker-handler
-           #:defunwalker-handler
            #:with-form-object
 
            #:implicit-progn-mixin
@@ -102,29 +98,12 @@
            #:special-variable-reference-form
            #:free-variable-reference-form
 
-           #:application-form
-           #:lexical-application-form
-           #:walked-lexical-application-form
-           #:unwalked-lexical-application-form
-           #:free-application-form
-           #:lambda-application-form
-
            #:function-object-form
            #:function-definition-form
            #:lexical-function-object-form
            #:walked-lexical-function-object-form
            #:unwalked-lexical-function-object-form
            #:free-function-object-form
-
-           #:function-form
-           #:lambda-function-form
-           #:function-argument-form
-           #:required-function-argument-form
-           #:specialized-function-argument-form
-           #:optional-function-argument-form
-           #:keyword-function-argument-form
-           #:allow-other-keys-function-argument-form
-           #:rest-function-argument-form
 
            #:block-form
            #:return-from-form
@@ -172,7 +151,6 @@
            #:other-forms-of
            #:parent-of
            #:protected-form-of
-           #:read-only-p
            #:result-of
            #:source-of
            #:specializer-of

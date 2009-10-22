@@ -9,8 +9,8 @@
 #+(and lispworks macosx)
 (progn
 
-(defwalker-handler compiler::internal-the (form parent env)
-  (walk-form (third form) parent env)))
+(def walker compiler::internal-the
+  (recurse (third -form-))))
 
 #|
 

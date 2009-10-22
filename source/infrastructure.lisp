@@ -6,50 +6,54 @@
 
 (in-package :hu.dwim.walker)
 
-(define-condition walker-error (error)
+(def (condition* e) walker-error (error)
   ())
 
-(define-condition simple-walker-error (simple-error walker-error)
+(def (condition* e) simple-walker-error (simple-error walker-error)
   ())
 
-(defun simple-walker-error (message &rest args)
+(def function simple-walker-error (message &rest args)
   (error 'simple-walker-error :format-control message :format-arguments args))
 
-(defun macroexpand-all (form &optional (env (make-empty-lexical-environment)))
-  (unwalk-form (walk-form form nil (make-walk-environment env))))
+(def function macroexpand-all (form &optional (env (make-empty-lexical-environment)))
+  (unwalk-form (walk-form form :environment (make-walk-environment env))))
 
-(defparameter *current-form* nil)
-(defparameter *inside-macroexpansion* nil)
+(def special-variable *current-form* nil)
+(def special-variable *inside-macroexpansion* nil)
 
-(defmacro with-current-form (form &body body)
-  `(let ((*current-form* (if *inside-macroexpansion*
-                             *current-form*
-                             ,form)))
-     ,@body))
+(def macro with-current-form (form &body body)
+  (once-only (form)
+    `(bind ((*current-form* (if (and *inside-macroexpansion*
+                                     *current-form*)
+                                *current-form*
+                                ,form)))
+       ,@body)))
 
-(defun walk-form (form &optional (parent nil) env)
-  "Walk FORM and return a CLOS based AST that represents it."
-  (unless env
-    (setf env (make-walk-environment)))
-  (let ((*current-form* (or *current-form*
-                            form)))
-    (funcall (find-walker-handler* form) form parent env)))
+(def (layered-function e) walk-form (form &key parent environment)
+  (:documentation "Entry point to initiate code walking of FORM using ENVIRONMENT. Returns a CLOS based AST that represents FORM.")
+  (:method (form &key parent environment)
+    (unless environment
+      (setf environment (make-walk-environment)))
+    (bind ((*current-form* (or *current-form*
+                               form)))
+      (with-current-form form
+        (funcall (find-walker-handler form) form parent environment)))))
 
-(defgeneric coerce-to-form (form)
+(def layered-function coerce-to-form (form)
   (:method (form)
     form))
 
-(defgeneric unwalk-form (form)
+(def (layered-function e) unwalk-form (form)
   (:documentation "Unwalk FORM and return a list representation."))
 
-(defun unwalk-forms (forms)
+(def (function e) unwalk-forms (forms)
   (mapcar #'unwalk-form forms))
 
-(defun eval (form)
-  (let (#+sbcl(sb-ext:*evaluator-mode* :interpret))
+(def function eval (form)
+  (bind (#+sbcl(sb-ext:*evaluator-mode* :interpret))
     (common-lisp:eval form)))
 
-(defun special-variable-name? (name)
+(def function special-variable-name? (name)
   (and (symbolp name)
        (not (keywordp name))
        (not (member name '(t nil) :test #'eq))
@@ -67,127 +71,64 @@
                          (declare (ignorable ,var))
                          (ignore-errors (func))))))))))
 
-(defvar *walker-context*)
-
-;; KLUDGE this is ugly. a contextl based slution would be much cleaner, but that's a rather heavy dependency...
-
-#+nil
-(hu.dwim.defclass-star:defclass* walker-context ()
-  ((find-walker-handler         (find-walker-handler-of *walker-context*))
-   (function-name?              (function-name?-of *walker-context*))
-   (macro-name?                 (macro-name?-of *walker-context*))
-   (macroexpand-1               (macroexpand-1-of *walker-context*))
-   (symbol-macro-name?          (symbol-macro-name?-of *walker-context*))
-   (constant-name?              (constant-name?-of *walker-context*))
-   (lambda-form?                (lambda-form?-of *walker-context*))
-   (lambda-like-walker          (lambda-like-walker-of *walker-context*))
-   (undefined-reference-handler (undefined-reference-handler-of *walker-context*))
-   (store-source?               (store-source? *walker-context*) :type boolean)
-   (ast-node-type-mapping       (ast-node-type-mapping-of *walker-context*) :documentation "Should be an 'eq hashtable mapping from the hu.dwim.walker node class name to a custom class")))
-
-;; macroexpansion of the above defclass*
-(defclass walker-context ()
-  ((find-walker-handler :initform (find-walker-handler-of *walker-context*) :accessor find-walker-handler-of :initarg :find-walker-handler)
-   (function-name? :initform (function-name?-of *walker-context*) :accessor function-name?-of :initarg :function-name?)
-   (macro-name? :initform (macro-name?-of *walker-context*) :accessor macro-name?-of :initarg :macro-name?)
-   (macroexpand-1 :initform (macroexpand-1-of *walker-context*) :accessor macroexpand-1-of :initarg :macroexpand-1)
-   (symbol-macro-name? :initform (symbol-macro-name?-of *walker-context*) :accessor symbol-macro-name?-of :initarg :symbol-macro-name?)
-   (constant-name? :initform (constant-name?-of *walker-context*) :accessor constant-name?-of :initarg :constant-name?)
-   (lambda-form? :initform (lambda-form?-of *walker-context*) :accessor lambda-form?-of :initarg :lambda-form?)
-   (lambda-like-walker :initform (lambda-like-walker-of *walker-context*) :accessor lambda-like-walker-of :initarg :lambda-like-walker)
-   (undefined-reference-handler :initform (undefined-reference-handler-of *walker-context*) :accessor undefined-reference-handler-of :initarg
-                                :undefined-reference-handler)
-   (store-source? :initform (store-source? *walker-context*) :accessor store-source? :initarg :store-source? :type boolean)
-   (ast-node-type-mapping :initform (ast-node-type-mapping-of *walker-context*) :accessor ast-node-type-mapping-of :initarg :ast-node-type-mapping :documentation "Should be an 'eq hashtable mapping from the hu.dwim.walker node class name to a custom class")))
-
-(setf *walker-context* (make-instance 'walker-context
-                                      :find-walker-handler         'find-walker-handler
-                                      :function-name?              '%function-name?
-                                      :macro-name?                 'macro-function
-                                      :macroexpand-1               'macroexpand-1
-                                      :symbol-macro-name?          '%symbol-macro-name?
-                                      :constant-name?              '%constant-name?
-                                      :lambda-form?                '%lambda-form?
-                                      :lambda-like-walker          '%walk-lambda-like
-                                      :undefined-reference-handler 'undefined-reference-handler
-                                      :store-source?               t
-                                      :ast-node-type-mapping       nil))
-
 (defun collect-standard-walked-form-subclasses ()
   "Returns a list of all the subclasses of hu.dwim.walker:walked-form whose name is in the hu.dwim.walker package. This is useful if you want to generate a complete AST-NODE-TYPE-MAPPING hashtable with a mixin in the class of each walked node."
-  (let ((class-direct-subclasses (or (and (find-package :closer-mop)
-                                          (find-symbol (symbol-name '#:class-direct-subclasses) :closer-mop))
-                                     #+sbcl 'sb-mop:class-direct-subclasses
-                                     #-sbcl (error "Please provide a CLASS-DIRECT-SUBCLASSES for your lisp or load closer-mop"))))
-    (remove-duplicates
-     (remove-if (lambda (class)
-                  (not (eq (symbol-package (class-name class)) #.(find-package :hu.dwim.walker))))
-                (labels ((collect-subclasses (class)
-                           (let ((direct-subclasses (funcall class-direct-subclasses class)))
-                             (nconc
-                              (copy-list direct-subclasses)
-                              (loop
-                                 :for subclass :in direct-subclasses
-                                 :nconc (collect-subclasses subclass))))))
-                  (collect-subclasses (find-class 'walked-form)))))))
+  (remove-duplicates
+   (remove-if (lambda (class)
+                (not (eq (symbol-package (class-name class)) #.(find-package :hu.dwim.walker))))
+              (labels ((collect-subclasses (class)
+                         (let ((direct-subclasses (closer-mop:class-direct-subclasses class)))
+                           (nconc
+                            (copy-list direct-subclasses)
+                            (loop
+                               :for subclass :in direct-subclasses
+                               :nconc (collect-subclasses subclass))))))
+                (collect-subclasses (find-class 'walked-form))))))
 
-(defun find-walker-handler* (name)
-  (funcall (find-walker-handler-of *walker-context*) name))
+(def layered-function function-name? (name)
+  (:method (name)
+    (or #+sbcl(eq (sb-int:info :function :kind name) :function)
+        (fboundp name))))
 
-(defun function-name? (name)
-  (funcall (function-name?-of *walker-context*) name))
+(def layered-function macro-name? (name &optional env)
+  (:method (name &optional env)
+    (macro-function name env)))
 
-(defun %function-name? (name)
-  (or #+sbcl(eq (sb-int:info :function :kind name) :function)
-      (fboundp name)))
+(def layered-function symbol-macro-name? (name &optional env)
+  (:method (name &optional env)
+    (nth-value 1 (macroexpand-1 name env))))
 
-(defun macro-name? (name &optional env)
-  (funcall (macro-name?-of *walker-context*) name env))
+(def layered-function constant-name? (form &optional env)
+  (:method (form &optional env)
+    (declare (ignore env))
+    (or (eq form t)
+        (eq form nil)
+        (keywordp form)
+        (not (or (symbolp form)
+                 (consp form))))))
 
-(defun symbol-macro-name? (name &optional env)
-  (funcall (symbol-macro-name?-of *walker-context*) name env))
+(def layered-function lambda-form? (form &optional env)
+  (:method (form &optional env)
+    (declare (ignore env))
+    (and (consp form)
+         (eq 'lambda (car form)))))
 
-(defun %symbol-macro-name? (name &optional env)
-  (nth-value 1 (macroexpand-1 name env)))
+;; TODO rename
+(def layered-function walker-macroexpand-1 (form &optional env)
+  (:method (form &optional env)
+    (macroexpand-1 form env)))
 
-(defun constant-name? (name &optional env)
-  (funcall (constant-name?-of *walker-context*) name env))
+(def (layer e) ignore-undefined-references ()
+  ())
 
-(defun %constant-name? (form &optional env)
-  (declare (ignore env))
-  (or (eq form t)
-      (eq form nil)
-      (keywordp form)
-      (not (or (symbolp form)
-               (consp form)))))
-
-(defun lambda-form? (form &optional env)
-  (funcall (lambda-form?-of *walker-context*) form env))
-
-(defun %lambda-form? (form &optional env)
-  (declare (ignore env))
-  (and (consp form)
-       (eq 'lambda (car form))))
-
-(defun walk-lambda-like (ast-node args body env)
-  (funcall (lambda-like-walker-of *walker-context*) ast-node args body env))
-
-(defun walker-macroexpand-1 (form &optional env)
-  (funcall (macroexpand-1-of *walker-context*) form env))
-
-(defun undefined-reference-handler (type name)
-  (ecase type
-    (:function (warn 'undefined-function-reference :name name))
-    (:variable (warn 'undefined-variable-reference :name name))))
-
-(defun undefined-reference (type name)
-  (awhen (undefined-reference-handler-of *walker-context*)
-    (funcall it type name)))
-
-(defmacro with-walker-configuration ((&rest args) &body body)
-  "See the WALKER-CONTEXT class for possible arguments."
-  `(let ((*walker-context* (make-instance 'walker-context ,@args)))
-     ,@body))
+(def layered-function handle-undefined-reference (type name)
+  (:method (type name)
+    (ecase type
+      (:function (warn 'undefined-function-reference :name name))
+      (:variable (warn 'undefined-variable-reference :name name))))
+  (:method :in ignore-undefined-references (type name)
+    ;; well, we ignore them in this layer...
+    ))
 
 ;;;
 ;;; Walk environment
@@ -197,15 +138,15 @@
 ;; 1) the walkenv, which contains the already walked *-form instances
 ;; 2) the lexenv, which is the underlying lisp's internal lexenv
 ;; 3) the combined environment, which is (cons walkenv lexenv)
-;;
-;; %lookup and friends are internal utils to update/query the walkenv.
+
+;; TODO fix naming! currently walkenv is a (cons walkenv lexenv)?!
 
 (defun make-walk-environment (&optional lexenv)
   (unless lexenv
     (setf lexenv (make-empty-lexical-environment)))
   (let ((walkenv '()))
     (macrolet ((extend! (environment type name datum &rest other-datum)
-                 `(setf ,environment (%extend ,environment ,type ,name ,datum ,@other-datum))))
+                 `(setf ,environment (%environment/augment ,environment ,type ,name ,datum ,@other-datum))))
       (do-variables-in-lexenv (lexenv name ignored?)
         (unless ignored?
           (extend! walkenv :unwalked-variable name t)))
@@ -217,9 +158,9 @@
         (extend! walkenv :symbol-macro name definition)))
     (cons walkenv lexenv)))
 
-(defun augment-walkenv (env type name datum)
-  (let ((walkenv (%extend (car env) type name datum))
-        (lexenv (cdr env)))
+(def function %augment (env type name datum)
+  (bind ((walkenv (%environment/augment (car env) type name datum))
+         (lexenv (cdr env)))
     (cons walkenv (ecase type
                     (:variable     (augment-lexenv-with-variable name lexenv))
                     (:macro        (augment-lexenv-with-macro name datum lexenv))
@@ -231,20 +172,17 @@
                     (:declare      lexenv)
                     (:tagbody      lexenv)))))
 
+;; TODO get rid of this, or rename, or something...
 (defmacro augment-walkenv! (env type name datum &rest other-datum)
-  `(setf ,env (augment-walkenv ,env ,type ,name ,datum ,@other-datum)))
+  `(setf ,env (%augment ,env ,type ,name ,datum ,@other-datum)))
 
-(defun lookup-in-walkenv (type name env &key (error-p nil) (default-value nil))
-  (check-type type (or null list keyword))
-  (%lookup (car env) type name :error-p error-p :default-value default-value))
-
-(defun %extend (environment type name datum &rest other-datum)
+(def function %environment/augment (environment type name datum &rest other-datum)
   (cons (if other-datum
             (list* type name datum other-datum)
             (list* type name datum))
         environment))
 
-(defun %lookup (environment type name &key (error-p nil) (default-value nil))
+(def function %environment/find (environment type name &key (otherwise nil))
   (loop
      :for (.type .name . data) :in environment
      :when (and (eq .name name)
@@ -256,13 +194,14 @@
                    (values .type .name data)
                    (values data t))
      :finally
-       (if error-p
-           (error "No value for ~S of type ~S in environment ~S was found."
-                  name type environment)
-           (values default-value nil))))
+       (return
+         (if (eq otherwise :error)
+             (error "No value for ~S of type ~S in environment ~S was found."
+                    name type environment)
+             (handle-otherwise otherwise)))))
 
 #+(or) ;; it's not used for now
-(defun (setf %lookup) (value environment type name &key (error-p nil))
+(defun (setf %environment/find) (value environment type name &key (error-p nil))
   (loop
      :for env-piece :in environment
      :when (and (eql (first env-piece) type)
@@ -279,31 +218,31 @@
 ;;; Handler management
 ;;;
 
-(defparameter *walker-handlers* (make-hash-table :test 'eq))
+(def special-variable *walker-handlers* (make-hash-table :test 'eq))
 
-(define-condition undefined-reference (style-warning)
-  ((enclosing-code :accessor enclosing-code-of :initform nil)
-   (name :accessor name-of :initarg :name)))
+(def (condition* e) undefined-reference (style-warning)
+  ((enclosing-code nil)
+   (name)))
 
-(define-condition undefined-variable-reference (undefined-reference)
+(def (condition* e) undefined-variable-reference (undefined-reference)
   ()
   (:report
-   (lambda (c s)
+   (lambda (c stream)
      (if (enclosing-code-of c)
-         (format s "Reference to unknown variable ~S in ~S." (name-of c) (enclosing-code-of c))
-         (format s "Reference to unknown variable ~S." (name-of c))))))
+         (format stream "Reference to unknown variable ~S in ~S." (name-of c) (enclosing-code-of c))
+         (format stream "Reference to unknown variable ~S." (name-of c))))))
 
-(define-condition undefined-function-reference (undefined-reference)
+(def (condition* e) undefined-function-reference (undefined-reference)
   ()
   (:report
-   (lambda (c s)
+   (lambda (c stream)
      (if (enclosing-code-of c)
-         (format s "Reference to unknown function ~S in ~S." (name-of c) (enclosing-code-of c))
-         (format s "Reference to unknown function ~S." (name-of c))))))
+         (format stream "Reference to unknown function ~S in ~S." (name-of c) (enclosing-code-of c))
+         (format stream "Reference to unknown function ~S." (name-of c))))))
 
-(defparameter +atom-marker+ '+atom-marker+)
+(def constant +atom-marker+ '+atom-marker+)
 
-(defgeneric find-walker-handler (form)
+(def (layered-function e) find-walker-handler (form)
   (:documentation "Simple function which tells us what handler should deal with FORM. Signals an error if we don't have a handler for FORM.")
   (:method ((form cons))
     (or (gethash (car form) *walker-handlers*)
@@ -318,45 +257,81 @@
   (:method ((form t))
     (gethash '+atom-marker+ *walker-handlers*)))
 
-(defun walker-handler-definition (name &optional (table *walker-handlers*))
+(def function walker-handler-definition (name &optional (table *walker-handlers*))
   (gethash name table))
 
-(defun (setf walker-handler-definition) (handler name &optional (table *walker-handlers*))
+(def function (setf walker-handler-definition) (handler name &optional (table *walker-handlers*))
   (when (gethash name table)
     (simple-style-warning "Redefining walker handler for ~S" name))
   (setf (gethash name table) handler))
 
-(defmacro defwalker-handler (name (form parent lexenv)
-                             &body body)
-  (let ((function-name (format-symbol *package* "WALKER-HANDLER/~A" name)))
+(def function %walker-handler-body (name body &optional declarations)
+  (bind ((function-name (format-symbol *package* "WALKER-HANDLER/~A" name)))
     `(progn
-       (defun ,function-name (,form ,parent ,lexenv)
-         (declare (ignorable ,parent ,lexenv))
-         (with-current-form ,form
-           ,@body))
+       (defun ,function-name (-form- -parent- -environment-)
+         (declare (ignorable -parent- -environment-)
+                  ,@declarations)
+         (block nil
+           (bind ((-form- (coerce-to-form -form-)))
+             (macrolet ((-lookup- (type name &key (otherwise nil))
+                          `(%environment/find (car -environment-) ,type ,name :otherwise ,otherwise))
+                        (-augment- (type name datum)
+                          `(setf -environment- (%augment -environment- ,type ,name ,datum))))
+               (flet ((recurse (node &optional (parent -parent-) (environment -environment-))
+                        (walk-form node :parent parent :environment environment)))
+                 (declare (ignorable #'recurse))
+                 (with-current-form -form-
+                   ,@body))))))
        (setf (walker-handler-definition ',name) ',function-name)
        ',name)))
 
-(defmacro defwalker-handler-alias (from-name to-name)
+(def (macro e) defwalker-handler (name &body body)
+  (%walker-handler-body name body))
+
+(def (definer e :available-flags "od") walker (name &body body)
+  (with-standard-definer-options name
+    (%walker-handler-body name body (function-like-definer-declarations -options-))))
+
+(def function %unwalker-handler-body (class slots body &optional declarations)
+  `(progn
+     (def layered-method unwalk-form ((-form- ,class))
+       ,@(when declarations
+         `((declare ,@declarations)))
+       (block nil
+         (flet ((recurse (node)
+                  (unwalk-form node))
+                (recurse-on-body (nodes)
+                  (mapcar #'unwalk-form nodes)))
+           (declare (ignorable #'recurse #'recurse-on-body))
+           (with-slots ,slots -form-
+             ,@body))))
+     ',class))
+
+(def (macro e) defunwalker-handler (class (&rest slots) &body body)
+  (%unwalker-handler-body class slots body))
+
+(def (definer e :available-flags "od") unwalker (class (&rest slots) &body body)
+  (%unwalker-handler-body class slots body (function-like-definer-declarations -options-)))
+
+(def macro defwalker-handler-alias (from-name to-name)
   `(progn
      (setf (walker-handler-definition ',to-name) (walker-handler-definition ',from-name))
      ',to-name))
 
-(defmacro defunwalker-handler (class (&rest slots) &body body)
-  `(progn
-     (defmethod unwalk-form ((-form- ,class))
-       (with-slots ,slots -form-
-         ,@body))
-     ',class))
+(def (definer e) walker-alias (from-name to-name)
+  `(defwalker-handler-alias ,from-name ,to-name))
 
-(defclass walked-form ()
-  ((parent :accessor parent-of :initarg :parent)
-   (source :initform *current-form* :accessor source-of :initarg :source)))
+(def (class* e) walked-form ()
+  ((parent)
+   (source *current-form*)))
 
-(defmethod make-load-form ((object walked-form) &optional env)
+(def (class* e) named-walked-form (walked-form)
+  ((name)))
+
+(def method make-load-form ((object walked-form) &optional env)
   (make-load-form-saving-slots object :environment env))
 
-(defprint-object walked-form
+(def print-object walked-form
   (if (and (slot-boundp -self- 'source)
            (source-of -self-))
       (let ((*print-readably* nil)
@@ -365,37 +340,28 @@
         (format t "~S" (source-of -self-)))
       (call-next-method)))
 
-(defmacro make-form-object (type parent &rest initargs)
+(def layered-function ast-node-type-for (type)
+  (:method (type)
+    type))
+
+(def macro make-form-object (type parent &rest initargs)
   (with-unique-names (custom-type)
     (appendf initargs `(:parent ,parent))
-    `(let ((,custom-type (awhen (ast-node-type-mapping-of *walker-context*)
-                           (gethash ,type it))))
+    `(bind ((,custom-type (ast-node-type-for ,type)))
+       ;; do it this way, so that we'll have an optimized (make-instance 'literal ...) path
        (if ,custom-type
            (make-instance ,custom-type ,@initargs)
            (make-instance ,type ,@initargs)))))
 
-(defmacro with-form-object ((variable type parent &rest initargs)
+(def macro with-form-object ((variable type parent &rest initargs)
                             &body body)
-  `(let ((,variable (make-form-object ,type ,parent ,@initargs)))
+  `(bind ((,variable (make-form-object ,type ,parent ,@initargs)))
      ,@body
      ,variable))
 
-(defmacro multiple-value-setf (places form)
-  `(let (_)
-     (declare (ignorable _))
-     (setf (values ,@(mapcar (lambda (el)
-                               (if (and (symbolp el)
-                                        (or (eq el nil)
-                                            (string= el '_)))
-                                   '_
-                                   el))
-                             places))
-           ,form)))
-
 (defun split-body (body env &key parent (docstring t) (declare t))
   (let ((walked-declarations (list)))
-    (multiple-value-bind (body declarations documentation)
-        (parse-body body :documentation docstring)
+    (bind (((:values body declarations documentation) (parse-body body :documentation docstring)))
       (when declarations
         (unless declare
           (error "Declarations are not allowed at ~S" body))
