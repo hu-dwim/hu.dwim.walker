@@ -45,4 +45,3 @@
                        (locally
                            (null (slot-value obj 'a))
                          (/ (slot-value obj 'a) 2)))))
-

@@ -8,13 +8,13 @@
 
 (defsuite* (test/utils :in test))
 
-(deftest test-collect-variable-references (form expected-count)
-  (with-walker-configuration (:undefined-reference-handler nil)
+(def test test-collect-variable-references (form expected-count)
+  (with-active-layers (ignore-undefined-references)
     (bind ((ast (walk-form form)))
       (is (= expected-count
              (length (collect-variable-references ast)))))))
 
-(deftest test/utils/collect-variable-references/1 ()
+(def test test/utils/collect-variable-references/1 ()
   (loop
      :for (form expected-count) :in
      '((var 1)

@@ -20,12 +20,12 @@
     (setf expected form))
   (unless env
     (setf env (make-empty-lexical-environment)))
-  (let ((walked-form (unwalk-form (walk-form form nil (make-walk-environment env)))))
+  (let ((walked-form (unwalk-form (walk-form form :environment (make-walk-environment env)))))
     (is (equal walked-form expected))))
 
 (defmacro define-walk-unwalk-test (name &body body)
   `(deftest ,name ()
-     (with-walker-configuration (:undefined-reference-handler nil)
+     (with-active-layers (ignore-undefined-references)
        ,@(loop
             :for entry :in body
             :collect (if (and (consp entry)
@@ -72,6 +72,14 @@
     #'(lambda (x &aux auxfoo)))
   #'(lambda (x &rest args &key key1 (key2 nil key2?) (key3 42) &allow-other-keys)))
 
+(define-walk-unwalk-test test/eval-when/1
+  (eval-when ()
+    (+ 2 2))
+  (eval-when (:load-toplevel)
+    )
+  (eval-when (:compile-toplevel :load-toplevel :execute)
+    (+ 3 3)))
+
 (define-walk-unwalk-test test/declare/1
   (locally (declare (zork)))
   (locally (declare (optimize speed) (optimize (debug 2))))
@@ -110,7 +118,7 @@
     (walk-form '(macrolet ((foo ((some-complex-args &optional (even-more-compelx 42)))
                             `(bar ,some-complex-args ,even-more-compelx)))
                  (foo (1 2)))
-               nil (make-walk-environment))))
+               :environment (make-walk-environment))))
 
 (define-walk-unwalk-test test/lambda-function
   #'(lambda (x y) (y x))

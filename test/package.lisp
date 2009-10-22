@@ -7,7 +7,9 @@
 (in-package :common-lisp-user)
 
 (defpackage :hu.dwim.walker.test
-  (:use :hu.dwim.common
+  (:use :contextl
+        :hu.dwim.common
+        :hu.dwim.def
         :hu.dwim.stefil
         :hu.dwim.walker))
 
