@@ -94,7 +94,7 @@
   ((arguments)))
 
 (def unwalker lambda-function-form (arguments body declares)
-  `#'(lambda ,(unwalk-lambda-list arguments)
+  `#'(lambda ,(unwalk-ordinary-lambda-list arguments)
        ,@(unwalk-declarations declares)
        ,@(recurse-on-body body)))
 
@@ -114,7 +114,7 @@
                       (nthcdr 3 -form-) -environment-)))
 
 (def unwalker function-definition-form (form name arguments body declares)
-  `(defun ,name ,(unwalk-lambda-list arguments) 
+  `(defun ,name ,(unwalk-ordinary-lambda-list arguments)
      ,@(unwalk-declarations declares)
      ,@(recurse-on-body body)))
 
@@ -124,7 +124,7 @@
 
 (def unwalker named-lambda-function-form (special-form name arguments body declares)
   `(function
-    (,special-form ,name ,(unwalk-lambda-list arguments)
+    (,special-form ,name ,(unwalk-ordinary-lambda-list arguments)
      ,@(unwalk-declarations declares)
      ,@(recurse-on-body body))))
 
@@ -177,37 +177,35 @@
 
 (def layered-function walk-lambda-like (ast-node args body env)
   (:method (ast-node args body env)
-    (setf (values (arguments-of ast-node) env) (walk-lambda-list args ast-node env))
+    (setf (values (arguments-of ast-node) env) (walk-ordinary-lambda-list args ast-node env))
     (walk-implict-progn ast-node body env :declare t)
     ast-node))
 
-(defun walk-lambda-list (lambda-list parent env &key allow-specializers macro-p)
-  (declare (ignore macro-p))
-  (let ((result (list)))
-    (flet ((extend-env (argument)
-             (unless (typep argument 'allow-other-keys-function-argument-form)
-               (augment-walkenv! env :variable (name-of argument) argument))))
-      (parse-lambda-list lambda-list
-                         (lambda (kind name argument)
-                           (declare (ignore name))
-                           (let ((parsed
-                                  (case kind
-                                    ((nil)
-                                     (if allow-specializers
-                                         (walk-specialized-argument-form argument parent env)
-                                         (make-form-object 'required-function-argument-form  parent
-                                                           :name argument)))
-                                    (&optional
-                                     (walk-optional-argument argument parent env))
-                                    (&allow-other-keys
-                                     (make-form-object 'allow-other-keys-function-argument-form parent))
-                                    (&rest (make-form-object 'rest-function-argument-form parent :name argument))
-                                    (&key
-                                     (walk-keyword-argument argument parent env)))))
-                             (when parsed
-                               (push parsed result)
-                               (extend-env parsed)))))
-      (values (nreverse result) env))))
+(def (function e) walk-ordinary-lambda-list (lambda-list parent env &key allow-specializers)
+  (bind (((:values requireds optionals rest keywords allow-other-keys? auxiliaries) (parse-ordinary-lambda-list lambda-list :normalize nil))
+         (result (nconc
+                  (loop
+                     :for required :in requireds
+                     :collect (if allow-specializers
+                                  (walk-specialized-argument required parent env)
+                                  (make-form-object 'required-function-argument-form parent :name required)))
+                  (loop
+                     :for optional :in optionals
+                     :collect (walk-optional-argument optional parent env))
+                  (when rest
+                    (list (make-form-object 'rest-function-argument-form parent :name rest)))
+                  (loop
+                     :for keyword :in keywords
+                     :collect (walk-keyword-argument keyword parent env))
+                  (when allow-other-keys?
+                    (list (make-form-object 'allow-other-keys-function-argument-form parent)))
+                  (loop
+                     :for auxiliary :in auxiliaries
+                     :collect (walk-auxiliary-argument auxiliary parent env)))))
+    (dolist (parsed result)
+      (unless (typep parsed 'allow-other-keys-function-argument-form)
+        (augment-walkenv! env :variable (name-of parsed) parsed)))
+    result))
 
 (def (class* e) function-argument-form (walked-form)
   ((name)))
@@ -224,7 +222,7 @@
 (def (class* e) specialized-function-argument-form (required-function-argument-form)
   ((specializer)))
 
-(defun walk-specialized-argument-form (form parent env)
+(def function walk-specialized-argument (form parent env)
   (declare (ignore env))
   (make-form-object 'specialized-function-argument-form parent
                     :name (if (listp form)
@@ -312,28 +310,57 @@
 (def unwalker rest-function-argument-form (name)
   name)
 
-(defun unwalk-lambda-list (arguments)
-  (let (optional-p rest-p keyword-p)
+(def (function e) unwalk-ordinary-lambda-list (arguments)
+  (bind ((optional-seen? nil)
+         (rest-seen? nil)
+         (keyword-seen? nil)
+         (auxiliary-seen? nil))
     (mapcan #'(lambda (form)
                 (append
-                 (typecase form
+                 (etypecase form
+                   (required-function-argument-form
+                    (assert (not (or optional-seen? rest-seen? keyword-seen? auxiliary-seen?))))
                    (optional-function-argument-form
-                    (unless optional-p
-                      (assert (not keyword-p))
-                      (assert (not rest-p))
-                      (setq optional-p t)
+                    (unless optional-seen?
+                      (assert (not (or rest-seen? keyword-seen? auxiliary-seen?)))
+                      (setq optional-seen? t)
                       '(&optional)))
                    (rest-function-argument-form
-                    (unless rest-p
-                      (assert (not keyword-p))
-                      (setq rest-p t)
+                    (unless rest-seen?
+                      (assert (not (or keyword-seen? auxiliary-seen?)))
+                      (setq rest-seen? t)
                       '(&rest)))
                    (keyword-function-argument-form
-                    (unless keyword-p
-                      (setq keyword-p t)
-                      '(&key))))
+                    (unless keyword-seen?
+                      (assert (not auxiliary-seen?))
+                      (setq keyword-seen? t)
+                      '(&key)))
+                   (allow-other-keys-function-argument-form
+                    (assert (not auxiliary-seen?)))
+                   (auxiliary-function-argument-form
+                    (unless auxiliary-seen?
+                      (setq auxiliary-seen? t)
+                      '(&aux))))
                  (list (unwalk-form form))))
             arguments)))
+
+(def (class* e) auxiliary-function-argument-form (function-argument-form)
+  ((default-value nil)))
+
+(defun walk-auxiliary-argument (form parent env)
+  (destructuring-bind (name &optional (default-value nil default-value-supplied?))
+      (ensure-list form)
+    (with-form-object (arg 'auxiliary-function-argument-form parent :name name)
+      (when default-value-supplied?
+        (setf (default-value-of arg) (walk-form default-value :parent arg :environment env))))))
+
+(def unwalker auxiliary-function-argument-form (name supplied-p-parameter)
+  (bind ((default-value (awhen (default-value-of -form-)
+                          (recurse it))))
+    (cond ((and name default-value)
+           `(,name ,default-value))
+          (name name)
+          (t (error "Invalid auxiliary argument")))))
 
 ;;;; FLET/LABELS
 
