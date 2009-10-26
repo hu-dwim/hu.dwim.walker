@@ -20,15 +20,12 @@ that it creates a fresh binding."
          (let ((,iterator ,iterator))
            ,@body))))
 
-;; TODO use lambda list parsing from alexandria, drop these
-(define-condition illegal-lambda-list (error)
-  ((lambda-list :accessor lambda-list-of :initarg :lambda-list)))
-
-(defun illegal-lambda-list (lambda-list)
-  (error 'illegal-lambda-list :lambda-list lambda-list))
+;; TODO drop these and use lambda list parsing from alexandria once it supports macro lambda list parsing
+(defun %illegal-lambda-list (lambda-list)
+  (error "Illegal lambda list: ~S" lambda-list))
 
 (locally #+sbcl(declare (sb-ext:muffle-conditions style-warning sb-ext:compiler-note))
-  (defun parse-lambda-list (lambda-list visitor &key macro)
+  (defun %parse-lambda-list (lambda-list visitor &key macro)
    ;; TODO finish macro lambda list parsing
    (declare (optimize (speed 3))
             (type list lambda-list)
@@ -36,7 +33,7 @@ that it creates a fresh binding."
    (let ((args lambda-list))
      (labels
          ((fail ()
-            (illegal-lambda-list lambda-list))
+            (%illegal-lambda-list lambda-list))
           (ensure-list (list)
             (if (listp list)
                 list
@@ -162,7 +159,7 @@ that it creates a fresh binding."
                  (funcall visitor '&aux (first arg) arg))
                (process-&aux))))
           (done ()
-            (return-from parse-lambda-list (values))))
+            (return-from %parse-lambda-list (values))))
        (when args
          (case (first args)
            (&whole (process-&whole))
@@ -173,7 +170,7 @@ that it creates a fresh binding."
         (rest-variable-name nil)
         (whole-variable-name nil)
         (env-variable-name nil))
-    (parse-lambda-list args
+    (%parse-lambda-list args
                        (lambda (kind name entry)
                          (declare (ignore entry))
                          (case kind
