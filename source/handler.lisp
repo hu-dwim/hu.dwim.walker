@@ -79,7 +79,7 @@
                    :for node = -parent- :then (parent-of node)
                    :while node
                    :do (progn
-                         (when (and (typep node 'implicit-progn-with-declare-mixin)
+                         (when (and (typep node 'implicit-progn-with-declarations-mixin)
                                     (progn
                                       (find-if (lambda (declare)
                                                  (and (typep declare 'special-variable-declaration-form)
@@ -200,7 +200,9 @@
 
 ;;;; LET/LET*
 
-(def (class* e) variable-binding-form (walked-form binding-form-mixin implicit-progn-with-declare-mixin)
+(def (class* e) variable-binding-form (walked-form
+                                       binding-form-mixin
+                                       implicit-progn-with-declarations-mixin)
   ())
 
 (def (class* e) let-form (variable-binding-form)
@@ -257,7 +259,8 @@
 
 ;;;; LOCALLY
 
-(def (class* e) locally-form (walked-form implicit-progn-with-declare-mixin)
+(def (class* e) locally-form (walked-form
+                              implicit-progn-with-declarations-mixin)
   ())
 
 (def walker locally
@@ -271,7 +274,9 @@
 
 ;;;; MACROLET
 
-(def (class* e) macrolet-form (walked-form binding-form-mixin implicit-progn-with-declare-mixin)
+(def (class* e) macrolet-form (walked-form
+                               binding-form-mixin
+                               implicit-progn-with-declarations-mixin)
   ())
 
 (def walker macrolet
@@ -411,7 +416,7 @@
 
 (def (class* e) symbol-macrolet-form (walked-form
                                       binding-form-mixin
-                                      implicit-progn-with-declare-mixin)
+                                      implicit-progn-with-declarations-mixin)
   ())
 
 (def walker symbol-macrolet

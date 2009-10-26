@@ -90,7 +90,7 @@
 (def (class* e) function-form (walked-form)
   ())
 
-(def (class* e) lambda-function-form (function-form implicit-progn-with-declare-mixin)
+(def (class* e) lambda-function-form (function-form implicit-progn-with-declarations-mixin)
   ((arguments)))
 
 (def unwalker lambda-function-form (arguments body declares)
@@ -364,7 +364,9 @@
 
 ;;;; FLET/LABELS
 
-(def (class* e) function-binding-form (walked-form binding-form-mixin implicit-progn-with-declare-mixin)
+(def (class* e) function-binding-form (walked-form
+                                       binding-form-mixin
+                                       implicit-progn-with-declarations-mixin)
   ())
 
 (def (class* e) flet-form (function-binding-form)

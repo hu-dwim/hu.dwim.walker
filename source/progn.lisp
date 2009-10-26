@@ -12,7 +12,7 @@
 (def print-object implicit-progn-mixin
   (format t "~A" (body-of -self-)))
 
-(def class* implicit-progn-with-declare-mixin (implicit-progn-mixin)
+(def (class* e) implicit-progn-with-declarations-mixin (implicit-progn-mixin)
   ((declares nil)))
 
 (def class* binding-form-mixin ()
@@ -172,7 +172,7 @@
 (def function walk-implict-progn (parent forms env &key declarations-callback docstring-allowed declarations-allowed (whole *current-form*))
   (assert (and (typep parent 'implicit-progn-mixin)
                (or (not declarations-allowed)
-                   (typep parent 'implicit-progn-with-declare-mixin))))
+                   (typep parent 'implicit-progn-with-declarations-mixin))))
   (bind (((:values body declarations docstring) (parse-body (coerce-to-form forms) :documentation docstring-allowed :whole whole)))
     (when docstring-allowed
       (setf (docstring-of parent) docstring))
