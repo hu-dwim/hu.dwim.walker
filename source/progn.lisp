@@ -158,19 +158,26 @@
       nil
       (list `(declare ,@(unwalk-forms decls)))))
 
-(defun walk-implict-progn (parent forms env &key docstring declare)
+(defun walk-implict-progn (parent forms env &key docstring-allowed declarations-allowed (whole *current-form*))
   (assert (and (typep parent 'implicit-progn-mixin)
-               (or (not declare)
+               (or (not declarations-allowed)
                    (typep parent 'implicit-progn-with-declare-mixin))))
-  (handler-bind ((undefined-reference
-                  (lambda (condition)
-                    (unless (enclosing-code-of condition)
-                      (setf (enclosing-code-of condition) `(some-implicit-progn-form ,@(coerce-to-form forms)))))))
-    (bind (((:values body env docstring declarations)
-            (split-body (coerce-to-form forms) env :parent parent :docstring docstring :declare declare)))
-      (when declare
-        (setf (declares-of parent) declarations))
-      (setf (body-of parent) (mapcar (lambda (form)
-                                       (walk-form form :parent parent :environment env))
-                                     (coerce-to-form body)))
-      docstring)))
+  (bind (((:values body declarations docstring) (parse-body (coerce-to-form forms) :documentation docstring-allowed :whole whole))
+         (walked-declarations '()))
+    (when docstring-allowed
+      (setf (docstring-of parent) docstring))
+    (when declarations
+      (unless declarations-allowed
+        (error "Declarations are not allowed at ~S" whole))
+      (dolist (declaration declarations)
+        (assert (eq (first declaration) 'declare))
+        (dolist (entry (rest declaration))
+          (with-current-form entry
+            (bind ((walked-declaration nil))
+              (setf (values env walked-declaration) (walk-declaration entry env parent))
+              (appendf walked-declarations walked-declaration)))))
+      (setf (declares-of parent) walked-declarations))
+    (setf (body-of parent) (mapcar (lambda (form)
+                                     (walk-form form :parent parent :environment env))
+                                   (coerce-to-form body)))
+    (values)))

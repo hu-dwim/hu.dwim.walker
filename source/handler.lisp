@@ -224,7 +224,7 @@
                                   declarations))
                ;; TODO audit this part, :dummy? check other occurrances, too!
                (-augment- :variable (coerce-to-form var) :dummy)))
-      (walk-implict-progn let (cddr -form-) -environment- :declare t))))
+      (walk-implict-progn let (cddr -form-) -environment- :declarations-allowed t))))
 
 (def unwalker let-form (bindings body declares)
   `(let ,(mapcar (lambda (bind)
@@ -243,7 +243,7 @@
       (push (cons var (recurse initial-value let*)) (bindings-of let*))
       (-augment- :variable var :dummy))
     (setf (bindings-of let*) (nreverse (bindings-of let*)))
-    (walk-implict-progn let* (cddr -form-) -environment- :declare t)))
+    (walk-implict-progn let* (cddr -form-) -environment- :declarations-allowed t)))
 
 (def unwalker let*-form (bindings body declares)
   `(let* ,(mapcar (lambda (bind)
@@ -259,7 +259,7 @@
 
 (def walker locally
   (with-form-object (locally 'locally-form -parent-)
-    (walk-implict-progn locally (cdr -form-) -environment- :declare t)))
+    (walk-implict-progn locally (cdr -form-) -environment- :declarations-allowed t)))
 
 (def unwalker locally-form (body declares)
   `(locally
@@ -280,7 +280,7 @@
         (-augment- :macro name handler)
         (push (cons name handler) (bindings-of macrolet))))
     (setf (bindings-of macrolet) (nreverse (bindings-of macrolet)))
-    (walk-implict-progn macrolet (cddr -form-) -environment- :declare t)))
+    (walk-implict-progn macrolet (cddr -form-) -environment- :declarations-allowed t)))
 
 (def unwalker macrolet-form (body declares)
   ;; We ignore the bindings, because the expansion has already taken place at walk-time.
@@ -418,7 +418,7 @@
       (-augment- :symbol-macro symbol expansion)
       (push (cons symbol expansion) (bindings-of symbol-macrolet)))
     (nreversef (bindings-of symbol-macrolet))
-    (walk-implict-progn symbol-macrolet (cddr -form-) -environment- :declare t)))
+    (walk-implict-progn symbol-macrolet (cddr -form-) -environment- :declarations-allowed t)))
 
 (def unwalker symbol-macrolet-form (body declares)
   ;; We ignore the bindings, because the expansion has already taken place at walk-time.

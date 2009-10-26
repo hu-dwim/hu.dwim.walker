@@ -99,22 +99,17 @@
        ,@(recurse-on-body body)))
 
 (def (class* e) function-definition-form (lambda-function-form)
-  ((name)))
+  ((name)
+   (docstring nil)))
 
 (def walker defun
   (with-form-object (node 'function-definition-form -parent-
                           :name (second -form-))
-    ;; TODO finish fixing the defun docstring bug...
-    #+nil
-    (bind (((:values remaining-forms declarations doc-string) (parse-body (nthcdr 3 form) :documentation t :whole form)))
-      (walk-lambda-like node (third form) remaining-forms env
-                        :declarations declarations
-                        :documentation doc-string))
-    (walk-lambda-like node (third -form-)
-                      (nthcdr 3 -form-) -environment-)))
+    (walk-lambda-like node (elt -form- 2) (nthcdr 3 -form-) -environment- :docstring-allowed t :declarations-allowed t)))
 
-(def unwalker function-definition-form (form name arguments body declares)
+(def unwalker function-definition-form (form name arguments body docstring declares)
   `(defun ,name ,(unwalk-ordinary-lambda-list arguments)
+     ,@(when docstring (list docstring))
      ,@(unwalk-declarations declares)
      ,@(recurse-on-body body)))
 
@@ -149,7 +144,7 @@
 (def walker function
   (cond
     ((lambda-form? (second -form-))
-     ;; specially handling the list (function (lambda ...))
+     ;; specially handling (function (lambda ...))
      (walk-lambda (second -form-) -parent- -environment-))
     #+sbcl
     ((and (consp (second -form-))
@@ -159,7 +154,8 @@
                                :special-form (first named-lambda-form)
                                :name (second named-lambda-form))
          (walk-lambda-like node (third named-lambda-form)
-                           (nthcdr 3 named-lambda-form) -environment-))))
+                           (nthcdr 3 named-lambda-form) -environment-
+                           :declarations-allowed t))))
     (t
      ;; (function foo)
      (bind ((function-name (second -form-)))
@@ -171,14 +167,18 @@
                          -parent-
                          :name function-name)))))
 
-(defun walk-lambda (form parent env)
-  (with-form-object (ast-node 'lambda-function-form parent)
-    (walk-lambda-like ast-node (second form) (cddr form) env)))
+(def (layered-function e) walk-lambda (form parent env)
+  (:method (form parent env)
+    (assert (eq (first form) 'lambda))
+    (with-form-object (ast-node 'lambda-function-form parent)
+      (walk-lambda-like ast-node (second form) (cddr form) env :declarations-allowed t))))
 
-(def layered-function walk-lambda-like (ast-node args body env)
-  (:method (ast-node args body env)
+(def (layered-function e) walk-lambda-like (ast-node args body env &key docstring-allowed declarations-allowed whole)
+  (:method (ast-node args body env &key docstring-allowed declarations-allowed (whole *current-form*))
     (setf (values (arguments-of ast-node) env) (walk-ordinary-lambda-list args ast-node env))
-    (walk-implict-progn ast-node body env :declare t)
+    (walk-implict-progn ast-node body env
+                        :docstring-allowed docstring-allowed :declarations-allowed declarations-allowed
+                        :whole whole)
     ast-node))
 
 (def (function e) walk-ordinary-lambda-list (lambda-list parent env &key allow-specializers)
@@ -392,7 +392,7 @@
                              :for (name . body) :in (bindings-of flet)
                              :do (-augment- :function name body)
                              :finally (return -environment-))
-                          :declare t))))
+                          :declarations-allowed t))))
 
 ;; TODO factor out stuff in flet-form and labels-form
 (def unwalker flet-form (bindings body declares)
@@ -442,7 +442,7 @@
                  (setf (body-of lambda) (body-of tmp-lambda)
                        (arguments-of lambda) (arguments-of tmp-lambda)
                        (declares-of lambda) (declares-of tmp-lambda)))))
-      (walk-implict-progn labels body -environment- :declare t))))
+      (walk-implict-progn labels body -environment- :declarations-allowed t))))
 
 (def unwalker labels-form (bindings body declares)
   `(labels ,(mapcar (lambda (binding)

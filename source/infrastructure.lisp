@@ -221,7 +221,7 @@
 (def special-variable *walker-handlers* (make-hash-table :test 'eq))
 
 (def (condition* e) undefined-reference (style-warning)
-  ((enclosing-code nil)
+  ((enclosing-code *current-form*)
    (name)))
 
 (def (condition* e) undefined-variable-reference (undefined-reference)
