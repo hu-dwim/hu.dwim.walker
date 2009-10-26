@@ -214,17 +214,20 @@
                                           (bind (((var &optional initial-value) (ensure-list (coerce-to-form binding))))
                                             (cons var (recurse initial-value let))))))
                                     (coerce-to-form (second -form-))))
-    (bind (((:values nil nil nil declarations) (split-body (cddr -form-) -environment- :parent let :declare t)))
-      (loop
-         :for (var . value) :in (bindings-of let)
-         :do (unless (or (special-variable-name? var)
-                         (find-if (lambda (declaration)
-                                    (and (typep declaration 'special-variable-declaration-form)
-                                         (eq var (name-of declaration))))
-                                  declarations))
-               ;; TODO audit this part, :dummy? check other occurrances, too!
-               (-augment- :variable (coerce-to-form var) :dummy)))
-      (walk-implict-progn let (cddr -form-) -environment- :declarations-allowed t))))
+    (walk-implict-progn let (cddr -form-) -environment-
+                        :declarations-allowed t
+                        :declarations-callback (lambda (declarations)
+                                                 ;; extend the walkenv before we walk the body with the lexical variables introduced by this LET form
+                                                 (loop
+                                                    :for (var . value) :in (bindings-of let)
+                                                    :do (when (and (not (special-variable-name? var))
+                                                                   (not (find-if (lambda (declaration)
+                                                                                   (and (typep declaration 'special-variable-declaration-form)
+                                                                                        (eq var (name-of declaration))))
+                                                                                 declarations)))
+                                                          (-augment- :variable (coerce-to-form var))))
+                                                 ;; we've extended the env, inform WALK-IMPLICT-PROGN about it
+                                                 -environment-))))
 
 (def unwalker let-form (bindings body declares)
   `(let ,(mapcar (lambda (bind)

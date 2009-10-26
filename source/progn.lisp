@@ -90,7 +90,7 @@
                                      )
                                    ))
 
-(defun walk-declaration (declaration environment parent)
+(defun walk-declaration (declaration parent environment)
   (let ((declares nil))
     (flet ((function-name (form)
              (if (and (consp form)
@@ -158,25 +158,31 @@
       nil
       (list `(declare ,@(unwalk-forms decls)))))
 
-(defun walk-implict-progn (parent forms env &key docstring-allowed declarations-allowed (whole *current-form*))
+(def function walk-declarations (declarations parent env)
+  (bind ((walked-declarations '()))
+    (dolist (declaration declarations)
+      (assert (eq (first declaration) 'declare))
+      (dolist (entry (rest declaration))
+        (with-current-form entry
+          (bind ((walked-declaration nil))
+            (setf (values env walked-declaration) (walk-declaration entry parent env))
+            (appendf walked-declarations walked-declaration)))))
+    walked-declarations))
+
+(def function walk-implict-progn (parent forms env &key declarations-callback docstring-allowed declarations-allowed (whole *current-form*))
   (assert (and (typep parent 'implicit-progn-mixin)
                (or (not declarations-allowed)
                    (typep parent 'implicit-progn-with-declare-mixin))))
-  (bind (((:values body declarations docstring) (parse-body (coerce-to-form forms) :documentation docstring-allowed :whole whole))
-         (walked-declarations '()))
+  (bind (((:values body declarations docstring) (parse-body (coerce-to-form forms) :documentation docstring-allowed :whole whole)))
     (when docstring-allowed
       (setf (docstring-of parent) docstring))
     (when declarations
       (unless declarations-allowed
         (error "Declarations are not allowed at ~S" whole))
-      (dolist (declaration declarations)
-        (assert (eq (first declaration) 'declare))
-        (dolist (entry (rest declaration))
-          (with-current-form entry
-            (bind ((walked-declaration nil))
-              (setf (values env walked-declaration) (walk-declaration entry env parent))
-              (appendf walked-declarations walked-declaration)))))
-      (setf (declares-of parent) walked-declarations))
+      (bind ((walked-declarations (walk-declarations declarations parent env)))
+        (setf (declares-of parent) walked-declarations)
+        (when declarations-callback
+          (setf env (funcall declarations-callback walked-declarations)))))
     (setf (body-of parent) (mapcar (lambda (form)
                                      (walk-form form :parent parent :environment env))
                                    (coerce-to-form body)))

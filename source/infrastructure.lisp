@@ -359,21 +359,6 @@
      ,@body
      ,variable))
 
-(defun split-body (body env &key parent (docstring t) (declare t))
-  (let ((walked-declarations (list)))
-    (bind (((:values body declarations documentation) (parse-body body :documentation docstring)))
-      (when declarations
-        (unless declare
-          (error "Declarations are not allowed at ~S" body))
-        (dolist (declaration declarations)
-          (assert (eq (first declaration) 'declare))
-          (dolist (entry (rest declaration))
-            (with-current-form entry
-              (let ((newdecls nil))
-                (setf (values env newdecls) (walk-declaration entry env parent))
-                (appendf walked-declarations newdecls))))))
-      (values body env documentation walked-declarations))))
-
 (defun parse-macro-definition (name lambda-list body &optional lexenv)
   "Sort of like parse-macro from CLtL2."
   (declare (ignore name))
