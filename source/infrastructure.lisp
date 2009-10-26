@@ -158,7 +158,7 @@
         (extend! walkenv :symbol-macro name definition)))
     (cons walkenv lexenv)))
 
-(def function %augment (env type name datum)
+(def function %augment (env type name &optional datum)
   (bind ((walkenv (%environment/augment (car env) type name datum))
          (lexenv (cdr env)))
     (cons walkenv (ecase type
@@ -275,7 +275,7 @@
            (bind ((-form- (coerce-to-form -form-)))
              (macrolet ((-lookup- (type name &key (otherwise nil))
                           `(%environment/find (car -environment-) ,type ,name :otherwise ,otherwise))
-                        (-augment- (type name datum)
+                        (-augment- (type name &optional datum)
                           `(setf -environment- (%augment -environment- ,type ,name ,datum))))
                (flet ((recurse (node &optional (parent -parent-) (environment -environment-))
                         (walk-form node :parent parent :environment environment)))

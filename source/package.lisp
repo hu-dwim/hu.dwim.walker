@@ -66,15 +66,11 @@
 
            ;; walker
            #:map-ast
-           #:walk-lambda
-           #:walk-lambda-like
-           #:unwalk-lambda-list
            #:make-walk-environment
 
            #:with-form-object
 
            #:implicit-progn-mixin
-           #:implicit-progn-with-declare-mixin
            #:binding-form-mixin
            #:bindings-of
            #:declaration-form
@@ -132,13 +128,11 @@
            #:unwind-protect-form
            #:load-time-value-form
 
-           #:walk-lambda-list
            #:walk-implict-progn
            #:body-of
            #:cleanup-form-of
            #:code-of
            #:condition-of
-           #:declares-of
            #:default-value-of
            #:else-of
            #:enclosing-tagbody-of
