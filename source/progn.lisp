@@ -6,32 +6,34 @@
 
 (in-package :hu.dwim.walker)
 
-(def class* implicit-progn-mixin ()
+(def (class* e) implicit-progn-mixin ()
   ((body)))
 
 (def print-object implicit-progn-mixin
   (format t "~A" (body-of -self-)))
 
-(def (class* e) implicit-progn-with-declarations-mixin (implicit-progn-mixin)
-  ((declares nil)))
+(def (class* ea) implicit-progn-with-declarations-mixin (implicit-progn-mixin)
+  ((declarations nil)))
 
-(def class* binding-form-mixin ()
+(def (class* ea) binding-form-mixin ()
   ((bindings)))
 
 (def (class* e) declaration-form (walked-form)
   ())
 
-(def (class* e) optimize-declaration-form (declaration-form)
+(def (class* ea) optimize-declaration-form (declaration-form)
   ((specification :accessor specification-of :initarg :specification)))
 
 (def unwalker optimize-declaration-form (specification)
   `(optimize ,specification))
 
-(def (class* e) variable-declaration-form (declaration-form)
-  ((name :accessor name-of :initarg :name)))
+(def (class* e) variable-declaration-form (declaration-form
+                                           named-walked-form)
+  ())
 
-(def (class* e) function-declaration-form (declaration-form)
-  ((name :accessor name-of :initarg :name)))
+(def (class* e) function-declaration-form (declaration-form
+                                           named-walked-form)
+  ())
 
 (def (class* e) dynamic-extent-declaration-form (variable-declaration-form)
   ())
@@ -180,7 +182,7 @@
       (unless declarations-allowed
         (error "Declarations are not allowed at ~S" whole))
       (bind ((walked-declarations (walk-declarations declarations parent env)))
-        (setf (declares-of parent) walked-declarations)
+        (setf (declarations-of parent) walked-declarations)
         (when declarations-callback
           (setf env (funcall declarations-callback walked-declarations)))))
     (setf (body-of parent) (mapcar (lambda (form)

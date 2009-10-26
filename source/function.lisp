@@ -93,38 +93,38 @@
 (def (class* e) lambda-function-form (function-form implicit-progn-with-declarations-mixin)
   ((arguments)))
 
-(def unwalker lambda-function-form (arguments body declares)
+(def unwalker lambda-function-form (arguments body declarations)
   `#'(lambda ,(unwalk-ordinary-lambda-list arguments)
-       ,@(unwalk-declarations declares)
+       ,@(unwalk-declarations declarations)
        ,@(recurse-on-body body)))
 
-(def (class* e) function-definition-form (lambda-function-form)
-  ((name)
-   (docstring nil)))
+(def (class* e) function-definition-form (lambda-function-form
+                                          named-walked-form)
+  ((docstring nil)))
 
 (def walker defun
   (with-form-object (node 'function-definition-form -parent-
                           :name (second -form-))
     (walk-lambda-like node (elt -form- 2) (nthcdr 3 -form-) -environment- :docstring-allowed t :declarations-allowed t)))
 
-(def unwalker function-definition-form (form name arguments body docstring declares)
+(def unwalker function-definition-form (form name arguments body docstring declarations)
   `(defun ,name ,(unwalk-ordinary-lambda-list arguments)
      ,@(when docstring (list docstring))
-     ,@(unwalk-declarations declares)
+     ,@(unwalk-declarations declarations)
      ,@(recurse-on-body body)))
 
-(def (class* e) named-lambda-function-form (lambda-function-form)
-  ((special-form)
-   (name)))
+(def (class* e) named-lambda-function-form (lambda-function-form
+                                            named-walked-form)
+  ((special-form)))
 
-(def unwalker named-lambda-function-form (special-form name arguments body declares)
+(def unwalker named-lambda-function-form (special-form name arguments body declarations)
   `(function
     (,special-form ,name ,(unwalk-ordinary-lambda-list arguments)
-     ,@(unwalk-declarations declares)
+     ,@(unwalk-declarations declarations)
      ,@(recurse-on-body body))))
 
-(def (class* e) function-object-form (walked-form)
-  ((name)))
+(def (class* e) function-object-form (named-walked-form)
+  ())
 
 (def unwalker function-object-form (name)
   `(function ,name))
@@ -207,8 +207,8 @@
         (augment-walkenv! env :variable (name-of parsed) parsed)))
     result))
 
-(def (class* e) function-argument-form (walked-form)
-  ((name)))
+(def (class* e) function-argument-form (named-walked-form)
+  ())
 
 (def print-object function-argument-form
   (format t "~S" (name-of -self-)))
@@ -397,7 +397,7 @@
                           :declarations-allowed t))))
 
 ;; TODO factor out stuff in flet-form and labels-form
-(def unwalker flet-form (bindings body declares)
+(def unwalker flet-form (bindings body declarations)
   `(flet ,(mapcar (lambda (binding)
                     (cons (car binding)
                           (if (cdr binding)
@@ -406,7 +406,7 @@
                               ;; empty args
                               (list '()))))
                   bindings)
-     ,@(unwalk-declarations declares)
+     ,@(unwalk-declarations declarations)
      ,@(recurse-on-body body)))
 
 (def (class* e) labels-form (function-binding-form)
@@ -443,10 +443,10 @@
                (let ((tmp-lambda (walk-lambda `(lambda ,arguments ,@body) labels -environment-)))
                  (setf (body-of lambda) (body-of tmp-lambda)
                        (arguments-of lambda) (arguments-of tmp-lambda)
-                       (declares-of lambda) (declares-of tmp-lambda)))))
+                       (declarations-of lambda) (declarations-of tmp-lambda)))))
       (walk-implict-progn labels body -environment- :declarations-allowed t))))
 
-(def unwalker labels-form (bindings body declares)
+(def unwalker labels-form (bindings body declarations)
   `(labels ,(mapcar (lambda (binding)
                       (cons (car binding)
                             (if (cdr binding)
@@ -455,5 +455,5 @@
                                 ;; empty args
                                 (list '()))))
                     bindings)
-     ,@(unwalk-declarations declares)
+     ,@(unwalk-declarations declarations)
      ,@(recurse-on-body body)))

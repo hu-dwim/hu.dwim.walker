@@ -24,8 +24,8 @@
 (def print-object constant-form
   (format t "!~S" (value-of -self-)))
 
-(def (class* e) variable-reference-form (walked-form)
-  ((name)))
+(def (class* e) variable-reference-form (named-walked-form)
+  ())
 
 (def unwalker variable-reference-form (name)
   name)
@@ -84,7 +84,7 @@
                                       (find-if (lambda (declare)
                                                  (and (typep declare 'special-variable-declaration-form)
                                                       (eq (name-of declare) form)))
-                                               (declares-of node))))
+                                               (declarations-of node))))
                            (return t)))))
             (make-form-object 'special-variable-reference-form -parent- :name form))
            (t
@@ -231,11 +231,11 @@
                                                  ;; we've extended the env, inform WALK-IMPLICT-PROGN about it
                                                  -environment-))))
 
-(def unwalker let-form (bindings body declares)
+(def unwalker let-form (bindings body declarations)
   `(let ,(mapcar (lambda (bind)
                    (list (car bind) (recurse (cdr bind))))
                  bindings)
-     ,@(unwalk-declarations declares)
+     ,@(unwalk-declarations declarations)
      ,@(recurse-on-body body)))
 
 (def (class* e) let*-form (variable-binding-form)
@@ -250,11 +250,11 @@
     (setf (bindings-of let*) (nreverse (bindings-of let*)))
     (walk-implict-progn let* (cddr -form-) -environment- :declarations-allowed t)))
 
-(def unwalker let*-form (bindings body declares)
+(def unwalker let*-form (bindings body declarations)
   `(let* ,(mapcar (lambda (bind)
                     (list (car bind) (recurse (cdr bind))))
                   bindings)
-     ,@(unwalk-declarations declares)
+     ,@(unwalk-declarations declarations)
      ,@(recurse-on-body body)))
 
 ;;;; LOCALLY
@@ -267,9 +267,9 @@
   (with-form-object (locally 'locally-form -parent-)
     (walk-implict-progn locally (cdr -form-) -environment- :declarations-allowed t)))
 
-(def unwalker locally-form (body declares)
+(def unwalker locally-form (body declarations)
   `(locally
-       ,@(unwalk-declarations declares)
+       ,@(unwalk-declarations declarations)
      ,@(recurse-on-body body)))
 
 ;;;; MACROLET
@@ -290,9 +290,9 @@
     (setf (bindings-of macrolet) (nreverse (bindings-of macrolet)))
     (walk-implict-progn macrolet (cddr -form-) -environment- :declarations-allowed t)))
 
-(def unwalker macrolet-form (body declares)
+(def unwalker macrolet-form (body declarations)
   ;; We ignore the bindings, because the expansion has already taken place at walk-time.
-  `(locally ,@(unwalk-declarations declares) ,@(recurse-on-body body)))
+  `(locally ,@(unwalk-declarations declarations) ,@(recurse-on-body body)))
 
 ;;;; MULTIPLE-VALUE-CALL
 
@@ -428,9 +428,9 @@
     (nreversef (bindings-of symbol-macrolet))
     (walk-implict-progn symbol-macrolet (cddr -form-) -environment- :declarations-allowed t)))
 
-(def unwalker symbol-macrolet-form (body declares)
+(def unwalker symbol-macrolet-form (body declarations)
   ;; We ignore the bindings, because the expansion has already taken place at walk-time.
-  `(locally ,@(unwalk-declarations declares) ,@(recurse-on-body body)))
+  `(locally ,@(unwalk-declarations declarations) ,@(recurse-on-body body)))
 
 ;;;; TAGBODY/GO
 
