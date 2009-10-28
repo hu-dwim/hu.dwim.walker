@@ -207,19 +207,19 @@
         (augment-walkenv! env :variable (name-of parsed) parsed)))
     result))
 
-(def (class* e) function-argument-form (named-walked-form)
+(def (class* ea) function-argument-form (named-walked-form)
   ())
 
 (def print-object function-argument-form
   (format t "~S" (name-of -self-)))
 
-(def (class* e) required-function-argument-form (function-argument-form)
+(def (class* ea) required-function-argument-form (function-argument-form)
   ())
 
 (def unwalker required-function-argument-form (name)
   name)
 
-(def (class* e) specialized-function-argument-form (required-function-argument-form)
+(def (class* ea) specialized-function-argument-form (required-function-argument-form)
   ((specializer)))
 
 (def function walk-specialized-argument (form parent env)
@@ -237,41 +237,44 @@
       name
       `(,name ,specializer)))
 
-(def (class* e) optional-function-argument-form (function-argument-form)
-  ((default-value nil)
-   (supplied-p-parameter)))
+(def (class* ea) function-argument-form-with-default-value (function-argument-form)
+  ((default-value nil)))
+
+(def (class* ea) function-argument-form-with-supplied-p-parameter (function-argument-form-with-default-value)
+  ((supplied-p-parameter-name)))
+
+(def (class* ea) optional-function-argument-form (function-argument-form-with-supplied-p-parameter)
+  ())
 
 (defun walk-optional-argument (form parent env)
   ;; TODO report bind bug: (bind (((name &optional (default-value nil default-value-supplied?) supplied-p-parameter) (ensure-list form))) )
-  (destructuring-bind (name &optional (default-value nil default-value-supplied?) supplied-p-parameter)
+  (destructuring-bind (name &optional (default-value nil default-value-supplied?) supplied-p-parameter-name)
       (ensure-list form)
     (with-form-object (arg 'optional-function-argument-form parent
                            :name name
-                           :supplied-p-parameter supplied-p-parameter)
+                           :supplied-p-parameter-name supplied-p-parameter-name)
       (when default-value-supplied?
         (setf (default-value-of arg) (walk-form default-value :parent arg :environment env))))))
 
-(def unwalker optional-function-argument-form (name supplied-p-parameter)
+(def unwalker optional-function-argument-form (name supplied-p-parameter-name)
   (bind ((default-value (awhen (default-value-of -form-)
                           (recurse it))))
-    (cond ((and name supplied-p-parameter)
-           `(,name ,default-value ,supplied-p-parameter))
+    (cond ((and name supplied-p-parameter-name)
+           `(,name ,default-value ,supplied-p-parameter-name))
           ((and name default-value)
            `(,name ,default-value))
           (name name)
           (t (error "Invalid optional argument")))))
 
-(def (class* e) keyword-function-argument-form (function-argument-form)
-  ((keyword-name)
-   (default-value nil)
-   (supplied-p-parameter)))
+(def (class* ea) keyword-function-argument-form (function-argument-form-with-supplied-p-parameter)
+  ((keyword-name)))
 
 (defun effective-keyword-name-of (k)
   (or (keyword-name-of k)
       (intern (symbol-name (name-of k)) :keyword)))
 
 (defun walk-keyword-argument (form parent env)
-  (destructuring-bind (name &optional (default-value nil default-value-supplied?) supplied-p-parameter)
+  (destructuring-bind (name &optional (default-value nil default-value-supplied?) supplied-p-parameter-name)
       (ensure-list form)
     (let ((name (if (consp name)
                     (second name)
@@ -282,17 +285,17 @@
       (with-form-object (arg 'keyword-function-argument-form parent
                              :name name
                              :keyword-name keyword
-                             :supplied-p-parameter supplied-p-parameter)
+                             :supplied-p-parameter-name supplied-p-parameter-name)
         (when default-value-supplied?
           (setf (default-value-of arg) (walk-form default-value :parent arg :environment env)))))))
 
-(def unwalker keyword-function-argument-form (keyword-name name default-value supplied-p-parameter)
+(def unwalker keyword-function-argument-form (keyword-name name default-value supplied-p-parameter-name)
   (bind ((default-value (awhen (default-value-of -form-)
                           (recurse it))))
-    (cond ((and keyword-name name supplied-p-parameter)
-           `((,keyword-name ,name) ,default-value ,supplied-p-parameter))
-          ((and name supplied-p-parameter)
-           `(,name ,default-value ,supplied-p-parameter))
+    (cond ((and keyword-name name supplied-p-parameter-name)
+           `((,keyword-name ,name) ,default-value ,supplied-p-parameter-name))
+          ((and name supplied-p-parameter-name)
+           `(,name ,default-value ,supplied-p-parameter-name))
           ((and name default-value)
            `(,name ,default-value))
           (name name)
@@ -309,6 +312,24 @@
 
 (def unwalker rest-function-argument-form (name)
   name)
+
+(def (class* e) auxiliary-function-argument-form (function-argument-form-with-default-value)
+  ())
+
+(defun walk-auxiliary-argument (form parent env)
+  (destructuring-bind (name &optional (default-value nil default-value-supplied?))
+      (ensure-list form)
+    (with-form-object (arg 'auxiliary-function-argument-form parent :name name)
+      (when default-value-supplied?
+        (setf (default-value-of arg) (walk-form default-value :parent arg :environment env))))))
+
+(def unwalker auxiliary-function-argument-form (name supplied-p-parameter)
+  (bind ((default-value (awhen (default-value-of -form-)
+                          (recurse it))))
+    (cond ((and name default-value)
+           `(,name ,default-value))
+          (name name)
+          (t (error "Invalid auxiliary argument")))))
 
 (def (function e) unwalk-ordinary-lambda-list (arguments)
   (bind ((optional-seen? nil)
@@ -343,24 +364,6 @@
                       '(&aux))))
                  (list (unwalk-form form))))
             arguments)))
-
-(def (class* e) auxiliary-function-argument-form (function-argument-form)
-  ((default-value nil)))
-
-(defun walk-auxiliary-argument (form parent env)
-  (destructuring-bind (name &optional (default-value nil default-value-supplied?))
-      (ensure-list form)
-    (with-form-object (arg 'auxiliary-function-argument-form parent :name name)
-      (when default-value-supplied?
-        (setf (default-value-of arg) (walk-form default-value :parent arg :environment env))))))
-
-(def unwalker auxiliary-function-argument-form (name supplied-p-parameter)
-  (bind ((default-value (awhen (default-value-of -form-)
-                          (recurse it))))
-    (cond ((and name default-value)
-           `(,name ,default-value))
-          (name name)
-          (t (error "Invalid auxiliary argument")))))
 
 ;;;; FLET/LABELS
 
