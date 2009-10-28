@@ -15,7 +15,7 @@
   :licence "BSD / Public domain"
   :description "Test suite for hu.dwim.walker"
   :depends-on (:hu.dwim.def+hu.dwim.stefil
-               :hu.dwim.stefil
+               :hu.dwim.stefil+swank
                :hu.dwim.walker)
   :components ((:module "test"
                 :components ((:file "ast" :depends-on ("package"))

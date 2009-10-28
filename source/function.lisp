@@ -103,9 +103,9 @@
   ((docstring nil)))
 
 (def walker defun
-  (with-form-object (node 'function-definition-form -parent-
-                          :name (second -form-))
-    (walk-lambda-like node (elt -form- 2) (nthcdr 3 -form-) -environment- :docstring-allowed t :declarations-allowed t)))
+  (bind (((name args &rest body) (rest -form-)))
+    (with-form-object (node 'function-definition-form -parent- :name name)
+      (walk-lambda-like node args body -environment- :docstring-allowed t :declarations-allowed t))))
 
 (def unwalker function-definition-form (form name arguments body docstring declarations)
   `(defun ,name ,(unwalk-ordinary-lambda-list arguments)
@@ -169,7 +169,7 @@
 
 (def (layered-function e) walk-lambda (form parent env)
   (:method (form parent env)
-    (assert (eq (first form) 'lambda))
+    (assert (string-equal (first form) "lambda")) ;; because the js walker comes in with '|lambda|...
     (with-form-object (ast-node 'lambda-function-form parent)
       (walk-lambda-like ast-node (second form) (cddr form) env :declarations-allowed t))))
 

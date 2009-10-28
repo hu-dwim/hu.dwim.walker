@@ -113,7 +113,6 @@
     (and (consp form)
          (eq 'lambda (car form)))))
 
-;; TODO rename
 (def layered-function walker-macroexpand-1 (form &optional env)
   (:method (form &optional env)
     (macroexpand-1 form env)))

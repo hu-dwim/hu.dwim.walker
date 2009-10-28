@@ -26,6 +26,10 @@
            #:lookup-in-lexenv
            #:macroexpand-all
 
+           #:-environment-
+           #:-form-
+           #:-parent-
+
            #:do-variables-in-lexenv
            #:do-functions-in-lexenv
            #:do-macros-in-lexenv

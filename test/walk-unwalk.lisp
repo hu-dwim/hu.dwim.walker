@@ -297,5 +297,6 @@
      (locally 'bar))))
 
 (define-walk-unwalk-test test/walk-unwalk/defun ()
+  (defun foo (x) x)
   (defun foo (x) (declare (type fixnum x)) x)
   (defun foo (x) "foo" (declare (type fixnum x)) x))
