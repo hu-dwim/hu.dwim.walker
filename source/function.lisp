@@ -390,8 +390,9 @@
                       (error "Illegal FLET binding form ~S" entry))
                     (cons name (when (or body
                                          arguments)
-                                 (with-form-object (lambda-node 'lambda-function-form flet)
-                                   (walk-lambda-like lambda-node arguments body -environment-)))))
+                                 (with-current-form entry
+                                   (with-form-object (lambda-node 'lambda-function-form flet)
+                                     (walk-lambda-like lambda-node arguments body -environment- :declarations-allowed t))))))
                   :into bindings
          :finally (setf (bindings-of flet) bindings))
       ;; walk the body in the new env
