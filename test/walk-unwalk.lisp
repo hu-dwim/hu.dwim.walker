@@ -163,7 +163,11 @@
            (princ s)
            (terpri)))
     (prline "hello")
-    (prline "world")))
+    (prline "world"))
+  (flet ((foo ()
+           (declare (optimize speed))
+           1))
+    (funcall #'foo)))
 
 (deftest test/walk-unwalk/flet/errors ()
   (signals error

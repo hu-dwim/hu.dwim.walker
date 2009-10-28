@@ -22,4 +22,5 @@
                              (:file "lexenv" :depends-on ("package"))
                              (:file "macros" :depends-on ("package" "walk-unwalk"))
                              (:file "package")
-                             (:file "walk-unwalk" :depends-on ("package"))))))
+                             (:file "walk-unwalk" :depends-on ("package"))
+                             (:file "semantics" :depends-on ("package"))))))
