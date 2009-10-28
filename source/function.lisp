@@ -132,8 +132,8 @@
 (def (class* e) lexical-function-object-form (function-object-form)
   ())
 
-(def (class* e) walked-lexical-function-object-form (lexical-function-object-form)
-  ())
+(def (class* ea) walked-lexical-function-object-form (lexical-function-object-form)
+  ((definition)))
 
 (def (class* e) unwalked-lexical-function-object-form (lexical-function-object-form)
   ())
@@ -158,14 +158,17 @@
                            :declarations-allowed t))))
     (t
      ;; (function foo)
-     (bind ((function-name (second -form-)))
-       (make-form-object (if (-lookup- :function function-name)
-                             'walked-lexical-function-object-form
-                             (if (-lookup- :unwalked-function function-name)
+     (bind ((function-name (second -form-))
+            (walked-lexical-function (-lookup- :function function-name)))
+       (if walked-lexical-function
+           (make-form-object 'walked-lexical-function-object-form -parent-
+                             :name function-name
+                             :definition walked-lexical-function)
+           (make-form-object (if (-lookup- :unwalked-function function-name)
                                  'unwalked-lexical-function-object-form
-                                 'free-function-object-form))
-                         -parent-
-                         :name function-name)))))
+                                 'free-function-object-form)
+                             -parent-
+                             :name function-name))))))
 
 (def (layered-function e) walk-lambda (form parent env)
   (:method (form parent env)
@@ -388,7 +391,8 @@
                     (cons name (when (or body
                                          arguments)
                                  (with-form-object (lambda-node 'lambda-function-form flet)
-                                   (walk-lambda-like lambda-node arguments body -environment-))))) :into bindings
+                                   (walk-lambda-like lambda-node arguments body -environment-)))))
+                  :into bindings
          :finally (setf (bindings-of flet) bindings))
       ;; walk the body in the new env
       (walk-implict-progn flet
