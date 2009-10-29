@@ -6,6 +6,11 @@
 
 (in-package :hu.dwim.walker)
 
+(def structure (walk-environment (:constructor %make-walk-environment (&optional walked-environment lexical-environment))
+                                 (:conc-name #:env/))
+  (walked-environment '())
+  lexical-environment)
+
 (def (condition* e) walker-error (error)
   ())
 
@@ -138,50 +143,49 @@
 ;; 2) the lexenv, which is the underlying lisp's internal lexenv
 ;; 3) the combined environment, which is (cons walkenv lexenv)
 
-;; TODO fix naming! currently walkenv is a (cons walkenv lexenv)?!
-
 (defun make-walk-environment (&optional lexenv)
   (unless lexenv
     (setf lexenv (make-empty-lexical-environment)))
-  (let ((walkenv '()))
-    (macrolet ((extend! (environment type name datum &rest other-datum)
-                 `(setf ,environment (%environment/augment ,environment ,type ,name ,datum ,@other-datum))))
+  (bind ((walkedenv '()))
+    (macrolet ((extend (type name datum &rest other-datum)
+                 `(setf walkedenv (%repository/augment walkedenv ,type ,name ,datum ,@other-datum))))
       (do-variables-in-lexenv (lexenv name ignored?)
         (unless ignored?
-          (extend! walkenv :unwalked-variable name t)))
+          (extend :unwalked-variable name t)))
       (do-functions-in-lexenv (lexenv name)
-        (extend! walkenv :unwalked-function name t))
+        (extend :unwalked-function name t))
       (do-macros-in-lexenv (lexenv name macro-fn)
-        (extend! walkenv :macro name macro-fn))
+        (extend :macro name macro-fn))
       (do-symbol-macros-in-lexenv (lexenv name definition)
-        (extend! walkenv :symbol-macro name definition)))
-    (cons walkenv lexenv)))
+        (extend :symbol-macro name definition)))
+    (%make-walk-environment walkedenv lexenv)))
 
-(def function %augment (env type name &optional datum)
-  (bind ((walkenv (%environment/augment (car env) type name datum))
-         (lexenv (cdr env)))
-    (cons walkenv (ecase type
-                    (:variable     (augment-lexenv-with-variable name lexenv))
-                    (:macro        (augment-lexenv-with-macro name datum lexenv))
-                    (:function     (augment-lexenv-with-function name lexenv))
-                    (:symbol-macro (augment-lexenv-with-symbol-macro name datum lexenv))
-                    (:block        (augment-lexenv-with-block name lexenv))
-                    (:tag          (augment-lexenv-with-tag name lexenv))
-                    ;; TODO
-                    (:declare      lexenv)
-                    (:tagbody      lexenv)))))
+(def function augment-walk-environment (env type name &optional datum)
+  (bind ((walkenv (env/walked-environment env))
+         (lexenv (env/lexical-environment env)))
+    (setf walkenv (%repository/augment walkenv type name datum))
+    (setf lexenv (ecase type
+                   (:variable     (augment-lexenv-with-variable     name lexenv))
+                   (:macro        (augment-lexenv-with-macro        name datum lexenv))
+                   (:function     (augment-lexenv-with-function     name lexenv))
+                   (:symbol-macro (augment-lexenv-with-symbol-macro name datum lexenv))
+                   (:block        (augment-lexenv-with-block        name lexenv))
+                   (:tag          (augment-lexenv-with-tag          name lexenv))
+                   ;; TODO
+                   (:declare      lexenv)
+                   (:tagbody      lexenv)))
+    (%make-walk-environment walkenv lexenv)))
 
-;; TODO get rid of this, or rename, or something...
-(defmacro augment-walkenv! (env type name datum &rest other-datum)
-  `(setf ,env (%augment ,env ,type ,name ,datum ,@other-datum)))
+(defmacro augment-walk-environment! (env type name datum &rest other-datum)
+  `(setf ,env (augment-walk-environment ,env ,type ,name ,datum ,@other-datum)))
 
-(def function %environment/augment (environment type name datum &rest other-datum)
+(def function %repository/augment (environment type name datum &rest other-datum)
   (cons (if other-datum
             (list* type name datum other-datum)
             (list* type name datum))
         environment))
 
-(def function %environment/find (environment type name &key (otherwise nil))
+(def function %repository/find (environment type name &key (otherwise nil))
   (loop
      :for (.type .name . data) :in environment
      :when (and (eq .name name)
@@ -200,7 +204,7 @@
              (handle-otherwise otherwise)))))
 
 #+(or) ;; it's not used for now
-(defun (setf %environment/find) (value environment type name &key (error-p nil))
+(defun (setf %repository/find) (value environment type name &key (error-p nil))
   (loop
      :for env-piece :in environment
      :when (and (eql (first env-piece) type)
@@ -273,9 +277,9 @@
          (block nil
            (bind ((-form- (coerce-to-form -form-)))
              (macrolet ((-lookup- (type name &key (otherwise nil))
-                          `(%environment/find (car -environment-) ,type ,name :otherwise ,otherwise))
+                          `(%repository/find (env/walked-environment -environment-) ,type ,name :otherwise ,otherwise))
                         (-augment- (type name &optional datum)
-                          `(setf -environment- (%augment -environment- ,type ,name ,datum))))
+                          `(setf -environment- (augment-walk-environment -environment- ,type ,name ,datum))))
                (flet ((recurse (node &optional (parent -parent-) (environment -environment-))
                         (walk-form node :parent parent :environment environment)))
                  (declare (ignorable #'recurse))

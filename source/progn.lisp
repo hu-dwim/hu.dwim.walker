@@ -104,7 +104,7 @@
                  (extend-env ((var list) newdeclare &rest datum)
                    `(dolist (,var ,list)
                       (push ,newdeclare declares)
-                      (augment-walkenv! environment :declare ,@datum))))
+                      (augment-walk-environment! environment :declare ,@datum))))
         (bind (((type &rest arguments) declaration))
           (case type
             (dynamic-extent
@@ -175,6 +175,7 @@
   (assert (and (typep parent 'implicit-progn-mixin)
                (or (not declarations-allowed)
                    (typep parent 'implicit-progn-with-declarations-mixin))))
+  (check-type env walk-environment)
   (bind (((:values body declarations docstring) (parse-body (coerce-to-form forms) :documentation docstring-allowed :whole whole)))
     (when docstring-allowed
       (setf (docstring-of parent) docstring))

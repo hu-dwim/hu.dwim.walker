@@ -51,7 +51,7 @@
   ())
 
 (def walker +atom-marker+
-  (let ((lexenv (cdr -environment-))
+  (let ((lexenv (env/lexical-environment -environment-))
         (form (coerce-to-form -form-)))
     (cond
       ((constant-name? form)
@@ -284,7 +284,7 @@
   (with-form-object (macrolet 'macrolet-form -parent-
                               :bindings '())
     (dolist* ((name args &body body) (second -form-))
-      (bind ((handler (parse-macro-definition name args body (cdr -environment-))))
+      (bind ((handler (parse-macro-definition name args body (env/lexical-environment -environment-))))
         (-augment- :macro name handler)
         (push (cons name handler) (bindings-of macrolet))))
     (setf (bindings-of macrolet) (nreverse (bindings-of macrolet)))

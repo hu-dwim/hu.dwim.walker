@@ -57,7 +57,7 @@
           (with-form-object (application 'lambda-application-form -parent-)
             (setf (operator-of application) (walk-lambda operator application -environment-)
                   (arguments-of application) (walk-arguments application)))))
-      (bind ((lexenv (cdr -environment-))
+      (bind ((lexenv (env/lexical-environment -environment-))
              ((:values innermost-lexical-definition-type nil expander) (-lookup- nil operator)))
         (awhen (eq :macro innermost-lexical-definition-type)
           (bind ((*inside-macroexpansion* t)
@@ -177,6 +177,8 @@
       (walk-lambda-like ast-node (second form) (cddr form) env :declarations-allowed t))))
 
 (def (layered-function e) walk-lambda-like (ast-node args body env &key docstring-allowed declarations-allowed whole)
+  (:method :before (ast-node args body env &key &allow-other-keys)
+    (check-type env walk-environment))
   (:method (ast-node args body env &key docstring-allowed declarations-allowed (whole *current-form*))
     (setf (values (arguments-of ast-node) env) (walk-ordinary-lambda-list args ast-node env))
     (walk-implict-progn ast-node body env
@@ -207,7 +209,7 @@
                      :collect (walk-auxiliary-argument auxiliary parent env)))))
     (dolist (parsed result)
       (unless (typep parsed 'allow-other-keys-function-argument-form)
-        (augment-walkenv! env :variable (name-of parsed) parsed)))
+        (augment-walk-environment! env :variable (name-of parsed) parsed)))
     result))
 
 (def (class* ea) function-argument-form (named-walked-form)
