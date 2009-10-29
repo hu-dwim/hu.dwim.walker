@@ -180,7 +180,7 @@
   (:method :before (ast-node args body env &key &allow-other-keys)
     (check-type env walk-environment))
   (:method (ast-node args body env &key docstring-allowed declarations-allowed (whole *current-form*))
-    (setf (values (arguments-of ast-node) env) (walk-ordinary-lambda-list args ast-node env))
+    (setf (arguments-of ast-node) (walk-ordinary-lambda-list args ast-node env))
     (walk-implict-progn ast-node body env
                         :docstring-allowed docstring-allowed :declarations-allowed declarations-allowed
                         :whole whole)
