@@ -384,40 +384,37 @@
   (bind (((bindings &body body) (cdr -form-)))
     (with-form-object (flet 'flet-form -parent-)
       ;; build up the objects for the bindings in the original env
+      (setf (bindings-of flet)
+            (loop
+              :for entry :in bindings
+              :for (name arguments . body) = entry
+              :collect (progn
+                         (when (< (length entry) 2)
+                           (error "Illegal FLET binding form ~S" entry))
+                         (cons name (with-current-form entry
+                                      (with-form-object (lambda-node 'lambda-function-form flet)
+                                        (walk-lambda-like lambda-node arguments body -environment- :declarations-allowed t)))))))
+      ;; augment the walkenv with the new flet bindings
       (loop
-         :for entry :in bindings
-         :for (name arguments . body) = entry
-         :collect (progn
-                    (when (< (length entry) 2)
-                      (error "Illegal FLET binding form ~S" entry))
-                    (cons name (when (or body
-                                         arguments)
-                                 (with-current-form entry
-                                   (with-form-object (lambda-node 'lambda-function-form flet)
-                                     (walk-lambda-like lambda-node arguments body -environment- :declarations-allowed t))))))
-                  :into bindings
-         :finally (setf (bindings-of flet) bindings))
+        :for (name . definition) :in (bindings-of flet)
+        :do (-augment- :function name definition))
       ;; walk the body in the new env
-      (walk-implict-progn flet
-                          body
-                          (loop
-                             :for (name . body) :in (bindings-of flet)
-                             :do (-augment- :function name body)
-                             :finally (return -environment-))
-                          :declarations-allowed t))))
+      (walk-implict-progn flet body -environment- :declarations-allowed t))))
 
-;; TODO factor out stuff in flet-form and labels-form
-(def unwalker flet-form (bindings body declarations)
-  `(flet ,(mapcar (lambda (binding)
-                    (cons (car binding)
-                          (if (cdr binding)
-                              ;; remove (function (lambda ...)) of the function bindings
-                              (rest (second (recurse (cdr binding))))
-                              ;; empty args
-                              (list '()))))
-                  bindings)
+(def function unwalk-flet-or-labels (name bindings body declarations)
+  `(,name ,(mapcar (lambda (binding)
+                     (cons (car binding)
+                           (if (cdr binding)
+                               ;; remove (function (lambda ...)) of the function bindings
+                               (rest (second (unwalk-form (cdr binding))))
+                               ;; empty args
+                               (list '()))))
+                   bindings)
      ,@(unwalk-declarations declarations)
-     ,@(recurse-on-body body)))
+     ,@(mapcar 'unwalk-form body)))
+
+(def unwalker flet-form (bindings body declarations)
+  (unwalk-flet-or-labels 'flet bindings body declarations))
 
 (def (class* e) labels-form (function-binding-form)
   ())
@@ -425,45 +422,27 @@
 (def walker labels
   (bind (((bindings &body body) (cdr -form-)))
     (with-form-object (labels 'labels-form -parent- :bindings '())
-      ;; we need to walk over the bindings twice. the first pass
-      ;; creates some 'empty' lambda objects in the environment so
-      ;; that walked-lexical-application-form and walked-lexical-function-object-form
-      ;; have something to point to. the second pass then walks the
-      ;; actual bodies of the form filling in the previously created
-      ;; objects.
+      ;; we need to walk over the bindings twice. the first pass creates some 'empty' lambda objects in the environment so
+      ;; that WALKED-LEXICAL-APPLICATION-FORM and WALKED-LEXICAL-FUNCTION-OBJECT-FORM have something to point to.
+      ;; the second pass then walks the actual bodies of the form filling in the previously created objects.
       (loop
-         :for entry :in bindings
-         :for (name arguments . body) :in bindings
-         :for lambda = (when (or body
-                            arguments)
-                    (with-current-form entry
-                      (make-form-object 'lambda-function-form labels)))
-         :do (progn
-               (when (< (length entry) 2)
-                 (error "Illegal LABELS binding form ~S" entry))
-               (push (cons name lambda) (bindings-of labels))
-               (-augment- :function name lambda)))
+        :for entry :in bindings
+        :for (name arguments . body) :in bindings
+        :do (bind ((definition (with-current-form entry
+                                 (make-form-object 'lambda-function-form labels))))
+              (when (< (length entry) 2)
+                (error "Illegal LABELS binding form ~S" entry))
+              (push (cons name definition) (bindings-of labels))
+              ;; augment walkenv with the not-yet-walked definition for the upcoming entries
+              (-augment- :function name definition)))
       (setf (bindings-of labels) (nreverse (bindings-of labels)))
       (loop
-         :for form :in bindings
-         :for (arguments . body) = (cdr form)
-         :for binding :in (bindings-of labels)
-         :for lambda = (cdr binding)
-         :do (when lambda
-               (let ((tmp-lambda (walk-lambda `(lambda ,arguments ,@body) labels -environment-)))
-                 (setf (body-of lambda) (body-of tmp-lambda)
-                       (arguments-of lambda) (arguments-of tmp-lambda)
-                       (declarations-of lambda) (declarations-of tmp-lambda)))))
+        :for (name1 arguments . body) :in bindings
+        :for (name2 . definition) :in (bindings-of labels)
+        :do (progn
+              (assert (eq name1 name2))
+              (walk-lambda-like definition arguments body -environment-)))
       (walk-implict-progn labels body -environment- :declarations-allowed t))))
 
 (def unwalker labels-form (bindings body declarations)
-  `(labels ,(mapcar (lambda (binding)
-                      (cons (car binding)
-                            (if (cdr binding)
-                                ;; remove (function (lambda ...)) of the function bindings
-                                (cdadr (recurse (cdr binding)))
-                                ;; empty args
-                                (list '()))))
-                    bindings)
-     ,@(unwalk-declarations declarations)
-     ,@(recurse-on-body body)))
+  (unwalk-flet-or-labels 'labels bindings body declarations))
