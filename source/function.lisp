@@ -26,8 +26,8 @@
       (setf first nil)))
   (princ ")"))
 
-(def (class* e) lexical-application-form (application-form)
-  ((code)))
+(def (class* ea) lexical-application-form (application-form)
+  ((definition)))
 
 (def (class* e) walked-lexical-application-form (lexical-application-form)
   ())
@@ -71,7 +71,7 @@
               (bind ((*inside-macroexpansion* t))
                 (return (recurse expansion)))))))
       (bind ((application-form (aif (-lookup- :function operator)
-                                    (make-instance 'walked-lexical-application-form :code it)
+                                    (make-instance 'walked-lexical-application-form :definition it)
                                     (if (-lookup- :unwalked-function operator)
                                         (make-instance 'unwalked-lexical-application-form)
                                         (progn
