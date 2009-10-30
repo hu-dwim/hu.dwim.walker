@@ -246,7 +246,7 @@
                           :bindings '())
     (dolist* ((var &optional initial-value) (mapcar #'ensure-list (second -form-)))
       (push (cons var (recurse initial-value let*)) (bindings-of let*))
-      (-augment- :variable var :dummy))
+      (-augment- :variable var))
     (setf (bindings-of let*) (nreverse (bindings-of let*)))
     (walk-implict-progn let* (cddr -form-) -environment- :declarations-allowed t)))
 
