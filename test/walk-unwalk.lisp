@@ -96,7 +96,10 @@
     (walk-form '(tagbody
                    (declare (optimize speed))
                  :tag1 (+ 1 1)
-                 :tag2 (+ 2 2)))))
+                 :tag2 (+ 2 2))))
+  (signals error
+    (walk-form '(eval-when (:compile-toplevel :load-toplevel :execute)
+                 (declare (optimize speed))))))
 
 (deftest test/declare/3 ()
   (check-walk-unwalk

@@ -8,6 +8,53 @@
 
 (defsuite* (test/semantics :in test))
 
+(def test test/semantics/let/1 ()
+  (bind ((walked (walk-form '(let ((foo 42)
+                                   (spec 101))
+                               (declare (special spec))
+                               foo
+                               spec
+                               free)))
+         (body (body-of walked))
+         (binding-form (first (bindings-of walked)))
+         (binding-value-form (initial-value-of binding-form))
+         (variable-reference-form (first body)))
+    (is (= 3 (length body)))
+    (is (typep binding-value-form 'constant-form))
+    (is (eql (value-of binding-value-form) 42))
+    (is (typep variable-reference-form 'walked-lexical-variable-reference-form))
+    (is (eq binding-form (definition-of variable-reference-form)))
+    (is (typep (second body) 'special-variable-reference-form))
+    (is (not (typep (second body) 'free-variable-reference-form)))
+    (is (typep (third body) 'free-variable-reference-form))))
+
+(def test test/semantics/let*/1 ()
+  (bind ((walked (walk-form '(let* ((foo 42)
+                                    (bar foo)
+                                    (spec 101))
+                               (declare (special spec))
+                               foo
+                               bar
+                               spec
+                               free)))
+         (body (body-of walked))
+         (bindings (bindings-of walked))
+         (foo-binding-form (first bindings))
+         (bar-binding-form (second bindings))
+         (foo-reference-form (first body))
+         (bar-reference-form (second body)))
+    (is (= 4 (length body)))
+    (is (typep foo-reference-form 'walked-lexical-variable-reference-form))
+    (is (typep bar-reference-form 'walked-lexical-variable-reference-form))
+    (is (typep (initial-value-of foo-binding-form) 'constant-form))
+    (is (typep (initial-value-of bar-binding-form) 'walked-lexical-variable-reference-form))
+    (is (eq (definition-of (initial-value-of bar-binding-form)) foo-binding-form))
+    (is (eq (definition-of foo-reference-form) foo-binding-form))
+    (is (eq (definition-of bar-reference-form) bar-binding-form))
+    (is (typep (third body) 'special-variable-reference-form))
+    (is (not (typep (third body) 'free-variable-reference-form)))
+    (is (typep (fourth body) 'free-variable-reference-form))))
+
 (def test test/semantics/flet/1 ()
   (bind ((walked (walk-form '(flet ((foo ()
                                      1))
