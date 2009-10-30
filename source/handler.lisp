@@ -172,7 +172,7 @@
   (bind (((times &body body) (cdr -form-)))
     (with-form-object (eval-when 'eval-when-form -parent-)
       (setf (eval-when-times-of eval-when) times)
-      (walk-implict-progn eval-when body -environment-))))
+      (walk-implict-progn eval-when body -environment- :declarations-allowed nil))))
 
 (def unwalker eval-when-form (body eval-when-times)
   `(eval-when ,eval-when-times
