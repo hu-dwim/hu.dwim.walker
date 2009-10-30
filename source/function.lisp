@@ -373,7 +373,7 @@
 ;;;; FLET/LABELS
 
 (def (class* e) function-binding-form (walked-form
-                                       binding-form-mixin
+                                       binder-form-mixin
                                        implicit-progn-with-declarations-mixin)
   ())
 

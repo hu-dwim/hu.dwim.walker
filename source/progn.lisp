@@ -15,7 +15,7 @@
 (def (class* ea) implicit-progn-with-declarations-mixin (implicit-progn-mixin)
   ((declarations nil)))
 
-(def (class* ea) binding-form-mixin ()
+(def (class* ea) binder-form-mixin ()
   ((bindings)))
 
 (def (class* e) declaration-form (walked-form)

@@ -33,7 +33,8 @@
    (optional-function-argument-form default-value-of)
    (keyword-function-argument-form default-value-of)
    (implicit-progn-mixin      body-of)
-   (binding-form-mixin        bindings-of)
+   (binder-form-mixin         bindings-of)
+   (lexical-variable-binding-form initial-value-of)
 
    (return-from-form result-of)
    (throw-form                value-of)
