@@ -130,7 +130,7 @@
     (ecase type
       (:function (warn 'undefined-function-reference :name name))
       (:variable (warn 'undefined-variable-reference :name name))))
-  (:method :in ignore-undefined-references (type name)
+  (:method :in ignore-undefined-references :around (type name)
     ;; well, we ignore them in this layer...
     ))
 
