@@ -49,9 +49,9 @@
   (bind (((operator &rest args) -form-))
     (flet ((walk-arguments (application-form)
              (loop
-                for index :from 1
-                for arg :in args
-                collect (recurse arg application-form))))
+                :for index :from 1
+                :for arg :in args
+                :collect (recurse arg application-form))))
       (when (lambda-form? operator)
         (return
           (with-form-object (application 'lambda-application-form -parent-)

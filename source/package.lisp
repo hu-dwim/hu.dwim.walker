@@ -105,33 +105,6 @@
            #:unwalked-lexical-function-object-form
            #:free-function-object-form
 
-           #:block-form
-           #:return-from-form
-           #:catch-form
-           #:throw-form
-           #:eval-when-form
-           #:if-form
-           #:function-binding-form
-           #:flet-form
-           #:labels-form
-           #:variable-binding-form
-           #:let-form
-           #:let*-form
-           #:locally-form
-           #:macrolet-form
-           #:multiple-value-call-form
-           #:multiple-value-prog1-form
-           #:progn-form
-           #:progv-form
-           #:setq-form
-           #:symbol-macrolet-form
-           #:tagbody-form
-           #:go-tag-form
-           #:go-form
-           #:the-form
-           #:unwind-protect-form
-           #:load-time-value-form
-
            #:walk-implict-progn
            #:body-of
            #:cleanup-form-of

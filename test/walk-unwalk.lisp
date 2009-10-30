@@ -27,14 +27,14 @@
   `(deftest ,name ()
      (with-active-layers (ignore-undefined-references)
        ,@(loop
-            :for entry :in body
-            :collect (if (and (consp entry)
-                              (eq (first entry) 'with-expected-failures))
-                         `(with-expected-failures
-                            ,@(mapcar (lambda (entry)
-                                        `(check-walk-unwalk ',entry))
-                                      (rest entry)))
-                         `(check-walk-unwalk ',entry))))))
+           :for entry :in body
+           :collect (if (and (consp entry)
+                             (eq (first entry) 'with-expected-failures))
+                        `(with-expected-failures
+                           ,@(mapcar (lambda (entry)
+                                       `(check-walk-unwalk ',entry))
+                                     (rest entry)))
+                        `(check-walk-unwalk ',entry))))))
 
 (define-walk-unwalk-test test/constant
   1 'a "a" (1 2 3) #(1 2 3))
