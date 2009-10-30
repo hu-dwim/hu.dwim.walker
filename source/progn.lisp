@@ -179,12 +179,14 @@
   (bind (((:values body declarations docstring) (parse-body (coerce-to-form forms) :documentation docstring-allowed :whole whole)))
     (when docstring-allowed
       (setf (docstring-of parent) docstring))
-    (when declarations
-      (unless declarations-allowed
-        (error "Declarations are not allowed at ~S" whole))
+    (when (and declarations
+               (not declarations-allowed))
+      (error "Declarations are not allowed at ~S" whole))
+    (when declarations-allowed
       (bind ((walked-declarations (walk-declarations declarations parent env)))
         (setf (declarations-of parent) walked-declarations)
         (when declarations-callback
+          ;; always call declarations-callback because some crucial sideffects may happen inside them (like in LET's walker)
           (setf env (funcall declarations-callback walked-declarations)))))
     (setf (body-of parent) (mapcar (lambda (form)
                                      (walk-form form :parent parent :environment env))
