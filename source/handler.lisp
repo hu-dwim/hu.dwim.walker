@@ -200,12 +200,12 @@
 
 ;;;; LET/LET*
 
-(def (class* e) variable-binding-form (walked-form
-                                       binding-form-mixin
-                                       implicit-progn-with-declarations-mixin)
+(def (class* e) lexical-variable-bindings-form (walked-form
+                                                binding-form-mixin
+                                                implicit-progn-with-declarations-mixin)
   ())
 
-(def (class* e) let-form (variable-binding-form)
+(def (class* e) let-form (lexical-variable-bindings-form)
   ())
 
 (def walker let
@@ -238,7 +238,7 @@
      ,@(unwalk-declarations declarations)
      ,@(recurse-on-body body)))
 
-(def (class* e) let*-form (variable-binding-form)
+(def (class* e) let*-form (lexical-variable-bindings-form)
   ())
 
 (def walker let*
