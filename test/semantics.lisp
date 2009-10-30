@@ -97,5 +97,11 @@
                                      ;; it's key for this test that body is empty
                                      ))
                               (outer))))
-         (application-form/inner (finishes (first (body-of walked)))))
+         (application-form/inner (first (body-of walked))))
     (is (typep application-form/inner 'walked-lexical-application-form))))
+
+(def test test/semantics/lambda/bug/1 ()
+  (bind ((walked (not-signals warning (walk-form '(lambda (a)
+                                                    a))))
+         (variable-reference-form (first (body-of walked))))
+    (is (typep variable-reference-form 'walked-lexical-variable-reference-form))))
