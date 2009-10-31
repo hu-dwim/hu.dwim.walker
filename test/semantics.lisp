@@ -26,7 +26,8 @@
     (is (eq binding-form (definition-of variable-reference-form)))
     (is (typep (second body) 'special-variable-reference-form))
     (is (not (typep (second body) 'free-variable-reference-form)))
-    (is (typep (third body) 'free-variable-reference-form))))
+    (is (typep (third body) 'free-variable-reference-form))
+    walked))
 
 (def test test/semantics/let*/1 ()
   (bind ((walked (walk-form '(let* ((foo 42)
@@ -53,7 +54,8 @@
     (is (eq (definition-of bar-reference-form) bar-binding-form))
     (is (typep (third body) 'special-variable-reference-form))
     (is (not (typep (third body) 'free-variable-reference-form)))
-    (is (typep (fourth body) 'free-variable-reference-form))))
+    (is (typep (fourth body) 'free-variable-reference-form))
+    walked))
 
 (def test test/semantics/flet/1 ()
   (bind ((walked (walk-form '(flet ((foo ()
@@ -69,7 +71,8 @@
         (is (not (null binding)))
         (is (eq (first binding) 'foo))
         ;; check if we looked up the innermost 'foo
-        (is (eql 2 (value-of (first (body-of walked-lexical-definition)))))))))
+        (is (eql 2 (value-of (first (body-of walked-lexical-definition)))))))
+    walked))
 
 (def test test/semantics/flet/2 ()
   (bind ((walked (walk-form '(flet ((outer ()
@@ -90,7 +93,8 @@
         (bind ((application-form/outer (first (body-of walked-lexical-definition))))
           (is (typep application-form/outer 'walked-lexical-application-form))
           (is (eql 'outer (operator-of application-form/outer)))
-          (is (eql 42 (value-of (first (body-of (definition-of application-form/outer)))))))))))
+          (is (eql 42 (value-of (first (body-of (definition-of application-form/outer)))))))))
+    walked))
 
 (def test test/semantics/flet/bug/1 ()
   (bind ((walked (walk-form '(flet ((outer ()
@@ -98,10 +102,28 @@
                                      ))
                               (outer))))
          (application-form/inner (first (body-of walked))))
-    (is (typep application-form/inner 'walked-lexical-application-form))))
+    (is (typep application-form/inner 'walked-lexical-application-form))
+    walked))
 
 (def test test/semantics/lambda/bug/1 ()
   (bind ((walked (not-signals warning (walk-form '(lambda (a)
                                                     a))))
          (variable-reference-form (first (body-of walked))))
-    (is (typep variable-reference-form 'walked-lexical-variable-reference-form))))
+    (is (typep variable-reference-form 'walked-lexical-variable-reference-form))
+    walked))
+
+(def test test/semantics/lambda/bug/2 ()
+  (bind ((walked (walk-form '(lambda (&optional a (b 42)) ; no default value for A
+                              )))
+         (optional-argument-form (second (arguments-of walked)))
+         (default-value-form (default-value-of optional-argument-form)))
+    (is (null (default-value-of (first (arguments-of walked)))))
+    (is (typep optional-argument-form 'optional-function-argument-form))
+    (is (typep default-value-form 'constant-form))
+    (is (eq (value-of default-value-form) 42))
+    walked))
+
+(def test test/semantics/lambda/bug/3 ()
+  (not-signals undefined-variable-reference
+    (walk-form '(lambda (a &optional (b a) &key (c b) &aux (d c) e (f e))
+                 (values a b c d e f)))))

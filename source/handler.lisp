@@ -44,6 +44,7 @@
   ()
   (:documentation "A reference to a local variable defined in the lexical environment outside of the form passed to walk-form."))
 
+;; TODO should we add/handle walked-special-variable-reference-form?
 (def (class* e) special-variable-reference-form (variable-reference-form)
   ())
 
@@ -311,6 +312,7 @@
 
 (def unwalker macrolet-form (body declarations)
   ;; We ignore the bindings, because the expansion has already taken place at walk-time.
+  ;; TODO either walk into a locally, or unwalk the bindings here
   `(locally ,@(unwalk-declarations declarations) ,@(recurse-on-body body)))
 
 ;;;; MULTIPLE-VALUE-CALL
@@ -449,6 +451,7 @@
 
 (def unwalker symbol-macrolet-form (body declarations)
   ;; We ignore the bindings, because the expansion has already taken place at walk-time.
+  ;; TODO either walk into a locally, or unwalk the bindings here
   `(locally ,@(unwalk-declarations declarations) ,@(recurse-on-body body)))
 
 ;;;; TAGBODY/GO

@@ -73,39 +73,8 @@
            #:make-walk-environment
 
            #:with-form-object
-
-           #:implicit-progn-mixin
-           #:binding-form-mixin
-           #:bindings-of
-           #:declaration-form
-           #:optimize-declaration-form
-           #:variable-declaration-form
-           #:function-declaration-form
-           #:dynamic-extent-declaration-form
-           #:variable-ignorable-declaration-form
-           #:function-ignorable-declaration-form
-           #:special-variable-declaration-form
-           #:type-declaration-form
-           #:ftype-declaration-form
-           #:notinline-declaration-form
-           #:unknown-declaration-form
-
-           #:constant-form
-           #:variable-reference-form
-           #:lexical-variable-reference-form
-           #:walked-lexical-variable-reference-form
-           #:unwalked-lexical-variable-reference-form
-           #:special-variable-reference-form
-           #:free-variable-reference-form
-
-           #:function-object-form
-           #:function-definition-form
-           #:lexical-function-object-form
-           #:walked-lexical-function-object-form
-           #:unwalked-lexical-function-object-form
-           #:free-function-object-form
-
            #:walk-implict-progn
+
            #:body-of
            #:cleanup-form-of
            #:code-of
