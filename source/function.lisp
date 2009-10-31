@@ -187,30 +187,30 @@
     ast-node))
 
 (def (function e) walk-ordinary-lambda-list (lambda-list parent env &key allow-specializers)
-  (bind (((:values requireds optionals rest keywords allow-other-keys? auxiliaries) (parse-ordinary-lambda-list lambda-list :normalize nil))
-         (result (nconc
-                  (loop
-                     :for required :in requireds
-                     :collect (if allow-specializers
-                                  (walk-specialized-argument required parent env)
-                                  (make-form-object 'required-function-argument-form parent :name required)))
-                  (loop
-                     :for optional :in optionals
-                     :collect (walk-optional-argument optional parent env))
-                  (when rest
-                    (list (make-form-object 'rest-function-argument-form parent :name rest)))
-                  (loop
-                     :for keyword :in keywords
-                     :collect (walk-keyword-argument keyword parent env))
-                  (when allow-other-keys?
-                    (list (make-form-object 'allow-other-keys-function-argument-form parent)))
-                  (loop
-                     :for auxiliary :in auxiliaries
-                     :collect (walk-auxiliary-argument auxiliary parent env)))))
-    (dolist (parsed result)
-      (unless (typep parsed 'allow-other-keys-function-argument-form)
-        (augment-walk-environment! env :variable (name-of parsed) parsed)))
-    (values result env)))
+  (flet ((augment! (walked)
+           (augment-walk-environment! env :variable (name-of walked) walked)
+           walked))
+    (bind (((:values requireds optionals rest keywords allow-other-keys? auxiliaries) (parse-ordinary-lambda-list lambda-list :normalize nil))
+           (result (nconc
+                    (loop
+                      :for required :in requireds
+                      :collect (augment! (if allow-specializers
+                                             (walk-specialized-argument required parent env)
+                                             (make-form-object 'required-function-argument-form parent :name required))))
+                    (loop
+                      :for optional :in optionals
+                      :collect (augment! (walk-optional-argument optional parent env)))
+                    (when rest
+                      (list (augment! (make-form-object 'rest-function-argument-form parent :name rest))))
+                    (loop
+                      :for keyword :in keywords
+                      :collect (augment! (walk-keyword-argument keyword parent env)))
+                    (when allow-other-keys?
+                      (list (make-form-object 'allow-other-keys-function-argument-form parent)))
+                    (loop
+                      :for auxiliary :in auxiliaries
+                      :collect (augment! (walk-auxiliary-argument auxiliary parent env))))))
+      (values result env))))
 
 (def (class* ea) function-argument-form (named-walked-form)
   ())
