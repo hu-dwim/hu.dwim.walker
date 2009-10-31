@@ -303,7 +303,9 @@
     (dolist* ((name args &body body) (second -form-))
       (bind ((handler (parse-macro-definition name args body (env/lexical-environment -environment-))))
         (-augment- :macro name handler)
-        (push (cons name handler) (bindings-of macrolet))))
+        ;; there's not much point in keeping the bindings when we expand the macrolet body anyway, so don't.
+        ;; it would just hinder the saving of the form into fasl's for no apparent benefit.
+        (push (cons name nil) (bindings-of macrolet))))
     (setf (bindings-of macrolet) (nreverse (bindings-of macrolet)))
     (walk-implict-progn macrolet (cddr -form-) -environment- :declarations-allowed t)))
 
