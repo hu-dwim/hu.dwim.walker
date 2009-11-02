@@ -1,15 +1,15 @@
-This is the Common Lisp code walker that was originally written by
-Marco Baringer in his Arnesi library. With his permission it was
-factored out into a standalone cl-walker library and further developed
-by Attila Lendvai. Also contains important contribution to the
-environment handling by Berki Lukács Tamás. Please consult the repo
-history for more details.
+This is a code walker that parses a Common Lisp sexp into a tree of
+CLOS objects, which is a much more convenient representation to do
+various code analysis and transformations than cons based sexps. Also
+features an unwalker that can turn the walked CLOS AST tree into an
+sexp.
 
-This code walker parses a lisp sexp into CLOS objects which is very
-convenient representation to do various code transformations using
-generic methods.
+It that was originally written by Marco Baringer in his Arnesi
+library. With his permission it was first factored out into a
+standalone cl-walker library and then renamed to hu.dwim.walker as
+part of a broad refactoring of all our (http://dwim.hu) libs.
 
-There's also an unwalker provided that can convert back the CLOS
-instances into lisp sexps.
+Also contains important contribution to the environment handling by
+Berki Lukács Tamás. Please consult the repo history for more details.
 
-Home: http://common-lisp.net/project/cl-walker/
+Homepage: http://dwim.hu/project/hu.dwim.walker
