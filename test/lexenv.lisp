@@ -8,9 +8,6 @@
 
 (defsuite* (test/lexenv :in test))
 
-(defun equal-any (item &rest args)
-  (some (lambda (a) (equal item a)) args))
-
 ;; TODO would be better to use macroexpand-all for this, because stefil's errors get to compile
 ;; which aborts at the first failure and skips the other assertions
 (defun compile* (form)
@@ -100,8 +97,8 @@
                 (z 3))
             (declare (ignore z))
             (macrolet ((dummy (&environment env)
-                         (is (equal-any (collect-macros-in-lexenv env)
-                                        '(dummy m1 m2) '(dummy m2 m1)))
+                         (is (set-equal (collect-macros-in-lexenv env)
+                                        '(dummy m1 m2)))
                          (bind ((macros 0))
                            (do-macros-in-lexenv (env name fn)
                              (is (and (symbolp name)
@@ -129,8 +126,8 @@
                 (z 3))
             (declare (ignore z))
             (macrolet ((dummy (&environment env)
-                         (is (equal-any (collect-symbol-macros-in-lexenv env)
-                                        '(a b) '(b a)))
+                         (is (set-equal (collect-symbol-macros-in-lexenv env)
+                                        '(a b)))
                          (bind ((symbol-macros 0))
                            (do-symbol-macros-in-lexenv (env name definition)
                              (is (and (symbolp name)
@@ -188,8 +185,8 @@
           t22
             (block b2
               (macrolet ((dummy (&environment env)
-                           (is (equal-any (collect-tags-in-lexenv env)
-                                          '(t21 t22 t1 t2) '(t22 t21 t2 t1)))
+                           (is (set-equal (collect-tags-in-lexenv env)
+                                          '(t21 t22 t1 t2)))
                            (bind ((tags 0))
                              (do-tags-in-lexenv (env name)
                                (is (and (symbolp name)
