@@ -8,6 +8,9 @@
 
 (defsuite* (test/lexenv :in test))
 
+(defun equal-any (item &rest args)
+  (some (lambda (a) (equal item a)) args))
+
 ;; TODO would be better to use macroexpand-all for this, because stefil's errors get to compile
 ;; which aborts at the first failure and skips the other assertions
 (defun compile* (form)
@@ -97,8 +100,8 @@
                 (z 3))
             (declare (ignore z))
             (macrolet ((dummy (&environment env)
-                         (is (equal '(dummy m1 m2)
-                                    (collect-macros-in-lexenv env)))
+                         (is (equal-any (collect-macros-in-lexenv env)
+                                        '(dummy m1 m2) '(dummy m2 m1)))
                          (bind ((macros 0))
                            (do-macros-in-lexenv (env name fn)
                              (is (and (symbolp name)
@@ -126,8 +129,8 @@
                 (z 3))
             (declare (ignore z))
             (macrolet ((dummy (&environment env)
-                         (is (equal '(a b)
-                                    (collect-symbol-macros-in-lexenv env)))
+                         (is (equal-any (collect-symbol-macros-in-lexenv env)
+                                        '(a b) '(b a)))
                          (bind ((symbol-macros 0))
                            (do-symbol-macros-in-lexenv (env name definition)
                              (is (and (symbolp name)
@@ -154,12 +157,14 @@
             (declare (ignore z))
             (macrolet ((dummy (&environment env)
                          (is (equal '(b2 b1)
-                                    (collect-blocks-in-lexenv env)))
+                                    (remove-if-not #'symbol-package
+                                                   (collect-blocks-in-lexenv env))))
                          (bind ((blocks 0))
                            (do-blocks-in-lexenv (env name)
-                             (is (and (symbolp name)
-                                      (eq (symbol-package name) ,*package*)))
-                             (incf blocks))
+                             (when (symbol-package name)
+                               (is (and (symbolp name)
+                                        (eq (symbol-package name) ,*package*)))
+                               (incf blocks)))
                            (is (= blocks 2)))
                          (is (find-block-in-lexenv 'b1 env))
                          (is (not (find-block-in-lexenv 'dummy env)))
@@ -181,8 +186,8 @@
           t22
             (block b2
               (macrolet ((dummy (&environment env)
-                           (is (equal '(t21 t22 t1 t2)
-                                      (collect-tags-in-lexenv env)))
+                           (is (equal-any (collect-tags-in-lexenv env)
+                                          '(t21 t22 t1 t2) '(t22 t21 t2 t1)))
                            (bind ((tags 0))
                              (do-tags-in-lexenv (env name)
                                (is (and (symbolp name)
