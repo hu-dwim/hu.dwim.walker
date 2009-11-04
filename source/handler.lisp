@@ -74,7 +74,7 @@
             (recurse (walker-macroexpand-1 -form- lexenv)))
            ;; FIXME special variable handling is most probably not good as it is:
            ;; check proper behavior regarding the lexenv nesting and the parent walking below for (DECLARE (SPECIAL ...)) entries
-           ((or (special-variable-name? -form-)
+           ((or (special-variable-name? -form- lexenv)
                 (loop
                    :for node = -parent- :then (parent-of node)
                    :while node
@@ -228,7 +228,8 @@
                               (loop
                                 :for binding :in (bindings-of let)
                                 :for name = (name-of binding)
-                                :do (when (and (not (special-variable-name? name))
+                                :for lexenv = (env/lexical-environment -environment-)
+                                :do (when (and (not (special-variable-name? name lexenv))
                                                (not (find-if (lambda (declaration)
                                                                (and (typep declaration 'special-variable-declaration-form)
                                                                     (eq name (name-of declaration))))
@@ -260,10 +261,11 @@
                               (setf (bindings-of let*-form)
                                     (loop
                                       :for entry :in (second -form-)
+                                      :for lexenv = (env/lexical-environment -environment-)
                                       :collect (bind (((name &optional initial-value) (ensure-list entry)))
                                                  (with-form-object (binding 'lexical-variable-binding-form let*-form :name name)
                                                    (setf (initial-value-of binding) (recurse initial-value binding))
-                                                   (when (and (not (special-variable-name? name))
+                                                   (when (and (not (special-variable-name? name lexenv))
                                                               (not (find-if (lambda (declaration)
                                                                               (and (typep declaration 'special-variable-declaration-form)
                                                                                    (eq name (name-of declaration))))

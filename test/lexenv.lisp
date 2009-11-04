@@ -145,6 +145,7 @@
                          nil))
               (dummy))))))))
 
+#-openmcl
 (deftest test/lexenv/query/blocks ()
   (compile*
    `(block b1
@@ -173,6 +174,7 @@
                          nil))
               (dummy))))))))
 
+#-openmcl
 (deftest test/lexenv/query/tags ()
   (compile*
    `(block b1

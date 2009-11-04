@@ -58,13 +58,16 @@
   (bind (#+sbcl(sb-ext:*evaluator-mode* :interpret))
     (common-lisp:eval form)))
 
-(def function special-variable-name? (name)
+(def function special-variable-name? (name &optional lexenv)
+  (declare (ignorable lexenv))
   (and (symbolp name)
        (not (keywordp name))
        (not (member name '(t nil) :test #'eq))
        (or (boundp name)
            #+sbcl(eq (sb-int:info :variable :kind name) :special)
            #+lispworks(eq (common-lisp::variable-information name) :special)
+           #+openmcl (or (ccl-proclaimed-special-p name lexenv)
+                         (ccl-defined-const-p name lexenv))
            ;; This is the only portable way to check if a symbol is
            ;; declared special, without being boundp, i.e. (defvar 'foo).
            ;; Maybe we should make it optional with a compile-time flag?
