@@ -68,6 +68,7 @@
            #+lispworks(eq (common-lisp::variable-information name) :special)
            #+openmcl (or (ccl-proclaimed-special-p name lexenv)
                          (ccl-defined-const-p name lexenv))
+           #+ecl (sys:specialp name)
            ;; This is the only portable way to check if a symbol is
            ;; declared special, without being boundp, i.e. (defvar 'foo).
            ;; Maybe we should make it optional with a compile-time flag?

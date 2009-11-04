@@ -556,4 +556,4 @@
                                              nil))))
 
 (def unwalker load-time-value-form (body read-only)
-  `(load-time-value ,(recurse body) ,read-only))
+  `(load-time-value ,(recurse body) ,@(if read-only '(t))))

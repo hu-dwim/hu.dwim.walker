@@ -204,7 +204,7 @@
   (let* ((a b) (b a)) (equal a b)))
 
 (define-walk-unwalk-test test/walk-unwalk/load-time-value
-  (load-time-value *load-pathname* nil))
+  (load-time-value *load-pathname* #-ecl t))
 
 (define-walk-unwalk-test test/walk-unwalk/locally
   (locally (setq *global* (whoops))))

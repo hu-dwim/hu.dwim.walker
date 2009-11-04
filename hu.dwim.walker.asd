@@ -31,6 +31,7 @@
                              #+cmu(:file "cmucl")
                              #+lispworks(:file "lispworks")
                              #+openmcl(:file "openmcl")
+                             #+ecl(:file "ecl")
                              #+sbcl(:file "sbcl")))
                (:module "source"
                 :depends-on ("integration")
