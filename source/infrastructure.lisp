@@ -66,9 +66,15 @@
        (or (boundp name)
            #+sbcl(eq (sb-int:info :variable :kind name) :special)
            #+lispworks(eq (common-lisp::variable-information name) :special)
-           #+openmcl (or (ccl-proclaimed-special-p name lexenv)
-                         (ccl-defined-const-p name lexenv))
-           #+ecl (sys:specialp name)
+           ;; FIXME some of CCL-PROCLAIMED-SPECIAL-P is probably redundant with the ITERATE-VARIABLES-IN-LEXENV below
+           #+openmcl(ccl-proclaimed-special-p name lexenv)
+           #+ecl(sys:specialp name)
+           (when lexenv
+             (iterate-variables-in-lexenv (lambda (var &key special? &allow-other-keys)
+                                            (when (and (eq name var)
+                                                       special?)
+                                              (return-from special-variable-name? t)))
+                                          lexenv :include-specials? t))
            ;; This is the only portable way to check if a symbol is
            ;; declared special, without being boundp, i.e. (defvar 'foo).
            ;; Maybe we should make it optional with a compile-time flag?
