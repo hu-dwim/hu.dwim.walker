@@ -64,6 +64,7 @@
        (not (keywordp name))
        (not (member name '(t nil) :test #'eq))
        (or (boundp name)
+           ;; TODO use #*() once the readtable infrastructure has been cleaned up
            #+sbcl(eq (sb-int:info :variable :kind name) :special)
            #+lispworks(eq (common-lisp::variable-information name) :special)
            ;; FIXME some of CCL-PROCLAIMED-SPECIAL-P is probably redundant with the ITERATE-VARIABLES-IN-LEXENV below

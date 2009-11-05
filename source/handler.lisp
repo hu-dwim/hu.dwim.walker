@@ -86,6 +86,7 @@
                                                       (eq (name-of declare) -form-)))
                                                (declarations-of node))))
                            (return t)))))
+            ;; TODO try to lookup a binding and if one was found then store it in the :definition slot
             (make-form-object 'special-variable-reference-form -parent- :name -form-))
            (t
             (handle-undefined-reference :variable -form-)
