@@ -57,6 +57,26 @@
     (is (typep (fourth body) 'free-variable-reference-form))
     walked))
 
+(def test test/semantics/specials/1 ()
+  (bind ((spec 42))
+    (declare (special spec))
+    (bind ((walked (macrolet ((macro (&environment lexenv)
+                                (walk-form '(let ((spec 43))
+                                             ;; it should be walked into a special-variable-reference-form due to the wrapping (declare (special ...)).
+                                             ;; tests how lexenv's keep track of special var declarations.
+                                             spec)
+                                           :environment (make-walk-environment lexenv))))
+                     (macro)))
+           (body (body-of walked))
+           (variable-reference (first body)))
+      (is (= spec 42)) ; gets rid of a warning...
+      (is (= 1 (length body)))
+      (is (typep variable-reference 'special-variable-reference-form))
+      (is (eq (name-of variable-reference) 'spec))
+      (with-expected-failures
+        (is (eql (value-of (initial-value-of (definition-of variable-reference))) 43)))
+      walked)))
+
 (def test test/semantics/flet/1 ()
   (bind ((walked (walk-form '(flet ((foo ()
                                      1))
