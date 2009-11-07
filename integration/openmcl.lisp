@@ -57,7 +57,8 @@
   (cdr (ccl::assq 'ignore decls)))
 
 (defun ccl-special-decl-p (decls)
-  (cdr (ccl::assq 'special decls)))
+  ;; Presence alone means it's special
+  (ccl::assq 'special decls))
 
 (defun ccl-symbol-macro-p (var-spec)
   (let ((exp (ccl::var-expansion var-spec)))
