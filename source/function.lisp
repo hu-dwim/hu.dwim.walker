@@ -105,7 +105,9 @@
 (def walker defun
   (bind (((name args &rest body) (rest -form-)))
     (with-form-object (node 'function-definition-form -parent- :name name)
-      (walk-lambda-like node args body -environment- :docstring-allowed t :declarations-allowed t))))
+      (walk-lambda-like node args body
+                        (-augment- :function name node)
+                        :docstring-allowed t :declarations-allowed t))))
 
 (def unwalker function-definition-form (form name arguments body docstring declarations)
   `(defun ,name ,(unwalk-ordinary-lambda-list arguments)
@@ -122,6 +124,15 @@
     (,special-form ,name ,(unwalk-ordinary-lambda-list arguments)
      ,@(unwalk-declarations declarations)
      ,@(recurse-on-body body))))
+
+(def (class* e) lexical-function-form (lambda-function-form
+                                       name-definition-form)
+  ())
+
+(def unwalker lexical-function-form (name arguments body declarations)
+  `(,name ,(unwalk-ordinary-lambda-list arguments)
+     ,@(unwalk-declarations declarations)
+     ,@(recurse-on-body body)))
 
 (def (class* e) function-object-form (named-walked-form)
   ())
@@ -154,7 +165,8 @@
                                :special-form (first named-lambda-form)
                                :name (second named-lambda-form))
          (walk-lambda-like node (third named-lambda-form)
-                           (nthcdr 3 named-lambda-form) -environment-
+                           (nthcdr 3 named-lambda-form)
+                           (-augment- :function (name-of node) node)
                            :declarations-allowed t))))
     (t
      ;; (function foo)
@@ -391,25 +403,18 @@
               :collect (progn
                          (when (< (length entry) 2)
                            (error "Illegal FLET binding form ~S" entry))
-                         (cons name (with-current-form entry
-                                      (with-form-object (lambda-node 'lambda-function-form flet)
-                                        (walk-lambda-like lambda-node arguments body -environment- :declarations-allowed t)))))))
+                         (with-current-form entry
+                           (with-form-object (lambda-node 'lexical-function-form flet :name name)
+                             (walk-lambda-like lambda-node arguments body -environment- :declarations-allowed t))))))
       ;; augment the walkenv with the new flet bindings
       (loop
-        :for (name . definition) :in (bindings-of flet)
-        :do (-augment- :function name definition))
+         :for definition :in (bindings-of flet)
+         :do (-augment- :function (name-of definition) definition))
       ;; walk the body in the new env
       (walk-implict-progn flet body -environment- :declarations-allowed t))))
 
 (def function unwalk-flet-or-labels (name bindings body declarations)
-  `(,name ,(mapcar (lambda (binding)
-                     (cons (car binding)
-                           (if (cdr binding)
-                               ;; remove (function (lambda ...)) of the function bindings
-                               (rest (second (unwalk-form (cdr binding))))
-                               ;; empty args
-                               (list '()))))
-                   bindings)
+  `(,name ,(mapcar #'unwalk-form bindings)
      ,@(unwalk-declarations declarations)
      ,@(mapcar 'unwalk-form body)))
 
@@ -429,19 +434,19 @@
         :for entry :in bindings
         :for (name arguments . body) :in bindings
         :do (bind ((definition (with-current-form entry
-                                 (make-form-object 'lambda-function-form labels))))
+                                 (make-form-object 'lexical-function-form labels :name name))))
               (when (< (length entry) 2)
                 (error "Illegal LABELS binding form ~S" entry))
-              (push (cons name definition) (bindings-of labels))
+              (push definition (bindings-of labels))
               ;; augment walkenv with the not-yet-walked definition for the upcoming entries
               (-augment- :function name definition)))
       (setf (bindings-of labels) (nreverse (bindings-of labels)))
       (loop
-        :for (name1 arguments . body) :in bindings
-        :for (name2 . definition) :in (bindings-of labels)
-        :do (progn
-              (assert (eq name1 name2))
-              (walk-lambda-like definition arguments body -environment-)))
+         :for (name arguments . body) :in bindings
+         :for definition :in (bindings-of labels)
+         :do (progn
+               (assert (eq name (name-of definition)))
+               (walk-lambda-like definition arguments body -environment-)))
       (walk-implict-progn labels body -environment- :declarations-allowed t))))
 
 (def unwalker labels-form (bindings body declarations)
