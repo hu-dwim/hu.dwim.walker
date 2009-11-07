@@ -188,3 +188,18 @@
   (not-signals undefined-variable-reference
     (walk-form '(lambda (a &optional (b a) &key (c b) &aux (d c) e (f e))
                  (values a b c d e f)))))
+
+(deftest test/semantics/tagbody/1 ()
+  (let* ((ast (walk-form '(tagbody
+                           (tagbody
+                              (go a) (go b) a)
+                           b)))
+         (body1 (body-of ast))
+         (body2 (body-of (first body1)))
+         (go1 (first body2))
+         (go2 (second body2)))
+    (is (eql (tag-of go1) (third body2)))
+    (is (eql (tag-of go2) (second body1)))
+    (is (eql (enclosing-tagbody-of go1) (first body1)))
+    (is (eql (enclosing-tagbody-of go2) ast))))
+

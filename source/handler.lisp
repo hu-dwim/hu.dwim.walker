@@ -471,34 +471,39 @@
       (loop
          :for part :on (body-of tagbody)
          :if (go-tag? (car part))
-           :do (-augment- :tag (car part) (cdr part)))
+         :do (let ((tag (with-current-form (car part)
+                          (make-form-object 'go-tag-form tagbody
+                                            :name (car part)
+                                            :jump-target (cdr part)))))
+               (-augment- :tag (car part) tag)
+               (setf (car part) tag)))
       (loop
          :for part :on (body-of tagbody)
-         :if (go-tag? (car part))
-           :do (setf (car part) (with-current-form (car part)
-                                  (make-form-object 'go-tag-form tagbody
-                                                    :name (car part))))
-         :else
+         :unless (typep (car part) 'go-tag-form)
            :do (setf (car part) (recurse (car part) tagbody))))))
 
 (def unwalker tagbody-form (body)
   `(tagbody ,@(recurse-on-body body)))
 
 (def (class* e) go-tag-form (name-definition-form)
-  ())
+  ((jump-target)))
 
 (def unwalker go-tag-form (name)
   name)
 
 (def (class* e) go-form (named-walked-form)
-  ((jump-target)
-   (enclosing-tagbody)))
+  ((tag)))
+
+(def method jump-target-of ((form go-form))
+  (jump-target-of (tag-of form)))
+
+(def method enclosing-tagbody-of ((form go-form))
+  (parent-of (tag-of form)))
 
 (def walker go
   (make-form-object 'go-form -parent-
                     :name (second -form-)
-                    :jump-target (-lookup- :tag (second -form-))
-                    :enclosing-tagbody (-lookup- :tagbody 'enclosing-tagbody)))
+                    :tag (-lookup- :tag (second -form-))))
 
 (def unwalker go-form (name)
   `(go ,name))
