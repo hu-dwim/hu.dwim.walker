@@ -80,11 +80,8 @@
                    :while node
                    :do (progn
                          (when (and (typep node 'implicit-progn-with-declarations-mixin)
-                                    (progn
-                                      (find-if (lambda (declare)
-                                                 (and (typep declare 'special-variable-declaration-form)
-                                                      (eq (name-of declare) -form-)))
-                                               (declarations-of node))))
+                                    (find-form-by-name -form- (declarations-of node)
+                                                       :type 'special-variable-declaration-form))
                            (return t)))))
             ;; TODO try to lookup a binding and if one was found then store it in the :definition slot
             (make-form-object 'special-variable-reference-form -parent- :name -form-))
@@ -94,7 +91,7 @@
 
 ;;;; BLOCK/RETURN-FROM
 
-(def (class* e) block-form (named-walked-form implicit-progn-mixin)
+(def (class* e) block-form (name-definition-form implicit-progn-mixin)
   ())
 
 (def walker block
@@ -206,7 +203,7 @@
                                                implicit-progn-with-declarations-mixin)
   ())
 
-(def (class* ea) lexical-variable-binding-form (named-walked-form)
+(def (class* ea) lexical-variable-binding-form (name-definition-form)
   ((initial-value)))
 
 (def (class* ea) let-form (lexical-variable-binder-form)
@@ -231,10 +228,8 @@
                                 :for name = (name-of binding)
                                 :for lexenv = (env/lexical-environment -environment-)
                                 :do (when (and (not (special-variable-name? name lexenv))
-                                               (not (find-if (lambda (declaration)
-                                                               (and (typep declaration 'special-variable-declaration-form)
-                                                                    (eq name (name-of declaration))))
-                                                             declarations)))
+                                               (not (find-form-by-name name declarations
+                                                                       :type 'special-variable-declaration-form)))
                                       (-augment- :variable name binding)))
                               ;; we've extended the env, inform WALK-IMPLICT-PROGN about it
                               -environment-))))
@@ -267,10 +262,8 @@
                                                  (with-form-object (binding 'lexical-variable-binding-form let*-form :name name)
                                                    (setf (initial-value-of binding) (recurse initial-value binding))
                                                    (when (and (not (special-variable-name? name lexenv))
-                                                              (not (find-if (lambda (declaration)
-                                                                              (and (typep declaration 'special-variable-declaration-form)
-                                                                                   (eq name (name-of declaration))))
-                                                                            declarations)))
+                                                              (not (find-form-by-name name declarations
+                                                                                      :type 'special-variable-declaration-form)))
                                                      (-augment- :variable name binding))))))
                               ;; we've extended the env, inform WALK-IMPLICT-PROGN about it
                               -environment-))))
@@ -488,7 +481,7 @@
 (def unwalker tagbody-form (body)
   `(tagbody ,@(recurse-on-body body)))
 
-(def (class* e) go-tag-form (named-walked-form)
+(def (class* e) go-tag-form (name-definition-form)
   ())
 
 (def unwalker go-tag-form (name)

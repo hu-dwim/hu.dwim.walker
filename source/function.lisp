@@ -99,7 +99,7 @@
        ,@(recurse-on-body body)))
 
 (def (class* e) function-definition-form (lambda-function-form
-                                          named-walked-form)
+                                          name-definition-form)
   ((docstring nil)))
 
 (def walker defun
@@ -114,7 +114,7 @@
      ,@(recurse-on-body body)))
 
 (def (class* e) named-lambda-function-form (lambda-function-form
-                                            named-walked-form)
+                                            name-definition-form)
   ((special-form)))
 
 (def unwalker named-lambda-function-form (special-form name arguments body declarations)
@@ -212,7 +212,7 @@
                       :collect (augment! (walk-auxiliary-argument auxiliary parent env))))))
       (values result env))))
 
-(def (class* ea) function-argument-form (named-walked-form)
+(def (class* ea) function-argument-form (name-definition-form)
   ())
 
 (def print-object function-argument-form

@@ -342,6 +342,17 @@
 (def (class* e) named-walked-form (walked-form)
   ((name)))
 
+(def (function e) find-form-by-name (name forms &key (type 't))
+  (find-if (lambda (item)
+             (and item
+                  (eql (name-of item) name)
+                  (or (eql type t)
+                      (typep item type))))
+           forms))
+
+(def (class* e) name-definition-form (named-walked-form)
+  ())
+
 (def method make-load-form ((object walked-form) &optional env)
   (make-load-form-saving-slots object :environment env))
 
