@@ -68,11 +68,13 @@
                                            :environment (make-walk-environment lexenv))))
                      (macro)))
            (body (body-of walked))
+           (variable-binding (first (bindings-of walked)))
            (variable-reference (first body)))
       (is (= spec 42)) ; gets rid of a warning...
       (is (= 1 (length body)))
       (is (typep variable-reference 'special-variable-reference-form))
       (is (eq (name-of variable-reference) 'spec))
+      (is (special-binding? variable-binding))
       (with-expected-failures
         (is (eql (value-of (initial-value-of (definition-of variable-reference))) 43)))
       walked)))

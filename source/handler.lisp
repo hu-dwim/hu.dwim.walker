@@ -204,7 +204,8 @@
   ())
 
 (def (class* ea) lexical-variable-binding-form (name-definition-form)
-  ((initial-value)))
+  ((initial-value)
+   (special-binding nil :accessor special-binding? :type boolean)))
 
 (def (class* ea) let-form (lexical-variable-binder-form)
   ())
@@ -227,10 +228,11 @@
                                 :for binding :in (bindings-of let)
                                 :for name = (name-of binding)
                                 :for lexenv = (env/lexical-environment -environment-)
-                                :do (when (and (not (special-variable-name? name lexenv))
-                                               (not (find-form-by-name name declarations
-                                                                       :type 'special-variable-declaration-form)))
-                                      (-augment- :variable name binding)))
+                                :do (if (and (not (special-variable-name? name lexenv))
+                                             (not (find-form-by-name name declarations
+                                                                     :type 'special-variable-declaration-form)))
+                                        (-augment- :variable name binding)
+                                        (setf (special-binding? binding) t)))
                               ;; we've extended the env, inform WALK-IMPLICT-PROGN about it
                               -environment-))))
 
@@ -261,10 +263,11 @@
                                       :collect (bind (((name &optional initial-value) (ensure-list entry)))
                                                  (with-form-object (binding 'lexical-variable-binding-form let*-form :name name)
                                                    (setf (initial-value-of binding) (recurse initial-value binding))
-                                                   (when (and (not (special-variable-name? name lexenv))
-                                                              (not (find-form-by-name name declarations
+                                                   (if (and (not (special-variable-name? name lexenv))
+                                                            (not (find-form-by-name name declarations
                                                                                       :type 'special-variable-declaration-form)))
-                                                     (-augment- :variable name binding))))))
+                                                       (-augment- :variable name binding)
+                                                       (setf (special-binding? binding) t))))))
                               ;; we've extended the env, inform WALK-IMPLICT-PROGN about it
                               -environment-))))
 
