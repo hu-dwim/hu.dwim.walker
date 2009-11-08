@@ -44,7 +44,7 @@
    (progv-form                variables-form-of values-form-of)
    (setq-form                 variable-of value-of)
    ;; go-form: leave it alone, dragons be there (and an infinite recursion, too)
-   (the-form                  decl-type-of value-of)
+   (the-form                  declared-type-of value-of)
    (unwind-protect-form       protected-form-of cleanup-form-of)))
 
 (defun collect-variable-references (top-form &key (type 'variable-reference-form))
