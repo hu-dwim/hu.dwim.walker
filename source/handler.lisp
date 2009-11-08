@@ -465,8 +465,7 @@
     (flet ((go-tag? (form)
              (or (symbolp form)
                  (integerp form))))
-      ;; the loop below destructuivly modifies the body of tagbody,
-      ;; since it's the same object as the source we need to copy it.
+      ;; the loop below destructuivly modifies the body of tagbody. since it's the same object as the source, we need to copy it.
       (setf (body-of tagbody) (copy-list (body-of tagbody)))
       (loop
          :for part :on (body-of tagbody)

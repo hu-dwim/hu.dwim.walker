@@ -10,6 +10,8 @@
   (:method-combination progn)
   (:method :around (visitor form)
     (let ((new (funcall visitor form)))
+      ;; if the visitor returns a new AST node instead of the one being given to it, then stop descending the tree and just return the new one
+      ;; giving full control to the visitor over what to do there.
       (if (eq new form)
           (call-next-method)
           new)

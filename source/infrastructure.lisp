@@ -351,9 +351,10 @@
   ((name)))
 
 (def (function e) find-form-by-name (name forms &key (type 't))
+  (check-type name symbol)
   (find-if (lambda (item)
              (and item
-                  (eql (name-of item) name)
+                  (eq (name-of item) name)
                   (or (eql type t)
                       (typep item type))))
            forms))
