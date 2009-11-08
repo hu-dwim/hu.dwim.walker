@@ -6,7 +6,7 @@
 
 (in-package :hu.dwim.walker)
 
-(defgeneric map-ast (visitor form)
+(def (generic e) map-ast (visitor form)
   (:method-combination progn)
   (:method :around (visitor form)
     (let ((new (funcall visitor form)))
@@ -47,7 +47,7 @@
    (the-form                  declared-type-of value-of)
    (unwind-protect-form       protected-form-of cleanup-form-of)))
 
-(defun collect-variable-references (top-form &key (type 'variable-reference-form))
+(def (function e) collect-variable-references (top-form &key (type 'variable-reference-form))
   (let ((result (list)))
     (map-ast (lambda (form)
                (when (typep form type)
@@ -56,14 +56,14 @@
              top-form)
     result))
 
-(defun clear-binding-usage-lists (top-form)
+(def function clear-binding-usage-lists (top-form)
   (map-ast (lambda (form)
              (when (typep form 'name-definition-form)
                (setf (usages-of form) nil))
              form)
            top-form))
 
-(defgeneric mark-binding-usages (form)
+(def generic mark-binding-usages (form)
   (:method-combination progn)
   (:method progn ((form t)))
   (:method progn ((form walked-lexical-variable-reference-form))
@@ -77,7 +77,7 @@
   (:method progn ((form go-form))
     (push form (usages-of (tag-of form)))))
 
-(defun compute-binding-usages (top-form)
+(def (function e) compute-binding-usages (top-form)
   (clear-binding-usage-lists top-form)
   (map-ast (lambda (form)
              (mark-binding-usages form)

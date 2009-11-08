@@ -20,7 +20,7 @@
 (def function simple-walker-error (message &rest args)
   (error 'simple-walker-error :format-control message :format-arguments args))
 
-(def function macroexpand-all (form &optional (env (make-empty-lexical-environment)))
+(def (function e) macroexpand-all (form &optional (env (make-empty-lexical-environment)))
   (unwalk-form (walk-form form :environment (make-walk-environment env))))
 
 (def special-variable *current-form* nil)
@@ -58,7 +58,7 @@
   (bind (#+sbcl(sb-ext:*evaluator-mode* :interpret))
     (common-lisp:eval form)))
 
-(def function special-variable-name? (name &optional lexenv)
+(def (function e) special-variable-name? (name &optional lexenv)
   (declare (ignorable lexenv))
   (and (symbolp name)
        (not (keywordp name))
@@ -87,7 +87,7 @@
                          (declare (ignorable ,var))
                          (ignore-errors (func))))))))))
 
-(defun collect-standard-walked-form-subclasses ()
+(def (function e) collect-standard-walked-form-subclasses ()
   "Returns a list of all the subclasses of hu.dwim.walker:walked-form whose name is in the hu.dwim.walker package. This is useful if you want to generate a complete AST-NODE-TYPE-MAPPING hashtable with a mixin in the class of each walked node."
   (remove-duplicates
    (remove-if (lambda (class)
@@ -154,7 +154,7 @@
 ;; 2) the lexenv, which is the underlying lisp's internal lexenv
 ;; 3) the combined environment, which is (cons walkenv lexenv)
 
-(defun make-walk-environment (&optional lexenv)
+(def (function e) make-walk-environment (&optional lexenv)
   (unless lexenv
     (setf lexenv (make-empty-lexical-environment)))
   (bind ((walkedenv '()))
@@ -386,8 +386,8 @@
            (make-instance ,custom-type ,@initargs)
            (make-instance ,type ,@initargs)))))
 
-(def macro with-form-object ((variable type parent &rest initargs)
-                            &body body)
+(def (macro e) with-form-object ((variable type parent &rest initargs)
+                                 &body body)
   `(bind ((,variable (make-form-object ,type ,parent ,@initargs)))
      ,@body
      ,variable))

@@ -171,7 +171,7 @@
             (appendf walked-declarations walked-declaration)))))
     walked-declarations))
 
-(def function walk-implict-progn (parent forms env &key declarations-callback docstring-allowed declarations-allowed (whole *current-form*))
+(def (function e) walk-implict-progn (parent forms env &key declarations-callback docstring-allowed declarations-allowed (whole *current-form*))
   (assert (and (typep parent 'implicit-progn-mixin)
                (or (not declarations-allowed)
                    (typep parent 'implicit-progn-with-declarations-mixin))))

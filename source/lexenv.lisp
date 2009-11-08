@@ -87,10 +87,10 @@
 ;;;
 ;;; variables
 ;;;
-(defmacro do-variables-in-lexenv ((lexenv name &optional
-                                          (ignored? (gensym) ignored-provided?)
-                                          (special? (gensym) special-provided?))
-                                  &body body)
+(def (macro e) do-variables-in-lexenv ((lexenv name &optional
+                                               (ignored? (gensym) ignored-provided?)
+                                               (special? (gensym) special-provided?))
+                                        &body body)
   `(iterate-variables-in-lexenv
     (lambda (,name &key ((:ignored? ,ignored?) nil) ((:special? ,special?) nil))
       (declare (ignorable ,@(unless ignored-provided? (list ignored?))
@@ -100,7 +100,7 @@
     :include-ignored? ,ignored-provided?
     :include-specials? ,special-provided?))
 
-(defun collect-variables-in-lexenv (lexenv &key include-ignored? include-specials? filter)
+(def (function e) collect-variables-in-lexenv (lexenv &key include-ignored? include-specials? filter)
   (let ((result (list)))
     (iterate-variables-in-lexenv
      (lambda (name &key ignored? special? &allow-other-keys)
@@ -112,7 +112,7 @@
      :include-specials? include-specials?)
     (nreverse result)))
 
-(defun find-variable-in-lexenv (name-to-find lexenv &key include-ignored? include-specials?)
+(def (function e) find-variable-in-lexenv (name-to-find lexenv &key include-ignored? include-specials?)
   (iterate-variables-in-lexenv
    (lambda (name &key ignored? &allow-other-keys)
      (when (eq name name-to-find)
@@ -125,13 +125,13 @@
 ;;;
 ;;; functions
 ;;;
-(defmacro do-functions-in-lexenv ((lexenv name) &body body)
+(def (macro e) do-functions-in-lexenv ((lexenv name) &body body)
   `(iterate-functions-in-lexenv
     (lambda (,name)
       ,@body)
     ,lexenv))
 
-(defun collect-functions-in-lexenv (lexenv &key filter)
+(def (function e) collect-functions-in-lexenv (lexenv &key filter)
   (let ((result (list)))
     (iterate-functions-in-lexenv
      (lambda (name)
@@ -141,7 +141,7 @@
      lexenv)
     (nreverse result)))
 
-(defun find-function-in-lexenv (name-to-find lexenv)
+(def (function e) find-function-in-lexenv (name-to-find lexenv)
   (iterate-functions-in-lexenv
    (lambda (name)
      (when (eq name name-to-find)
@@ -152,8 +152,8 @@
 ;;;
 ;;; macros
 ;;;
-(defmacro do-macros-in-lexenv ((lexenv name &optional (macro-fn (gensym) macro-fn-provided?))
-                               &body body)
+(def (macro e) do-macros-in-lexenv ((lexenv name &optional (macro-fn (gensym) macro-fn-provided?))
+                                     &body body)
   `(iterate-macros-in-lexenv
     (lambda (,name ,macro-fn)
       ,@(unless macro-fn-provided?
@@ -161,7 +161,7 @@
       ,@body)
     ,lexenv))
 
-(defun collect-macros-in-lexenv (lexenv &key filter)
+(def (function e) collect-macros-in-lexenv (lexenv &key filter)
   (let ((result (list)))
     (iterate-macros-in-lexenv
      (lambda (name macro-function)
@@ -172,7 +172,7 @@
      lexenv)
     (nreverse result)))
 
-(defun find-macro-in-lexenv (name-to-find lexenv)
+(def (function e) find-macro-in-lexenv (name-to-find lexenv)
   (iterate-macros-in-lexenv
    (lambda (name macro-function)
      (when (eq name name-to-find)
@@ -183,8 +183,8 @@
 ;;;
 ;;; symbol-macros
 ;;;
-(defmacro do-symbol-macros-in-lexenv ((lexenv name &optional (definition (gensym) definition-provided?))
-                                      &body body)
+(def (macro e) do-symbol-macros-in-lexenv ((lexenv name &optional (definition (gensym) definition-provided?))
+                                            &body body)
   `(iterate-symbol-macros-in-lexenv
     (lambda (,name ,definition)
       ,@(unless definition-provided?
@@ -192,7 +192,7 @@
       ,@body)
     ,lexenv))
 
-(defun collect-symbol-macros-in-lexenv (lexenv &key filter)
+(def (function e) collect-symbol-macros-in-lexenv (lexenv &key filter)
   (let ((result (list)))
     (iterate-symbol-macros-in-lexenv
      (lambda (name macro-body)
@@ -203,7 +203,7 @@
      lexenv)
     (nreverse result)))
 
-(defun find-symbol-macro-in-lexenv (name-to-find lexenv)
+(def (function e) find-symbol-macro-in-lexenv (name-to-find lexenv)
   (iterate-symbol-macros-in-lexenv
    (lambda (name macro-body)
      (when (eq name name-to-find)
@@ -214,13 +214,13 @@
 ;;;
 ;;; blocks
 ;;;
-(defmacro do-blocks-in-lexenv ((lexenv name) &body body)
+(def (macro e) do-blocks-in-lexenv ((lexenv name) &body body)
   `(iterate-blocks-in-lexenv
     (lambda (,name)
       ,@body)
     ,lexenv))
 
-(defun collect-blocks-in-lexenv (lexenv &key filter)
+(def (function e) collect-blocks-in-lexenv (lexenv &key filter)
   (let ((result (list)))
     (iterate-blocks-in-lexenv
      (lambda (name)
@@ -230,7 +230,7 @@
      lexenv)
     (nreverse result)))
 
-(defun find-block-in-lexenv (name-to-find lexenv)
+(def (function e) find-block-in-lexenv (name-to-find lexenv)
   (iterate-blocks-in-lexenv
    (lambda (name)
      (when (eq name name-to-find)
@@ -241,13 +241,13 @@
 ;;;
 ;;; tags
 ;;;
-(defmacro do-tags-in-lexenv ((lexenv name) &body body)
+(def (macro e) do-tags-in-lexenv ((lexenv name) &body body)
   `(iterate-tags-in-lexenv
     (lambda (,name)
       ,@body)
     ,lexenv))
 
-(defun collect-tags-in-lexenv (lexenv &key filter)
+(def (function e) collect-tags-in-lexenv (lexenv &key filter)
   (let ((result (list)))
     (iterate-tags-in-lexenv
      (lambda (name)
@@ -257,7 +257,7 @@
      lexenv)
     (nreverse result)))
 
-(defun find-tag-in-lexenv (name-to-find lexenv)
+(def (function e) find-tag-in-lexenv (name-to-find lexenv)
   (iterate-tags-in-lexenv
    (lambda (name)
      (when (eq name name-to-find)
