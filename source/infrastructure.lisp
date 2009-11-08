@@ -337,7 +337,12 @@
 
 (def (class* e) walked-form ()
   ((parent)
-   (source *current-form*)))
+   (source *current-form*)
+   (attributes nil)))
+
+(def (macro e) form-attr (form tag &optional defval)
+  "Access the attribute plist of a form."
+  `(getf (attributes-of ,form) ,tag ,defval))
 
 (def (class* e) named-walked-form (walked-form)
   ((name)))
