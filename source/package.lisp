@@ -61,6 +61,7 @@
            ;; some utils
            #:collect-variable-references
            #:special-variable-name?
+           #:compute-binding-usages
 
            ;; conditions
            #:walker-error
@@ -99,6 +100,7 @@
            #:target-block-of
            #:jump-target-of
            #:then-of
+           #:usages-of
            ;; #:type-of
            #:value-of
            #:values-form-of

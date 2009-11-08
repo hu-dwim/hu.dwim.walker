@@ -356,7 +356,7 @@
            forms))
 
 (def (class* e) name-definition-form (named-walked-form)
-  ())
+  ((usages)))
 
 (def method make-load-form ((object walked-form) &optional env)
   (make-load-form-saving-slots object :environment env))
