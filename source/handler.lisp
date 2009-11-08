@@ -497,7 +497,8 @@
 (def method jump-target-of ((form go-form))
   (jump-target-of (tag-of form)))
 
-(def method enclosing-tagbody-of ((form go-form))
+(def (function e) enclosing-tagbody-of (form)
+  (check-type form go-form)
   (parent-of (tag-of form)))
 
 (def walker go
