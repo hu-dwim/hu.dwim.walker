@@ -63,16 +63,16 @@
   `(special ,name))
 
 (def (class* e) type-declaration-form (variable-declaration-form)
-  ((type :accessor type-of :initarg :type)))
+  ((decl-type)))
 
-(def unwalker type-declaration-form (type name)
-  `(type ,type ,name))
+(def unwalker type-declaration-form (decl-type name)
+  `(type ,decl-type ,name))
 
 (def (class* e) ftype-declaration-form (function-declaration-form)
-  ((type :accessor type-of :initarg :type)))
+  ((decl-type)))
 
-(def unwalker ftype-declaration-form (type name)
-  `(ftype ,type ,name))
+(def unwalker ftype-declaration-form (decl-type name)
+  `(ftype ,decl-type ,name))
 
 (def (class* e) notinline-declaration-form (function-declaration-form)
   ())
@@ -115,7 +115,7 @@
              (extend-env (function-name (cdr arguments))
                          (make-form-object 'ftype-declaration-form parent
                                            :name function-name
-                                           :type (first arguments))
+                                           :decl-type (first arguments))
                          function-name `(ftype ,(first arguments))))
             ((ignore ignorable)
              (extend-env (var arguments)
@@ -143,7 +143,7 @@
              (extend-env (var (rest arguments))
                          (make-form-object 'type-declaration-form parent
                                            :name var
-                                           :type (first arguments))
+                                           :decl-type (first arguments))
                          var `(type ,(first arguments))))
             (t
              (unless (member type *known-declaration-types* :test #'eq)

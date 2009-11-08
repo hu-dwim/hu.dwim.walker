@@ -18,8 +18,7 @@
         :hu.dwim.util
         :metabang-bind)
 
-  (:shadow #:type-of
-           #:eval)
+  (:shadow #:eval)
 
   (:export ;; environment (intentionally kept here instead of definer export, because they need to be implemented on some platforms)
            #:make-empty-lexical-environment
@@ -80,6 +79,7 @@
            #:cleanup-form-of
            #:code-of
            #:condition-of
+           #:decl-type-of
            #:default-value-of
            #:else-of
            #:enclosing-tagbody-of
@@ -101,7 +101,6 @@
            #:jump-target-of
            #:then-of
            #:usages-of
-           ;; #:type-of
            #:value-of
            #:values-form-of
            #:variable-of

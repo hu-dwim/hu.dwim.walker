@@ -511,16 +511,16 @@
 ;;;; THE
 
 (def (class* e) the-form (walked-form)
-  ((type)
+  ((decl-type)
    (value)))
 
 (def walker the
   (with-form-object (the 'the-form -parent-
-                         :type (second -form-))
+                         :decl-type (second -form-))
     (setf (value-of the) (recurse (third -form-) the))))
 
-(def unwalker the-form (type value)
-  `(the ,type ,(recurse value)))
+(def unwalker the-form (decl-type value)
+  `(the ,decl-type ,(recurse value)))
 
 ;;;; UNWIND-PROTECT
 
