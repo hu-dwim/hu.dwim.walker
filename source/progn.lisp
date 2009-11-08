@@ -6,81 +6,81 @@
 
 (in-package :hu.dwim.walker)
 
-(def (class* e) implicit-progn-mixin ()
+(def form-class implicit-progn-mixin ()
   ((body)))
 
 (def print-object implicit-progn-mixin
   (format t "~A" (body-of -self-)))
 
-(def (class* ea) implicit-progn-with-declarations-mixin (implicit-progn-mixin)
+(def form-class implicit-progn-with-declarations-mixin (implicit-progn-mixin)
   ((declarations nil)))
 
-(def (class* ea) binder-form-mixin ()
+(def form-class binder-form-mixin ()
   ((bindings)))
 
-(def (class* e) declaration-form (walked-form)
+(def form-class declaration-form (walked-form)
   ())
 
-(def (class* ea) optimize-declaration-form (declaration-form)
+(def form-class optimize-declaration-form (declaration-form)
   ((specification :accessor specification-of :initarg :specification)))
 
 (def unwalker optimize-declaration-form (specification)
   `(optimize ,specification))
 
-(def (class* e) variable-declaration-form (declaration-form
+(def form-class variable-declaration-form (declaration-form
                                            named-walked-form)
   ())
 
-(def (class* e) function-declaration-form (declaration-form
+(def form-class function-declaration-form (declaration-form
                                            named-walked-form)
   ())
 
-(def (class* e) dynamic-extent-declaration-form (variable-declaration-form)
+(def form-class dynamic-extent-declaration-form (variable-declaration-form)
   ())
 
 (def unwalker dynamic-extent-declaration-form (name)
   `(dynamic-extent ,name))
 
-(def (class* e) ignorable-declaration-form-mixin (declaration-form)
+(def form-class ignorable-declaration-form-mixin (declaration-form)
   ())
 
-(def (class* e) variable-ignorable-declaration-form (variable-declaration-form ignorable-declaration-form-mixin)
+(def form-class variable-ignorable-declaration-form (variable-declaration-form ignorable-declaration-form-mixin)
   ())
 
 (def unwalker variable-ignorable-declaration-form (name)
   `(ignorable ,name))
 
-(def (class* e) function-ignorable-declaration-form (function-declaration-form ignorable-declaration-form-mixin)
+(def form-class function-ignorable-declaration-form (function-declaration-form ignorable-declaration-form-mixin)
   ())
 
 (def unwalker function-ignorable-declaration-form (name)
   `(ignorable (function ,name)))
 
-(def (class* e) special-variable-declaration-form (variable-declaration-form)
+(def form-class special-variable-declaration-form (variable-declaration-form)
   ())
 
 (def unwalker special-variable-declaration-form (name)
   `(special ,name))
 
-(def (class* ea) type-declaration-form (variable-declaration-form)
+(def form-class type-declaration-form (variable-declaration-form)
   ((declared-type)))
 
 (def unwalker type-declaration-form (declared-type name)
   `(type ,declared-type ,name))
 
-(def (class* e) ftype-declaration-form (function-declaration-form)
+(def form-class ftype-declaration-form (function-declaration-form)
   ((declared-type)))
 
 (def unwalker ftype-declaration-form (declared-type name)
   `(ftype ,declared-type ,name))
 
-(def (class* e) notinline-declaration-form (function-declaration-form)
+(def form-class notinline-declaration-form (function-declaration-form)
   ())
 
 (def unwalker notinline-declaration-form (name)
   `(notinline ,name))
 
-(def (class* e) unknown-declaration-form (declaration-form)
+(def form-class unknown-declaration-form (declaration-form)
   ((declaration-form :initarg :declaration-form :accessor declaration-form-of)))
 
 (def unwalker unknown-declaration-form (declaration-form)

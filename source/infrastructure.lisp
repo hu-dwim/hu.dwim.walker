@@ -335,7 +335,10 @@
 (def (definer e) walker-alias (from-name to-name)
   `(defwalker-handler-alias ,from-name ,to-name))
 
-(def (class* e) walked-form ()
+(def (definer e) form-class (name supers slots &rest args)
+  `(def (class* ea) ,name ,supers ,slots ,@args))
+
+(def form-class walked-form ()
   ((parent)
    (source *current-form*)
    (attributes nil)))
@@ -344,7 +347,7 @@
   "Access the attribute plist of a form."
   `(getf (attributes-of ,form) ,tag ,default-value))
 
-(def (class* e) named-walked-form (walked-form)
+(def form-class named-walked-form (walked-form)
   ((name)))
 
 (def (function e) find-form-by-name (name forms &key (type 't))
@@ -355,7 +358,7 @@
                       (typep item type))))
            forms))
 
-(def (class* e) name-definition-form (named-walked-form)
+(def form-class name-definition-form (named-walked-form)
   ((usages)))
 
 (def method make-load-form ((object walked-form) &optional env)
