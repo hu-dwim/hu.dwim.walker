@@ -56,14 +56,14 @@
              top-form)
     result))
 
-(def function clear-binding-usage-lists (top-form)
+(def function clear-binding-usage-annotation (top-form)
   (map-ast (lambda (form)
              (when (typep form 'name-definition-form)
                (setf (usages-of form) nil))
              form)
            top-form))
 
-(def generic mark-binding-usages (form)
+(def generic mark-binding-usage (form)
   (:method-combination progn)
   (:method progn ((form t)))
   (:method progn ((form walked-lexical-variable-reference-form))
@@ -77,10 +77,10 @@
   (:method progn ((form go-form))
     (push form (usages-of (tag-of form)))))
 
-(def (function e) compute-binding-usages (top-form)
-  (clear-binding-usage-lists top-form)
+(def (function e) annotate-binding-usage (top-form)
+  (clear-binding-usage-annotation top-form)
   (map-ast (lambda (form)
-             (mark-binding-usages form)
+             (mark-binding-usage form)
              form)
            top-form))
 
