@@ -52,8 +52,12 @@
 ;;;
 
 (defun iterate-variables-in-lexenv (visitor lexenv
-                                    &key include-ignored? include-specials?)
+                                    &key include-ignored? include-specials? include-macros?)
   (dolist (spec (c::cmp-env-variables lexenv))
+    (when (ecl-symbol-macro-spec-p spec)
+      (when include-macros?
+        (funcall visitor (first spec) :macro? t
+                 :macro-body (funcall (third spec) nil nil))))
     (when (ecl-variable-spec-p spec)
       (let* ((name     (first spec))
              (special? (ecl-special-var-p spec))
@@ -63,11 +67,6 @@
                    (or (not ignored?)
                        include-ignored?))
           (funcall visitor name :ignored? ignored? :special? special?))))))
-
-(defun iterate-symbol-macros-in-lexenv (visitor lexenv)
-  (dolist (spec (c::cmp-env-variables lexenv))
-    (when (ecl-symbol-macro-spec-p spec)
-      (funcall visitor (first spec) (funcall (third spec) nil nil)))))
 
 (defun iterate-functions-in-lexenv (visitor lexenv)
   (dolist (spec (c::cmp-env-functions lexenv))

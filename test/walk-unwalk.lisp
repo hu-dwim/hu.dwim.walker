@@ -303,6 +303,26 @@
    '(let ((foo ()))
      (locally 'bar))))
 
+(deftest test/walk-unwalk/context-macrolets/1 ()
+  (with-captured-env (env (symbol-macrolet ((foo 'xxx))
+                            (symbol-macrolet ((foo 'bar))
+                              -here-)))
+    (check-walk-unwalk 'foo ''bar env)))
+
+(deftest test/walk-unwalk/context-macrolets/2 ()
+  (with-captured-env (env (let ((foo 'xxx))
+                            (declare (ignorable foo))
+                            (symbol-macrolet ((foo 'bar))
+                              -here-)))
+    (check-walk-unwalk 'foo ''bar env)))
+
+(deftest test/walk-unwalk/context-macrolets/3 ()
+  (with-captured-env (env (symbol-macrolet ((foo 'xxx))
+                            (let ((foo 'bar))
+                              (declare (ignorable foo))
+                              -here-)))
+    (check-walk-unwalk 'foo 'foo env)))
+
 (define-walk-unwalk-test test/walk-unwalk/defun ()
   (defun foo (x) x)
   (defun foo (x) (declare (type fixnum x)) x)

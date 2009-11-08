@@ -160,16 +160,16 @@
   (bind ((walkedenv '()))
     (macrolet ((extend (type name datum &rest other-datum)
                  `(setf walkedenv (%repository/augment walkedenv ,type ,name ,datum ,@other-datum))))
-      (do-variables-in-lexenv (lexenv name ignored?)
-        (unless ignored?
-          (extend :unwalked-variable name t)))
+      (do-variables-in-lexenv (lexenv name ignored? special? macro? macro-body)
+        (if macro?
+            (extend :symbol-macro name macro-body)
+            (unless (or ignored? special?)
+              (extend :unwalked-variable name t))))
       (do-functions-in-lexenv (lexenv name)
         (extend :unwalked-function name t))
       (do-macros-in-lexenv (lexenv name macro-fn)
-        (extend :macro name macro-fn))
-      (do-symbol-macros-in-lexenv (lexenv name definition)
-        (extend :symbol-macro name definition)))
-    (%make-walk-environment walkedenv lexenv)))
+        (extend :macro name macro-fn)))
+    (%make-walk-environment (nreverse walkedenv) lexenv)))
 
 (def function augment-walk-environment (env type name &optional datum)
   (bind ((walkenv (env/walked-environment env))

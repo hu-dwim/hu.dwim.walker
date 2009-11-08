@@ -25,12 +25,87 @@
    #:-form-
    #:-parent-
 
-   ;; these are defined by conditionally loaded platform dependent code, so export them from here
-   #:make-empty-lexical-environment
-   #:iterate-variables-in-lexenv
-   #:iterate-functions-in-lexenv
-   #:iterate-macros-in-lexenv
-   #:iterate-symbol-macros-in-lexenv
-   #:iterate-blocks-in-lexenv
-   #:iterate-tags-in-lexenv
-   ))
+           #:-environment-
+           #:-form-
+           #:-parent-
+
+           #:do-variables-in-lexenv
+           #:do-functions-in-lexenv
+           #:do-macros-in-lexenv
+           #:do-symbol-macros-in-lexenv
+           #:do-blocks-in-lexenv
+           #:do-tags-in-lexenv
+
+           #:iterate-variables-in-lexenv
+           #:iterate-functions-in-lexenv
+           #:iterate-macros-in-lexenv
+           #:iterate-symbol-macros-in-lexenv
+           #:iterate-blocks-in-lexenv
+           #:iterate-tags-in-lexenv
+
+           #:collect-variables-in-lexenv
+           #:collect-functions-in-lexenv
+           #:collect-macros-in-lexenv
+           #:collect-symbol-macros-in-lexenv
+           #:collect-blocks-in-lexenv
+           #:collect-tags-in-lexenv
+
+           #:find-variable-in-lexenv
+           #:find-function-in-lexenv
+           #:find-macro-in-lexenv
+           #:find-symbol-macro-in-lexenv
+           #:find-block-in-lexenv
+           #:find-tag-in-lexenv
+
+           ;; some utils
+           #:collect-variable-references
+           #:special-variable-name?
+           #:compute-binding-usages
+
+           ;; conditions
+           #:walker-error
+           #:simple-walker-error
+           #:return-from-unknown-block
+           #:illegal-lambda-list
+
+           ;; walker
+           #:map-ast
+           #:make-walk-environment
+
+           #:with-form-object
+           #:walk-implict-progn
+
+           #:body-of
+           #:cleanup-form-of
+           #:code-of
+           #:condition-of
+           #:decl-type-of
+           #:default-value-of
+           #:else-of
+           #:enclosing-tagbody-of
+           #:eval-when-times
+           #:first-form-of
+           #:function-designator-of
+           #:keyword-name-of
+           #:effective-keyword-name-of
+           #:name-of
+           #:other-forms-of
+           #:parent-of
+           #:protected-form-of
+           #:result-of
+           #:source-of
+           #:specializer-of
+           #:supplied-p-parameter
+           #:tag-of
+           #:target-block-of
+           #:jump-target-of
+           #:then-of
+           #:usages-of
+           #:value-of
+           #:values-form-of
+           #:variable-of
+           #:variables-form-of
+           #:operator-of
+           #:arguments-of
+
+           #:collect-standard-walked-form-subclasses))

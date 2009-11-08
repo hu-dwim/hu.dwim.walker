@@ -10,10 +10,9 @@
 
 (defparameter *lexical-environment-functions*
   '((make-empty-lexical-environment  "Returns an empty lexical environment useful for testing and playing around in the repl.")
-    (iterate-variables-in-lexenv     "(funcall VISITOR name &key ignored? special?) for each variable definition in LEXENV.")
+    (iterate-variables-in-lexenv     "(funcall VISITOR name &key ignored? special? macro? macro-body) for each variable or symbol macro definition in LEXENV.")
     (iterate-functions-in-lexenv     "(funcall VISITOR name) for each function definition in LEXENV.")
     (iterate-macros-in-lexenv        "(funcall VISITOR name macro-function) for each macro definition in LEXENV.")
-    (iterate-symbol-macros-in-lexenv "(funcall VISITOR name macro-function) for each symbol macro definition in LEXENV.")
     (iterate-blocks-in-lexenv        "(funcall VISITOR name) for each block in LEXENV.")
     (iterate-tags-in-lexenv          "(funcall VISITOR name) for each tag in LEXENV.")
     (augment-lexenv-with-variable)
@@ -87,16 +86,19 @@
 ;;;
 ;;; variables
 ;;;
-(def (macro e) do-variables-in-lexenv ((lexenv name &optional
-                                               (ignored? (gensym) ignored-provided?)
-                                               (special? (gensym) special-provided?))
-                                        &body body)
+(defmacro do-variables-in-lexenv ((lexenv name &optional
+                                          (ignored? (gensym) ignored-provided?)
+                                          (special? (gensym) special-provided?))
+                                  &body body)
   `(iterate-variables-in-lexenv
-    (lambda (,name &key ((:ignored? ,ignored?) nil) ((:special? ,special?) nil))
+    (lambda (,name &key ((:ignored? ,ignored?) nil) ((:special? ,special?) nil)
+        ((:macro? ,macro?) nil) ((:macro-body ,macro-body) nil))
       (declare (ignorable ,@(unless ignored-provided? (list ignored?))
-                          ,@(unless special-provided? (list special?))))
+                          ,@(unless special-provided? (list special?))
+                          ,@(unless macro-provided? (list macro? macro-body))))
       ,@body)
     ,lexenv
+    :include-macros? ,macro-provided?
     :include-ignored? ,ignored-provided?
     :include-specials? ,special-provided?))
 
@@ -183,32 +185,37 @@
 ;;;
 ;;; symbol-macros
 ;;;
-(def (macro e) do-symbol-macros-in-lexenv ((lexenv name &optional (definition (gensym) definition-provided?))
-                                            &body body)
+(defmacro do-symbol-macros-in-lexenv ((lexenv name &optional (definition (gensym) definition-provided?))
+                                      &body body)
   `(iterate-symbol-macros-in-lexenv
     (lambda (,name ,definition)
       ,@(unless definition-provided?
-        `((declare (ignore ,definition))))
-      ,@body)
-    ,lexenv))
+          `((declare (ignore ,definition))))
+      (when ,macro?
+        ,@body))
+    ,lexenv
+    :include-macros? t))
 
 (def (function e) collect-symbol-macros-in-lexenv (lexenv &key filter)
   (let ((result (list)))
-    (iterate-symbol-macros-in-lexenv
-     (lambda (name macro-body)
+    (iterate-variables-in-lexenv
+     (lambda (name &key macro-body macro? &allow-other-keys)
        (declare (ignore macro-body))
-       (when (or (not filter)
-                 (funcall filter name))
+       (when (and macro?
+                  (or (not filter)
+                      (funcall filter name)))
          (push name result)))
-     lexenv)
+     lexenv
+     :include-macros? t)
     (nreverse result)))
 
 (def (function e) find-symbol-macro-in-lexenv (name-to-find lexenv)
-  (iterate-symbol-macros-in-lexenv
-   (lambda (name macro-body)
-     (when (eq name name-to-find)
+  (iterate-variables-in-lexenv
+   (lambda (name &key macro-body macro? &allow-other-keys)
+     (when (and macro? (eq name name-to-find))
        (return-from find-symbol-macro-in-lexenv (values name macro-body))))
-   lexenv)
+   lexenv
+   :include-macros? t)
   (values nil))
 
 ;;;

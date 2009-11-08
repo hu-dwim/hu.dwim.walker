@@ -15,7 +15,8 @@
 ;;;;;;
 ;;; Iteration
 
-(defun iterate-variables-in-lexenv (visitor lexenv &key include-ignored? include-specials?)
+(defun iterate-variables-in-lexenv (visitor lexenv &key
+                                    include-ignored? include-specials? include-macros?)
   (loop
      :for entry :in (sb-c::lexenv-vars lexenv)
      :for name = (first entry)
@@ -23,8 +24,11 @@
      :for ignored? = (and (typep definition 'sb-c::lambda-var)
                           (sb-c::lambda-var-ignorep definition))
      :for special? = (typep definition 'sb-c::global-var)
-     :unless (and (consp definition)
-                  (eq 'sb-sys::macro (first definition)))
+     :if (and (consp definition)
+              (eq 'sb-sys::macro (first definition)))
+     :do (when include-macros?
+           (funcall visitor name :macro? t :macro-body (rest definition)))
+     :else
      :do (when (and (or (not ignored?)
                         include-ignored?)
                     (or (not special?)
@@ -53,18 +57,6 @@
      :do (progn
            (assert (functionp macro-function))
            (funcall visitor name macro-function))))
-
-(defun iterate-symbol-macros-in-lexenv (visitor lexenv)
-  (loop
-     :for entry :in (sb-c::lexenv-vars lexenv)
-     :for name = (first entry)
-     :for definition = (rest entry)
-     :for macro? = (and (consp definition)
-                        (eq 'sb-sys::macro (first definition)))
-     :for macro-body = (when macro?
-                         (rest definition))
-     :when macro?
-     :do (funcall visitor name macro-body)))
 
 (defun iterate-blocks-in-lexenv (visitor lexenv)
   (loop
