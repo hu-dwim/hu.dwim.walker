@@ -35,7 +35,7 @@
 
 (def test test/utils/attrs/1 ()
   (let ((walked (walk-form :foo)))
-    (is (eql (form-attr walked :test :none) :none))
-    (setf (form-attr walked :test) :set)
-    (is (eql (form-attr walked :test) :set))
+    (is (eql (form-attribute walked :test :none) :none))
+    (setf (form-attribute walked :test) :set)
+    (is (eql (form-attribute walked :test) :set))
     walked))

@@ -340,9 +340,9 @@
    (source *current-form*)
    (attributes nil)))
 
-(def (macro e) form-attr (form tag &optional defval)
+(def (macro e) form-attribute (form tag &optional default-value)
   "Access the attribute plist of a form."
-  `(getf (attributes-of ,form) ,tag ,defval))
+  `(getf (attributes-of ,form) ,tag ,default-value))
 
 (def (class* e) named-walked-form (walked-form)
   ((name)))
