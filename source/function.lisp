@@ -286,7 +286,7 @@
 (def form-class keyword-function-argument-form (function-argument-form-with-supplied-p-parameter)
   ((keyword-name)))
 
-(defun effective-keyword-name-of (k)
+(def (function e) effective-keyword-name-of (k)
   (or (keyword-name-of k)
       (intern (symbol-name (name-of k)) :keyword)))
 
