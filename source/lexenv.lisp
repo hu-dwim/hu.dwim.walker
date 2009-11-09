@@ -86,10 +86,12 @@
 ;;;
 ;;; variables
 ;;;
-(defmacro do-variables-in-lexenv ((lexenv name &optional
-                                          (ignored? (gensym) ignored-provided?)
-                                          (special? (gensym) special-provided?))
-                                  &body body)
+(def (macro e) do-variables-in-lexenv ((lexenv name &optional
+                                               (ignored? (gensym) ignored-provided?)
+                                               (special? (gensym) special-provided?)
+                                               (macro? (gensym) macro-provided?)
+                                               (macro-body (gensym)))
+                                        &body body)
   `(iterate-variables-in-lexenv
     (lambda (,name &key ((:ignored? ,ignored?) nil) ((:special? ,special?) nil)
         ((:macro? ,macro?) nil) ((:macro-body ,macro-body) nil))
@@ -185,10 +187,10 @@
 ;;;
 ;;; symbol-macros
 ;;;
-(defmacro do-symbol-macros-in-lexenv ((lexenv name &optional (definition (gensym) definition-provided?))
-                                      &body body)
-  `(iterate-symbol-macros-in-lexenv
-    (lambda (,name ,definition)
+(def (macro e) do-symbol-macros-in-lexenv ((lexenv name &optional (definition (gensym) definition-provided?))
+                                            &body body &aux (macro? (gensym)))
+  `(iterate-variables-in-lexenv
+    (lambda (,name &key ((:macro-body ,definition)) ((:macro? ,macro?)) &allow-other-keys)
       ,@(unless definition-provided?
           `((declare (ignore ,definition))))
       (when ,macro?
