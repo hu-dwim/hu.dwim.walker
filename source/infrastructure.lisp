@@ -354,9 +354,9 @@
   (check-type name symbol)
   (find-if (lambda (item)
              (and item
-                  (eq (name-of item) name)
                   (or (eql type t)
-                      (typep item type))))
+                      (typep item type))
+                  (eq (name-of item) name)))
            forms))
 
 (def form-class name-definition-form (named-walked-form)
