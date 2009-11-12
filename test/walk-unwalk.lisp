@@ -87,9 +87,9 @@
   (locally (declare (dynamic-extent a) (ignorable b))))
 
 (deftest test/declare/2 ()
-  (signals style-warning
+  (signals walker-style-warning
     (walk-form '(locally (declare (zork)))))
-  (signals style-warning
+  (signals walker-style-warning
     (walk-form '(locally (declare (integer x)))))
   ;; declare is not allowed in a tagbody
   (signals error

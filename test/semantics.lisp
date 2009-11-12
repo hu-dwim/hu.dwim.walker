@@ -198,6 +198,14 @@
     (walk-form '(lambda (a &optional (b a) &key (c b) &aux (d c) e (f e))
                  (values a b c d e f)))))
 
+(def test test/semantics/lambda/bug/4 ()
+  (bind ((walked (walk-form '(lambda (&optional (o 42 o?) &key (k nil k?))
+                              o?
+                              k?))))
+    (is (typep (first (body-of walked)) 'lexical-variable-reference-form))
+    (is (typep (second (body-of walked)) 'lexical-variable-reference-form))
+    walked))
+
 (deftest test/semantics/tagbody/1 ()
   (let* ((ast (walk-form '(tagbody
                            (tagbody
