@@ -234,9 +234,22 @@
 
 (def special-variable *walker-handlers* (make-hash-table :test 'eq))
 
-(def (condition* e) undefined-reference (style-warning)
-  ((enclosing-code *current-form*)
-   (name)))
+(def (condition* e) walker-warning (warning)
+  ((enclosing-code *current-form*)))
+
+(def (condition* e) walker-style-warning (walker-warning
+                                          style-warning)
+  ())
+
+(def (condition* e) simple-walker-style-warning (walker-style-warning
+                                                 simple-style-warning)
+  ())
+
+(def function simple-walker-style-warning (format-control &rest format-arguments)
+  (warn 'simple-walker-style-warning :format-control format-control :format-arguments format-arguments))
+
+(def (condition* e) undefined-reference (walker-style-warning)
+  ((name)))
 
 (def (condition* e) undefined-variable-reference (undefined-reference)
   ()

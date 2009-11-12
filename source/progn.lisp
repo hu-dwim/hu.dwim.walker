@@ -147,8 +147,8 @@
                          var `(type ,(first arguments))))
             (t
              (unless (member type *known-declaration-types* :test #'eq)
-               (simple-style-warning "Ignoring unknown declaration ~S while walking forms. If it's a type declaration, then use the full form to avoid this warning: `(type ,type ,@variables), or you can also (pushnew ~S ~S)."
-                                     declaration type '*known-declaration-types*))
+               (simple-walker-style-warning "Ignoring unknown declaration ~S while walking forms. If it's a type declaration, then use the full form to avoid this warning: `(type ,type ,@variables), or you can also (pushnew ~S ~S)."
+                                            declaration type '*known-declaration-types*))
              (push (make-form-object 'unknown-declaration-form parent
                                      :declaration-form declaration)
                    declares))))))
