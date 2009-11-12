@@ -6,7 +6,7 @@
 
 (in-package :hu.dwim.walker)
 
-(def form-class application-form (walked-form)
+(def form-class application-form ()
   ((operator)
    (arguments)))
 
@@ -87,7 +87,7 @@
 
 ;;;; Functions
 
-(def form-class function-form (walked-form)
+(def form-class function-form ()
   ())
 
 (def form-class lambda-function-form (function-form implicit-progn-with-declarations-mixin)
@@ -384,8 +384,7 @@
 
 ;;;; FLET/LABELS
 
-(def form-class function-binding-form (walked-form
-                                       binder-form-mixin
+(def form-class function-binding-form (binder-form-mixin
                                        implicit-progn-with-declarations-mixin)
   ())
 

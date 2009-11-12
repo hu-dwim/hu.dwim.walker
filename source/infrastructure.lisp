@@ -336,6 +336,9 @@
   `(defwalker-handler-alias ,from-name ,to-name))
 
 (def (definer e) form-class (name supers slots &rest args)
+  (when (and (not (eq name 'walked-form))
+             (zerop (length supers)))
+    (setf supers '(walked-form)))
   `(def (class* ea) ,name ,supers ,slots ,@args))
 
 (def form-class walked-form ()
@@ -347,7 +350,7 @@
   "Access the attribute plist of a form."
   `(getf (attributes-of ,form) ,tag ,default-value))
 
-(def form-class named-walked-form (walked-form)
+(def form-class named-walked-form ()
   ((name)))
 
 (def (function e) find-form-by-name (name forms &key (type 't))

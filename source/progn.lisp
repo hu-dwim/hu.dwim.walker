@@ -18,7 +18,7 @@
 (def form-class binder-form-mixin ()
   ((bindings)))
 
-(def form-class declaration-form (walked-form)
+(def form-class declaration-form ()
   ())
 
 (def form-class optimize-declaration-form (declaration-form)

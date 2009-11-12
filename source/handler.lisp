@@ -8,7 +8,7 @@
 
 ;;;; Atoms
 
-(def form-class constant-form (walked-form)
+(def form-class constant-form ()
   ((value)))
 
 (def unwalker constant-form (value)
@@ -91,7 +91,7 @@
 
 ;;;; BLOCK/RETURN-FROM
 
-(def form-class block-form (name-definition-form implicit-progn-mixin)
+(def form-class block-form (implicit-progn-mixin name-definition-form)
   ())
 
 (def walker block
@@ -105,7 +105,7 @@
 (def unwalker block-form (name body)
   `(block ,name ,@(recurse-on-body body)))
 
-(def form-class return-from-form (walked-form)
+(def form-class return-from-form ()
   ((target-block nil)
    (result)))
 
@@ -137,7 +137,7 @@
 
 ;;;; CATCH/THROW
 
-(def form-class catch-form (walked-form implicit-progn-mixin)
+(def form-class catch-form (implicit-progn-mixin)
   ((tag)))
 
 (def walker catch
@@ -149,7 +149,7 @@
 (def unwalker catch-form (tag body)
   `(catch ,(recurse tag) ,@(recurse-on-body body)))
 
-(def form-class throw-form (walked-form)
+(def form-class throw-form ()
   ((tag)
    (value)))
 
@@ -164,7 +164,7 @@
 
 ;;;; EVAL-WHEN
 
-(def form-class eval-when-form (walked-form implicit-progn-mixin)
+(def form-class eval-when-form (implicit-progn-mixin)
   ((eval-when-times)))
 
 (def walker eval-when
@@ -179,7 +179,7 @@
 
 ;;;; IF
 
-(def form-class if-form (walked-form)
+(def form-class if-form ()
   ((condition)
    (then)
    (else)))
@@ -198,8 +198,7 @@
 
 ;;;; LET/LET*
 
-(def form-class lexical-variable-binder-form (walked-form
-                                              binder-form-mixin
+(def form-class lexical-variable-binder-form (binder-form-mixin
                                               implicit-progn-with-declarations-mixin)
   ())
 
@@ -276,8 +275,7 @@
 
 ;;;; LOCALLY
 
-(def form-class locally-form (walked-form
-                              implicit-progn-with-declarations-mixin)
+(def form-class locally-form (implicit-progn-with-declarations-mixin)
   ())
 
 (def walker locally
@@ -291,8 +289,7 @@
 
 ;;;; MACROLET
 
-(def form-class macrolet-form (walked-form
-                               binder-form-mixin
+(def form-class macrolet-form (binder-form-mixin
                                implicit-progn-with-declarations-mixin)
   ())
 
@@ -316,7 +313,7 @@
 
 ;;;; MULTIPLE-VALUE-CALL
 
-(def form-class multiple-value-call-form (walked-form)
+(def form-class multiple-value-call-form ()
   ((function-designator)
    (arguments)))
 
@@ -332,7 +329,7 @@
 
 ;;;; MULTIPLE-VALUE-PROG1
 
-(def form-class multiple-value-prog1-form (walked-form)
+(def form-class multiple-value-prog1-form ()
   ((first-form)
    (other-forms)))
 
@@ -348,7 +345,7 @@
 
 ;;;; PROGN
 
-(def form-class progn-form (walked-form implicit-progn-mixin)
+(def form-class progn-form (implicit-progn-mixin)
   ())
 
 (def walker progn
@@ -377,7 +374,7 @@
 
 ;;;; PROGV
 
-(def form-class progv-form (walked-form implicit-progn-mixin)
+(def form-class progv-form (implicit-progn-mixin)
   ((variables-form)
    (values-form)))
 
@@ -402,7 +399,7 @@
 
 ;;;; SETQ
 
-(def form-class setq-form (walked-form)
+(def form-class setq-form ()
   ((variable)
    (value)))
 
@@ -434,8 +431,7 @@
 
 ;;;; SYMBOL-MACROLET
 
-(def form-class symbol-macrolet-form (walked-form
-                                      binder-form-mixin
+(def form-class symbol-macrolet-form (binder-form-mixin
                                       implicit-progn-with-declarations-mixin)
   ())
 
@@ -455,7 +451,7 @@
 
 ;;;; TAGBODY/GO
 
-(def form-class tagbody-form (walked-form implicit-progn-mixin)
+(def form-class tagbody-form (implicit-progn-mixin)
   ())
 
 (def walker tagbody
@@ -510,7 +506,7 @@
 
 ;;;; THE
 
-(def form-class the-form (walked-form)
+(def form-class the-form ()
   ((declared-type)
    (value)))
 
@@ -523,7 +519,7 @@
 
 ;;;; UNWIND-PROTECT
 
-(def form-class unwind-protect-form (walked-form)
+(def form-class unwind-protect-form ()
   ((protected-form)
    (cleanup-form)))
 
@@ -539,7 +535,7 @@
 
 ;;;; LOAD-TIME-VALUE
 
-(def form-class load-time-value-form (walked-form)
+(def form-class load-time-value-form ()
   ((body)
    (read-only nil :accessor read-only? :type boolean)
    (value)))
