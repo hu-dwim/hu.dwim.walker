@@ -83,6 +83,9 @@
 (def form-class unknown-declaration-form (declaration-form)
   ((declaration-form :initarg :declaration-form :accessor declaration-form-of)))
 
+(def method name-of ((self unknown-declaration-form))
+  (first (declaration-form-of self)))
+
 (def unwalker unknown-declaration-form (declaration-form)
   declaration-form)
 
