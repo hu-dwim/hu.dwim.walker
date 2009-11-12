@@ -199,30 +199,64 @@
     ast-node))
 
 (def (function e) walk-ordinary-lambda-list (lambda-list parent env &key allow-specializers)
-  (flet ((augment! (walked)
-           (augment-walk-environment! env :variable (name-of walked) walked)
-           walked))
-    (bind (((:values requireds optionals rest keywords allow-other-keys? auxiliaries) (parse-ordinary-lambda-list lambda-list :normalize nil))
-           (result (nconc
-                    (loop
-                      :for required :in requireds
-                      :collect (augment! (if allow-specializers
-                                             (walk-specialized-argument required parent env)
-                                             (make-form-object 'required-function-argument-form parent :name required))))
-                    (loop
-                      :for optional :in optionals
-                      :collect (augment! (walk-optional-argument optional parent env)))
-                    (when rest
-                      (list (augment! (make-form-object 'rest-function-argument-form parent :name rest))))
-                    (loop
-                      :for keyword :in keywords
-                      :collect (augment! (walk-keyword-argument keyword parent env)))
-                    (when allow-other-keys?
-                      (list (make-form-object 'allow-other-keys-function-argument-form parent)))
-                    (loop
-                      :for auxiliary :in auxiliaries
-                      :collect (augment! (walk-auxiliary-argument auxiliary parent env))))))
-      (values result env))))
+  (bind (((:values requireds optionals rest keywords allow-other-keys? auxiliaries) (parse-ordinary-lambda-list lambda-list :normalize nil))
+         (args (nconc
+                (loop
+                  :for required :in requireds
+                  :collect (bind ((arg (if allow-specializers
+                                           (make-form-object 'specialized-function-argument-form parent
+                                                             :name (first (ensure-list required))
+                                                             :specializer (or (second (ensure-list required)) t))
+                                           (make-form-object 'required-function-argument-form parent
+                                                             :name required))))
+                             (augment-walk-environment! env :variable (name-of arg) arg)
+                             arg))
+                (loop
+                  :for optional :in optionals
+                  ;; TODO report bind bug: (bind (((name &optional (default-value nil default-value-supplied?) supplied-p-parameter) (ensure-list form))) )
+                  ;; it blingly replaces all nil's with '#:ignore-me-123, including the nil default value above.
+                  :collect (destructuring-bind (name &optional (default-value nil default-value-supplied?) supplied-p-parameter-name)
+                               (ensure-list optional)
+                             (with-form-object (arg 'optional-function-argument-form parent
+                                                    :name name
+                                                    :supplied-p-parameter-name supplied-p-parameter-name)
+                               (augment-walk-environment! env :variable name arg)
+                               (when default-value-supplied?
+                                 (setf (default-value-of arg) (walk-form default-value :parent arg :environment env)))
+                               (when supplied-p-parameter-name
+                                 ;; TODO so, what on earth do we want to store for supplied-p-parameter-name? it should be a full lexical-variable-binding-form so that ...
+                                 (augment-walk-environment! env :variable supplied-p-parameter-name t)))))
+                (when rest
+                  (bind ((arg (make-form-object 'rest-function-argument-form parent :name rest)))
+                    (augment-walk-environment! env :variable rest arg)
+                    (list arg)))
+                (loop
+                  :for keyword :in keywords
+                  :collect (destructuring-bind (name &optional (default-value nil default-value-supplied?) supplied-p-parameter-name)
+                               (ensure-list keyword)
+                             (bind ((name (if (consp name) (second name) name))
+                                    (keyword (if (consp name) (first name) nil)))
+                               (with-form-object (arg 'keyword-function-argument-form parent
+                                                      :name name
+                                                      :keyword-name keyword
+                                                      :supplied-p-parameter-name supplied-p-parameter-name)
+                                 (augment-walk-environment! env :variable name arg)
+                                 (when default-value-supplied?
+                                   (setf (default-value-of arg) (walk-form default-value :parent arg :environment env)))
+                                 (when supplied-p-parameter-name
+                                   ;; TODO see similar comment at &optional
+                                   (augment-walk-environment! env :variable supplied-p-parameter-name t))))))
+                (when allow-other-keys?
+                  (list (make-form-object 'allow-other-keys-function-argument-form parent)))
+                (loop
+                  :for auxiliary :in auxiliaries
+                  :collect (destructuring-bind (name &optional (default-value nil default-value-supplied?))
+                               (ensure-list auxiliary)
+                             (with-form-object (arg 'auxiliary-function-argument-form parent :name name)
+                               (augment-walk-environment! env :variable name arg)
+                               (when default-value-supplied?
+                                 (setf (default-value-of arg) (walk-form default-value :parent arg :environment env)))))))))
+    (values args env)))
 
 (def form-class function-argument-form (name-definition-form)
   ())
@@ -239,16 +273,6 @@
 (def form-class specialized-function-argument-form (required-function-argument-form)
   ((specializer)))
 
-(def function walk-specialized-argument (form parent env)
-  (declare (ignore env))
-  (make-form-object 'specialized-function-argument-form parent
-                    :name (if (listp form)
-                              (first form)
-                              form)
-                    :specializer (if (listp form)
-                                     (second form)
-                                     t)))
-
 (def unwalker specialized-function-argument-form (name specializer)
   (if (eq specializer t)
       name
@@ -262,16 +286,6 @@
 
 (def form-class optional-function-argument-form (function-argument-form-with-supplied-p-parameter)
   ())
-
-(defun walk-optional-argument (form parent env)
-  ;; TODO report bind bug: (bind (((name &optional (default-value nil default-value-supplied?) supplied-p-parameter) (ensure-list form))) )
-  (destructuring-bind (name &optional (default-value nil default-value-supplied?) supplied-p-parameter-name)
-      (ensure-list form)
-    (with-form-object (arg 'optional-function-argument-form parent
-                           :name name
-                           :supplied-p-parameter-name supplied-p-parameter-name)
-      (when default-value-supplied?
-        (setf (default-value-of arg) (walk-form default-value :parent arg :environment env))))))
 
 (def unwalker optional-function-argument-form (name supplied-p-parameter-name)
   (bind ((default-value (awhen (default-value-of -form-)
@@ -289,22 +303,6 @@
 (def (function e) effective-keyword-name-of (k)
   (or (keyword-name-of k)
       (intern (symbol-name (name-of k)) :keyword)))
-
-(defun walk-keyword-argument (form parent env)
-  (destructuring-bind (name &optional (default-value nil default-value-supplied?) supplied-p-parameter-name)
-      (ensure-list form)
-    (let ((name (if (consp name)
-                    (second name)
-                    name))
-          (keyword (if (consp name)
-                       (first name)
-                       nil)))
-      (with-form-object (arg 'keyword-function-argument-form parent
-                             :name name
-                             :keyword-name keyword
-                             :supplied-p-parameter-name supplied-p-parameter-name)
-        (when default-value-supplied?
-          (setf (default-value-of arg) (walk-form default-value :parent arg :environment env)))))))
 
 (def unwalker keyword-function-argument-form (keyword-name name default-value supplied-p-parameter-name)
   (bind ((default-value (awhen (default-value-of -form-)
@@ -332,13 +330,6 @@
 
 (def form-class auxiliary-function-argument-form (function-argument-form-with-default-value)
   ())
-
-(defun walk-auxiliary-argument (form parent env)
-  (destructuring-bind (name &optional (default-value nil default-value-supplied?))
-      (ensure-list form)
-    (with-form-object (arg 'auxiliary-function-argument-form parent :name name)
-      (when default-value-supplied?
-        (setf (default-value-of arg) (walk-form default-value :parent arg :environment env))))))
 
 (def unwalker auxiliary-function-argument-form (name supplied-p-parameter)
   (bind ((default-value (awhen (default-value-of -form-)
