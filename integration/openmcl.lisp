@@ -139,7 +139,7 @@
 ;;;
 
 (defun augment-lexenv-with-variable (name lexenv &key special ignored)
-  (let* ((decls (if special `(special ,name)))
+  (let* ((decls (if special `((special ,name))))
          (env (ccl:augment-environment lexenv :variable (list name) :declare decls)))
     ;; augment-environment does not understand ignore decls
     (when ignored

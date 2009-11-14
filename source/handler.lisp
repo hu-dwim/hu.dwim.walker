@@ -66,26 +66,15 @@
               (:variable
                (make-form-object 'walked-lexical-variable-reference-form -parent- :name -form- :definition definition))
               (:unwalked-variable
-               (if (eql definition :special)
+               (if (eql definition :special) ; Local special declaration?
                    (make-form-object 'special-variable-reference-form -parent- :name -form-)
                    (make-form-object 'unwalked-lexical-variable-reference-form -parent- :name -form-)))
               (:symbol-macro
                (bind ((*inside-macroexpansion* t))
                  (recurse (-lookup- :symbol-macro -form-))))))
-           ((symbol-macro-name? -form- lexenv)
+           ((symbol-macro-name? -form- lexenv) ; Global symbol macro?
             (recurse (walker-macroexpand-1 -form- lexenv)))
-           ;; FIXME special variable handling is most probably not good as it is:
-           ;; check proper behavior regarding the lexenv nesting and the parent walking below for (DECLARE (SPECIAL ...)) entries
-           ((or (special-variable-name? -form- lexenv)
-                (loop
-                   :for node = -parent- :then (parent-of node)
-                   :while node
-                   :do (progn
-                         (when (and (typep node 'implicit-progn-with-declarations-mixin)
-                                    (find-form-by-name -form- (declarations-of node)
-                                                       :type 'special-variable-declaration-form))
-                           (return t)))))
-            ;; TODO try to lookup a binding and if one was found then store it in the :definition slot
+           ((special-variable-name? -form- lexenv) ; Globally proclaimed special variable?
             (make-form-object 'special-variable-reference-form -parent- :name -form-))
            (t
             (handle-undefined-reference :variable -form-)

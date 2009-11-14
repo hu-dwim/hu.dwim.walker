@@ -174,6 +174,13 @@
             (appendf walked-declarations walked-declaration)))))
     walked-declarations))
 
+(def function augment-with-special-vars (env declarations)
+  (reduce (lambda (env form)
+            (if (typep form 'special-variable-declaration-form)
+                (augment-walk-environment env :unwalked-variable (name-of form) :special)
+                env))
+          declarations :initial-value env))
+
 (def (function e) walk-implict-progn (parent forms env &key declarations-callback docstring-allowed declarations-allowed (whole *current-form*))
   (assert (and (typep parent 'implicit-progn-mixin)
                (or (not declarations-allowed)
@@ -190,7 +197,9 @@
         (setf (declarations-of parent) walked-declarations)
         (when declarations-callback
           ;; always call declarations-callback because some crucial sideffects may happen inside them (like in LET's walker)
-          (setf env (funcall declarations-callback walked-declarations)))))
+          (setf env (funcall declarations-callback walked-declarations)))
+        ;; Add special declarations to the environment
+        (setf env (augment-with-special-vars env walked-declarations))))
     (setf (body-of parent) (mapcar (lambda (form)
                                      (walk-form form :parent parent :environment env))
                                    (coerce-to-form body)))

@@ -95,10 +95,9 @@
 
 (defun augment-lexenv-with-variable (name lexenv &key special ignored)
   (let* ((env (c::cmp-env-copy lexenv))
-         (var (if special
-                  (c::c1make-global-variable name :warn nil :kind 'c::special)
-                  (c::%make-var :name name :kind 'c::lexical
-                                :ref (if ignored -1 0)))))
+         (var (c::%make-var :name name
+                            :kind (if special 'c::special 'c::lexical)
+                            :ref (if ignored -1 0))))
     ;; cmp-env-register-var has a bug and would
     ;; update the wrong environment
     (push (list (c::var-name var)

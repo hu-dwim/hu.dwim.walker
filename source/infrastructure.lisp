@@ -178,6 +178,9 @@
                    (:symbol-macro (augment-lexenv-with-symbol-macro name datum lexenv))
                    (:block        (augment-lexenv-with-block        name lexenv))
                    (:tag          (augment-lexenv-with-tag          name lexenv))
+                   (:unwalked-variable
+                    (assert (eql datum :special))
+                    (augment-lexenv-with-variable name lexenv :special t))
                    ;; TODO
                    (:declare      lexenv)
                    (:tagbody      lexenv)))

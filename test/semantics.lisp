@@ -114,6 +114,34 @@
       (is (typep (nth 5 body) 'unwalked-lexical-variable-reference-form))
       (is (typep (nth 6 body) 'unwalked-lexical-variable-reference-form)))))
 
+(def test test/semantics/specials/3 ()
+  ;; Same as 2, but inside the walker
+  (bind ((walked (walk-form `(let ((spec1 1)
+                                   (spec3 0)
+                                   (lex1 2))
+                               (declare (special spec1 spec2 lex2))
+                               ;; here: spec3 lexical, lex2 special
+                               (locally
+                                   (declare (special spec3 spec4 lex3))
+                                 ;; here spec3 shadowed by a special
+                                 (let ((lex2 3)
+                                       (lex3 4))
+                                   ;; here lex2 & lex3 are lexical because
+                                   ;; let is affected only by global and
+                                   ;; immediate special declarations.
+                                   (progn spec1 spec2 spec3 spec4
+                                          lex1 lex2 lex3))))))
+         (locally-form (first (body-of walked)))
+         (let-form (first (body-of locally-form)))
+         (body (body-of (first (body-of let-form)))))
+    (is (typep (nth 0 body) 'special-variable-reference-form))
+    (is (typep (nth 1 body) 'special-variable-reference-form))
+    (is (typep (nth 2 body) 'special-variable-reference-form))
+    (is (typep (nth 3 body) 'special-variable-reference-form))
+    (is (typep (nth 4 body) 'walked-lexical-variable-reference-form))
+    (is (typep (nth 5 body) 'walked-lexical-variable-reference-form))
+    (is (typep (nth 6 body) 'walked-lexical-variable-reference-form))))
+
 (def test test/semantics/flet/1 ()
   (bind ((walked (walk-form '(flet ((foo ()
                                      1))
