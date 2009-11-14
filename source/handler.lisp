@@ -66,7 +66,9 @@
               (:variable
                (make-form-object 'walked-lexical-variable-reference-form -parent- :name -form- :definition definition))
               (:unwalked-variable
-               (make-form-object 'unwalked-lexical-variable-reference-form -parent- :name -form-))
+               (if (eql definition :special)
+                   (make-form-object 'special-variable-reference-form -parent- :name -form-)
+                   (make-form-object 'unwalked-lexical-variable-reference-form -parent- :name -form-)))
               (:symbol-macro
                (bind ((*inside-macroexpansion* t))
                  (recurse (-lookup- :symbol-macro -form-))))))

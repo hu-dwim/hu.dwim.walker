@@ -83,22 +83,33 @@
             (dolist (cell (ccl::defenv.symbol-macros env))
               (funcall visitor (car cell) :macro? t :macro-body (cdr cell)))))
         ;; Enumerate vars
-        (dolist (var-spec (ccl-get-env-vars env))
-          (let* ((name      (ccl::var-name var-spec))
-                 (var-decls (ccl-get-var-decls name env))
-                 (macro?    (ccl-symbol-macro-p var-spec))
-                 (ignored?  (ccl-ignored-decl-p var-decls))
-                 (special?  (ccl-special-decl-p var-decls)))
-            (if macro?
-                (when include-macros?
-                  (funcall visitor name :macro? t
-                           :macro-body (cdr (ccl::var-expansion var-spec))))
-                (when (and (or (not ignored?)
-                               include-ignored?)
-                           (or (not special?)
-                               include-specials?)
-                           (not (member name hide-list)))
-                  (funcall visitor name :ignored? ignored? :special? special?))))))))
+        (let* ((decls         (ccl::lexenv.vdecls env))
+               (special-decls (remove 'special decls :key #'cadr :test-not #'eq)))
+          (dolist (var-spec (ccl-get-env-vars env))
+            (let* ((name      (ccl::var-name var-spec))
+                   (macro?    (ccl-symbol-macro-p var-spec))
+                   (ignored?  (find-if (lambda (item)
+                                         (and (eq (first item) name)
+                                              (eq (second item) 'ignore)
+                                              (cddr item)))
+                                       decls))
+                   (special?  (find name special-decls :key #'car)))
+              (when special?
+                (deletef special-decls name :key #'car))
+              (if macro?
+                  (when include-macros?
+                    (funcall visitor name :macro? t
+                             :macro-body (cdr (ccl::var-expansion var-spec))))
+                  (when (and (or (not ignored?)
+                                 include-ignored?)
+                             (or (not special?)
+                                 include-specials?)
+                             (not (member name hide-list)))
+                    (funcall visitor name :ignored? ignored? :special? special?)))))
+          ;; Enumerate var-less special decls as vars
+          (when include-specials?
+            (dolist (decl special-decls)
+              (funcall visitor (car decl) :special? t)))))))
 
 (defun iterate-functions-in-lexenv (visitor lexenv &key include-macros?)
   (do-ccl-env-chain (env lexenv :with-defenv t)

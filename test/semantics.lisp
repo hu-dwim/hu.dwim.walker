@@ -65,23 +65,54 @@
   (bind ((spec 42))
     (declare (special spec))
     (bind ((walked (macrolet ((macro (&environment lexenv)
-                                (walk-form '(let ((spec 43))
-                                             ;; it should be walked into a special-variable-reference-form due to the wrapping (declare (special ...)).
-                                             ;; tests how lexenv's keep track of special var declarations.
-                                             spec)
+                                (walk-form '(let ((spec2 44)
+                                                  (spec 43))
+                                             (declare (special spec2))
+                                             ;; spec2 is special, but spec is not,
+                                             ;; because local special decls affect
+                                             ;; only usages, not bindings.
+                                             spec2 spec)
                                            :environment (make-walk-environment lexenv))))
                      (macro)))
            (body (body-of walked))
            (variable-binding (first (bindings-of walked)))
            (variable-reference (first body)))
       (is (= spec 42)) ; gets rid of a warning...
-      (is (= 1 (length body)))
+      (is (= 2 (length body)))
       (is (typep variable-reference 'special-variable-reference-form))
-      (is (eq (name-of variable-reference) 'spec))
+      (is (eq (name-of variable-reference) 'spec2))
       (is (special-binding? variable-binding))
+      (is (typep (second body) 'lexical-variable-reference-form))
       (with-expected-failures
         (is (eql (value-of (initial-value-of (definition-of variable-reference))) 43)))
       walked)))
+
+(def test test/semantics/specials/2 ()
+  (with-captured-env (env (let ((spec1 1)
+                                (spec3 0)
+                                (lex1 2))
+                            (declare (special spec1 spec2 lex2))
+                            ;; here: spec3 lexical, lex2 special
+                            (locally
+                                (declare (special spec3 spec4 lex3))
+                              ;; here spec3 shadowed by a special
+                              (let ((lex2 3)
+                                    (lex3 4))
+                                ;; here lex2 & lex3 are lexical because
+                                ;; let is affected only by global and
+                                ;; immediate special declarations.
+                                -here-))))
+    (bind ((walked (walk-form '(progn spec1 spec2 spec3 spec4
+                                lex1 lex2 lex3)
+                              :environment (make-walk-environment env)))
+           (body (body-of walked)))
+      (is (typep (nth 0 body) 'special-variable-reference-form))
+      (is (typep (nth 1 body) 'special-variable-reference-form))
+      (is (typep (nth 2 body) 'special-variable-reference-form))
+      (is (typep (nth 3 body) 'special-variable-reference-form))
+      (is (typep (nth 4 body) 'unwalked-lexical-variable-reference-form))
+      (is (typep (nth 5 body) 'unwalked-lexical-variable-reference-form))
+      (is (typep (nth 6 body) 'unwalked-lexical-variable-reference-form)))))
 
 (def test test/semantics/flet/1 ()
   (bind ((walked (walk-form '(flet ((foo ()
