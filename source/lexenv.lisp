@@ -198,15 +198,16 @@
 ;;; symbol-macros
 ;;;
 (def (macro e) do-symbol-macros-in-lexenv ((lexenv name &optional (definition (gensym) definition-provided?))
-                                            &body body &aux (macro? (gensym)))
-  `(iterate-variables-in-lexenv
-    (lambda (,name &key ((:macro-body ,definition)) ((:macro? ,macro?)) &allow-other-keys)
-      ,@(unless definition-provided?
-          `((declare (ignore ,definition))))
-      (when ,macro?
-        ,@body))
-    ,lexenv
-    :include-macros? t))
+                                            &body body)
+  (with-unique-names (macro?)
+    `(iterate-variables-in-lexenv
+      (lambda (,name &key ((:macro-body ,definition)) ((:macro? ,macro?)) &allow-other-keys)
+        ,@(unless definition-provided?
+            `((declare (ignore ,definition))))
+        (when ,macro?
+          ,@body))
+      ,lexenv
+      :include-macros? t)))
 
 (def (function e) collect-symbol-macros-in-lexenv (lexenv &key filter)
   (let ((result (list)))

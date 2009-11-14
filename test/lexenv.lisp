@@ -17,12 +17,13 @@
                     ,form)))
   (values))
 
-(defmacro with-captured-env ((env form) &body code)
+(defmacro with-captured-env ((env-variable form) &body code)
   "Executes code with env captured at the point marked -here-"
-  (let ((wenv (gensym "ENV-HANDLER")))
-    `(flet ((,wenv (,env) ,@code))
+  (with-unique-names (body)
+    `(flet ((,body (,env-variable)
+              ,@code))
        (compile* (subst `(macrolet ((-here- (&environment env)
-                                      (funcall ,#',wenv env)))
+                                      (funcall ,#',body env)))
                            (-here-))
                         '-here- ',form)))))
 

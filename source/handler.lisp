@@ -255,7 +255,7 @@
                                                    (setf (initial-value-of binding) (recurse initial-value binding))
                                                    (if (and (not (special-variable-name? name lexenv))
                                                             (not (find-form-by-name name declarations
-                                                                                      :type 'special-variable-declaration-form)))
+                                                                                    :type 'special-variable-declaration-form)))
                                                        (-augment- :variable name binding)
                                                        (setf (special-binding? binding) t))))))
                               ;; we've extended the env, inform WALK-IMPLICT-PROGN about it
