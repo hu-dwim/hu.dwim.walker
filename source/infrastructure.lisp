@@ -8,8 +8,9 @@
 
 (def structure (walk-environment (:constructor %make-walk-environment (&optional walked-environment lexical-environment))
                                  (:conc-name #:env/))
-  (walked-environment '())
-  lexical-environment)
+  ;; TODO the walked-environment slot name and is confusing. either rename the struct, or rename this slot to something more intuitive...
+  (walked-environment '()) ; contains the already walked *-form instances
+  lexical-environment) ; the underlying lisp's internal lexenv
 
 (def (condition* e) walker-error (error)
   ())
@@ -142,11 +143,6 @@
 ;;;
 ;;; Walk environment
 ;;;
-
-;; there are three players here:
-;; 1) the walkenv, which contains the already walked *-form instances
-;; 2) the lexenv, which is the underlying lisp's internal lexenv
-;; 3) the combined environment, which is (cons walkenv lexenv)
 
 (def (function e) make-walk-environment (&optional lexenv)
   (unless lexenv
