@@ -100,23 +100,18 @@
                            (not (member name hide-list)))
                   (funcall visitor name :ignored? ignored? :special? special?))))))))
 
-(defun iterate-functions-in-lexenv (visitor lexenv)
-  (do-ccl-env-chain (env lexenv)
-    (dolist (func-spec (ccl::lexenv.functions env))
-      (let* ((name      (ccl::maybe-setf-name (first func-spec)))
-             (function? (eql 'ccl::function (second func-spec))))
-        (when function?
-          (funcall visitor name))))))
-
-(defun iterate-macros-in-lexenv (visitor lexenv)
+(defun iterate-functions-in-lexenv (visitor lexenv &key include-macros?)
   (do-ccl-env-chain (env lexenv :with-defenv t)
     ;; lexenv.functions can operate on a defenv
     (dolist (func-spec (ccl::lexenv.functions env))
-      (let* ((name     (first func-spec))
+      (let* ((name      (ccl::maybe-setf-name (first func-spec)))
+             (function? (eql 'ccl::function (second func-spec)))
              (macro?   (eql 'ccl::macro (second func-spec))))
-        (when macro?
+        (when (and macro? include-macros?)
           (assert (functionp (cddr func-spec)))
-          (funcall visitor name (cddr func-spec)))))))
+          (funcall visitor name :macro? t :macro-function (cddr func-spec)))
+        (when function?
+          (funcall visitor name))))))
 
 (defun iterate-blocks-in-lexenv (visitor lexenv)
   (declare (ignore visitor lexenv))

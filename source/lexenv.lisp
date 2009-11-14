@@ -11,8 +11,7 @@
 (defparameter *lexical-environment-functions*
   '((make-empty-lexical-environment  "Returns an empty lexical environment useful for testing and playing around in the repl.")
     (iterate-variables-in-lexenv     "(funcall VISITOR name &key ignored? special? macro? macro-body) for each variable or symbol macro definition in LEXENV.")
-    (iterate-functions-in-lexenv     "(funcall VISITOR name) for each function definition in LEXENV.")
-    (iterate-macros-in-lexenv        "(funcall VISITOR name macro-function) for each macro definition in LEXENV.")
+    (iterate-functions-in-lexenv     "(funcall VISITOR name &key macro? macro-function) for each function or macro definition in LEXENV.")
     (iterate-blocks-in-lexenv        "(funcall VISITOR name) for each block in LEXENV.")
     (iterate-tags-in-lexenv          "(funcall VISITOR name) for each tag in LEXENV.")
     (augment-lexenv-with-variable)
@@ -129,11 +128,17 @@
 ;;;
 ;;; functions
 ;;;
-(def (macro e) do-functions-in-lexenv ((lexenv name) &body body)
+(def (macro e) do-functions-in-lexenv ((lexenv name &optional
+                                               (macro? (gensym) macro-provided?)
+                                               (macro-function (gensym) macro-function-provided?))
+                                       &body body)
   `(iterate-functions-in-lexenv
-    (lambda (,name)
+    (lambda (,name &key ((:macro? ,macro?)) ((:macro-function ,macro-function)))
+      (declare (ignorable ,@(unless macro-provided? (list macro?))
+                          ,@(unless macro-function-provided? (list macro-function))))
       ,@body)
-    ,lexenv))
+    ,lexenv
+    :include-macros? ,macro-provided?))
 
 (def (function e) collect-functions-in-lexenv (lexenv &key filter)
   (let ((result (list)))
@@ -157,31 +162,36 @@
 ;;; macros
 ;;;
 (def (macro e) do-macros-in-lexenv ((lexenv name &optional (macro-fn (gensym) macro-fn-provided?))
-                                     &body body)
-  `(iterate-macros-in-lexenv
-    (lambda (,name ,macro-fn)
+                                     &body body &aux (macro? (gensym)))
+  `(iterate-functions-in-lexenv
+    (lambda (,name &key ((:macro? ,macro?)) ((:macro-function ,macro-fn)))
       ,@(unless macro-fn-provided?
         `((declare (ignore ,macro-fn))))
-      ,@body)
-    ,lexenv))
+      (when ,macro?
+        ,@body))
+    ,lexenv
+    :include-macros? t))
 
 (def (function e) collect-macros-in-lexenv (lexenv &key filter)
   (let ((result (list)))
-    (iterate-macros-in-lexenv
-     (lambda (name macro-function)
+    (iterate-functions-in-lexenv
+     (lambda (name &key macro? macro-function)
        (declare (ignore macro-function))
-       (when (or (not filter)
-                 (funcall filter name))
+       (when (and macro?
+                  (or (not filter)
+                      (funcall filter name)))
          (push name result)))
-     lexenv)
+     lexenv
+     :include-macros? t)
     (nreverse result)))
 
 (def (function e) find-macro-in-lexenv (name-to-find lexenv)
-  (iterate-macros-in-lexenv
-   (lambda (name macro-function)
-     (when (eq name name-to-find)
+  (iterate-functions-in-lexenv
+   (lambda (name &key macro? macro-function)
+     (when (and macro? (eq name name-to-find))
        (return-from find-macro-in-lexenv (values name macro-function))))
-   lexenv)
+   lexenv
+   :include-macros? t)
   (values nil))
 
 ;;;

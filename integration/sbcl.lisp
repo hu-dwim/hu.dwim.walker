@@ -35,28 +35,18 @@
                         include-specials?))
            (funcall visitor name :ignored? ignored? :special? special?))))
 
-(defun iterate-functions-in-lexenv (visitor lexenv)
-  (loop
-     :for entry :in (sb-c::lexenv-funs lexenv)
-     :for name = (first entry)
-     :for definition = (rest entry)
-     :unless (and (consp definition)
-                  (eq 'sb-sys::macro (first definition)))
-     :do (funcall visitor name)))
-
-(defun iterate-macros-in-lexenv (visitor lexenv)
+(defun iterate-functions-in-lexenv (visitor lexenv &key include-macros?)
   (loop
      :for entry :in (sb-c::lexenv-funs lexenv)
      :for name = (first entry)
      :for definition = (rest entry)
      :for macro? = (and (consp definition)
                         (eq 'sb-sys::macro (first definition)))
-     :for macro-function = (when macro?
-                             (rest definition))
-     :when macro?
-     :do (progn
-           (assert (functionp macro-function))
-           (funcall visitor name macro-function))))
+     :do (if macro?
+             (when include-macros?
+               (funcall visitor name :macro? t
+                        :macro-function (rest definition)))
+             (funcall visitor name))))
 
 (defun iterate-blocks-in-lexenv (visitor lexenv)
   (loop

@@ -165,10 +165,10 @@
             (extend :symbol-macro name macro-body)
             (unless (or ignored? special?)
               (extend :unwalked-variable name t))))
-      (do-functions-in-lexenv (lexenv name)
-        (extend :unwalked-function name t))
-      (do-macros-in-lexenv (lexenv name macro-fn)
-        (extend :macro name macro-fn)))
+      (do-functions-in-lexenv (lexenv name macro? macro-fn)
+        (if macro?
+            (extend :macro name macro-fn)
+            (extend :unwalked-function name t))))
     (%make-walk-environment (nreverse walkedenv) lexenv)))
 
 (def function augment-walk-environment (env type name &optional datum)

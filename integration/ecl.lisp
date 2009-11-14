@@ -68,16 +68,15 @@
                        include-ignored?))
           (funcall visitor name :ignored? ignored? :special? special?))))))
 
-(defun iterate-functions-in-lexenv (visitor lexenv)
+(defun iterate-functions-in-lexenv (visitor lexenv &key include-macros?)
   (dolist (spec (c::cmp-env-functions lexenv))
+    (when (and (ecl-macro-spec-p spec)
+               include-macros?)
+      (assert (functionp (third spec)))
+      (funcall visitor (first spec) :macro? t
+               :macro-function (third spec)))
     (when (ecl-function-spec-p spec)
       (funcall visitor (first spec)))))
-
-(defun iterate-macros-in-lexenv (visitor lexenv)
-  (dolist (spec (c::cmp-env-functions lexenv))
-    (when (ecl-macro-spec-p spec)
-      (assert (functionp (third spec)))
-      (funcall visitor (first spec) (third spec)))))
 
 (defun iterate-blocks-in-lexenv (visitor lexenv)
   (dolist (spec (c::cmp-env-variables lexenv))
