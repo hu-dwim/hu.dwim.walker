@@ -28,7 +28,7 @@
    :do (when documentation
          (setf (documentation name 'function) documentation)))
 
-(defun unimplemented-lexical-environment-function ()
+(defun missing-lexical-environment-function ()
   (cerror "ignore and try to continue" "This is not implemented for your lisp, sorry. You may try to continue, but...")
   nil)
 
@@ -42,7 +42,7 @@
            (setf (fdefinition name)
                  (lambda (&rest args)
                    (declare (ignore args))
-                   (unimplemented-lexical-environment-function))))))
+                   (missing-lexical-environment-function))))))
 
 (def (function e) lookup-in-lexenv (kind name lexenv &key (otherwise :error))
   (bind ((result (multiple-value-list
