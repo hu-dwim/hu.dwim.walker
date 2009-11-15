@@ -29,7 +29,6 @@
    #:make-empty-lexical-environment
    #:iterate-variables-in-lexenv
    #:iterate-functions-in-lexenv
-   #:iterate-macros-in-lexenv
    #:iterate-blocks-in-lexenv
    #:iterate-tags-in-lexenv
    ))
