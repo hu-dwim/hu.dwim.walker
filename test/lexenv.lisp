@@ -18,14 +18,19 @@
   (values))
 
 (defmacro with-captured-env ((env-variable form) &body code)
-  "Executes code with env captured at the point marked -here-"
+  "Executes code with env captured at the point marked -here-.
+The captured environment includes a '-here-' macrolet.
+Use return to abort compilation and produce a value."
   (with-unique-names (body)
-    `(flet ((,body (,env-variable)
-              ,@code))
-       (compile* (subst `(macrolet ((-here- (&environment env)
-                                      (funcall ,#',body env)))
-                           (-here-))
-                        '-here- ',form)))))
+    `(block nil
+       (let ((,body (lambda (,env-variable) ,@code)))
+         (declare (special ,body)) ; For the macrolet
+         (compile* ',(subst `(macrolet ((-here- (&environment env)
+                                          (declare (special ,body))
+                                          (funcall ,body env)
+                                          nil))
+                               (-here-))
+                            '-here- form))))))
 
 (defsuite* (test/lexenv/query :in test/lexenv))
 
