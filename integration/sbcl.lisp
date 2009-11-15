@@ -13,6 +13,13 @@
   (sb-kernel:make-null-lexenv))
 
 ;;;;;;
+;;; Miscellaneous
+
+(def function proclaimed-special-in-lexenv? (name lexenv)
+  (declare (ignore lexenv))
+  (eq (sb-int:info :variable :kind name) :special))
+
+;;;;;;
 ;;; Iteration
 
 (defun iterate-variables-in-lexenv (visitor lexenv &key

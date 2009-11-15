@@ -40,7 +40,7 @@
   (let ((lst (ccl::lexenv.variables env)))
     (if (listp lst) lst)))
 
-(defun ccl-proclaimed-special-p (name &optional lexenv)
+(defun proclaimed-special-in-lexenv? (name lexenv)
   ;; During compilation the special proclamations are
   ;; collected in the definition environment.
   (let* ((defenv (ccl::definition-environment lexenv))

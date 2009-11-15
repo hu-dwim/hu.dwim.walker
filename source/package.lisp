@@ -31,4 +31,5 @@
    #:iterate-functions-in-lexenv
    #:iterate-blocks-in-lexenv
    #:iterate-tags-in-lexenv
+   #:proclaimed-special-in-lexenv?
    ))

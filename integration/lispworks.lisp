@@ -6,6 +6,13 @@
 
 (in-package :hu.dwim.walker)
 
+;;;;;;
+;;; Miscellaneous
+
+(def function proclaimed-special-in-lexenv? (name lexenv)
+  (declare (ignore lexenv))
+  (eq (common-lisp::variable-information name) :special))
+
 #+(and lispworks macosx)
 (progn
 

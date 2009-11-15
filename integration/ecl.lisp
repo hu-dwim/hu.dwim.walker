@@ -48,6 +48,14 @@
   (< (c::var-ref (fourth spec)) 0))
 
 ;;;
+;;; miscellaneous
+;;;
+
+(def function proclaimed-special-in-lexenv? (name lexenv)
+  (declare (ignore lexenv))
+  (sys:specialp name))
+
+;;;
 ;;; iteration
 ;;;
 

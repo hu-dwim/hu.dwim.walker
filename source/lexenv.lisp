@@ -20,6 +20,7 @@
     (augment-lexenv-with-symbol-macro)
     (augment-lexenv-with-block)
     (augment-lexenv-with-tag)
+    (proclaimed-special-in-lexenv?)
     ))
 
 ;;; set up some docstrings
