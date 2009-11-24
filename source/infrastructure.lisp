@@ -145,13 +145,14 @@
   (bind ((walkedenv '()))
     (macrolet ((extend (type name datum &rest other-datum)
                  `(setf walkedenv (%repository/augment walkedenv ,type ,name ,datum ,@other-datum))))
-      (do-variables-in-lexenv (lexenv name ignored? special? macro? macro-body)
+      (do-variables-in-lexenv (lexenv name ignored? special? macro? macro-body type)
         (if macro?
             (extend :symbol-macro name macro-body)
             (extend :unwalked-variable name
-                    (cond (special? :special)
-                          (ignored? :ignored)
-                          (t t)))))
+                    (cons (cond (special? :special)
+                                (ignored? :ignored)
+                                (t t))
+                          type))))
       (do-functions-in-lexenv (lexenv name macro? macro-fn)
         (if macro?
             (extend :macro name macro-fn)
@@ -170,7 +171,7 @@
                    (:block        (augment-lexenv-with-block        name lexenv))
                    (:tag          (augment-lexenv-with-tag          name lexenv))
                    (:unwalked-variable
-                    (assert (eql datum :special))
+                    (assert (eql (car datum) :special))
                     (augment-lexenv-with-variable name lexenv :special t))
                    ;; TODO
                    (:declare      lexenv)

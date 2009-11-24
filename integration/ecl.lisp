@@ -47,6 +47,9 @@
 (defun ecl-ignored-var-p (spec)
   (< (c::var-ref (fourth spec)) 0))
 
+(defun nullify-t (value)
+  (if (eq value t) nil value))
+
 ;;;
 ;;; miscellaneous
 ;;;
@@ -54,6 +57,10 @@
 (def function proclaimed-special-in-lexenv? (name lexenv)
   (declare (ignore lexenv))
   (sys:specialp name))
+
+(def function global-variable-type-in-lexenv (name lexenv)
+  (declare (ignore lexenv))
+  (or (si::get-sysprop name 'c::CMP-TYPE) t))
 
 ;;;
 ;;; iteration
@@ -69,12 +76,15 @@
     (when (ecl-variable-spec-p spec)
       (let* ((name     (first spec))
              (special? (ecl-special-var-p spec))
-             (ignored? (ecl-ignored-var-p spec)))
+             (ignored? (ecl-ignored-var-p spec))
+             (type     (or (nullify-t (c::var-type (fourth spec)))
+                           (if special? (si::get-sysprop name 'c::CMP-TYPE))
+                           't)))
         (when (and (or (not special?)
                        include-specials?)
                    (or (not ignored?)
                        include-ignored?))
-          (funcall visitor name :ignored? ignored? :special? special?))))))
+          (funcall visitor name :ignored? ignored? :special? special? :type type))))))
 
 (defun iterate-functions-in-lexenv (visitor lexenv &key include-macros?)
   (dolist (spec (c::cmp-env-functions lexenv))

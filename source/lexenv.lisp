@@ -21,6 +21,7 @@
     (augment-lexenv-with-block)
     (augment-lexenv-with-tag)
     (proclaimed-special-in-lexenv?)
+    (global-variable-type-in-lexenv)
     ))
 
 ;;; set up some docstrings
@@ -90,14 +91,16 @@
                                                (ignored? (gensym) ignored-provided?)
                                                (special? (gensym) special-provided?)
                                                (macro? (gensym) macro-provided?)
-                                               (macro-body (gensym)))
+                                               (macro-body (gensym))
+                                               (type (gensym) type-provided?))
                                         &body body)
   `(iterate-variables-in-lexenv
     (lambda (,name &key ((:ignored? ,ignored?) nil) ((:special? ,special?) nil)
-        ((:macro? ,macro?) nil) ((:macro-body ,macro-body) nil))
+        ((:macro? ,macro?) nil) ((:macro-body ,macro-body) nil) ((:type ,type) nil))
       (declare (ignorable ,@(unless ignored-provided? (list ignored?))
                           ,@(unless special-provided? (list special?))
-                          ,@(unless macro-provided? (list macro? macro-body))))
+                          ,@(unless macro-provided? (list macro? macro-body))
+                          ,@(unless type-provided? (list type))))
       ,@body)
     ,lexenv
     :include-macros? ,macro-provided?

@@ -177,7 +177,11 @@
 (def function augment-with-special-vars (env declarations)
   (reduce (lambda (env form)
             (if (typep form 'special-variable-declaration-form)
-                (augment-walk-environment env :unwalked-variable (name-of form) :special)
+                (let* ((name (name-of form))
+                       (type-form (find-form-by-name name declarations
+                                                     :type 'type-declaration-form))
+                       (type (if type-form (declared-type-of type-form))))
+                  (augment-walk-environment env :unwalked-variable name (cons :special type)))
                 env))
           declarations :initial-value env))
 

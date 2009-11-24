@@ -19,18 +19,35 @@
   (declare (ignore lexenv))
   (eq (sb-int:info :variable :kind name) :special))
 
+(def function sbcl-unparse-type (type)
+  (if (null type) 't
+      (let ((info (sb-kernel::type-class-info type)))
+        (funcall (sb-kernel::type-class-unparse info) type))))
+
+(def function global-variable-type-in-lexenv (name lexenv)
+  (declare (ignore lexenv))
+  (multiple-value-bind (type found)
+      (sb-int:info :variable :type name)
+    (if found (sbcl-unparse-type type) t)))
+
 ;;;;;;
 ;;; Iteration
 
 (defun iterate-variables-in-lexenv (visitor lexenv &key
                                     include-ignored? include-specials? include-macros?)
   (loop
+     :with types = (sb-c::lexenv-type-restrictions lexenv)
      :for entry :in (sb-c::lexenv-vars lexenv)
      :for name = (first entry)
      :for definition = (rest entry)
      :for ignored? = (and (typep definition 'sb-c::lambda-var)
                           (sb-c::lambda-var-ignorep definition))
      :for special? = (typep definition 'sb-c::global-var)
+     :for type = (or (cdr (assoc definition types))
+                     (typecase definition
+                       (sb-c::global-var (sb-c::global-var-type definition))
+                       (sb-c::lambda-var (sb-c::lambda-var-type definition))
+                       (t nil)))
      :if (and (consp definition)
               (eq 'sb-sys::macro (first definition)))
      :do (when include-macros?
@@ -40,7 +57,8 @@
                         include-ignored?)
                     (or (not special?)
                         include-specials?))
-           (funcall visitor name :ignored? ignored? :special? special?))))
+           (funcall visitor name :ignored? ignored? :special? special?
+                    :type (sbcl-unparse-type type)))))
 
 (defun iterate-functions-in-lexenv (visitor lexenv &key include-macros?)
   (loop

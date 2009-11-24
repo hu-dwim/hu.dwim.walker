@@ -41,12 +41,12 @@
   (:documentation "A reference to a local variable defined in the lexical environment inside the form passed to walk-form."))
 
 (def form-class unwalked-lexical-variable-reference-form (lexical-variable-reference-form)
-  ()
+  (declared-type)
   (:documentation "A reference to a local variable defined in the lexical environment outside of the form passed to walk-form."))
 
 ;; TODO should we add/handle walked-special-variable-reference-form?
 (def form-class special-variable-reference-form (variable-reference-form)
-  ())
+  (declared-type))
 
 (def form-class free-variable-reference-form (special-variable-reference-form)
   ())
@@ -66,19 +66,23 @@
               (:variable
                (make-form-object 'walked-lexical-variable-reference-form -parent- :name -form- :definition definition))
               (:unwalked-variable
-               (if (eql definition :special) ; Local special declaration?
-                   (make-form-object 'special-variable-reference-form -parent- :name -form-)
-                   (make-form-object 'unwalked-lexical-variable-reference-form -parent- :name -form-)))
+               (if (eql (car definition) :special) ; Local special declaration?
+                   (make-form-object 'special-variable-reference-form -parent-
+                                     :name -form- :declared-type (cdr definition))
+                   (make-form-object 'unwalked-lexical-variable-reference-form -parent-
+                                     :name -form- :declared-type (cdr definition))))
               (:symbol-macro
                (bind ((*inside-macroexpansion* t))
                  (recurse (-lookup- :symbol-macro -form-))))))
            ((symbol-macro-name? -form- lexenv) ; Global symbol macro?
             (recurse (walker-macroexpand-1 -form- lexenv)))
            ((special-variable-name? -form- lexenv) ; Globally proclaimed special variable?
-            (make-form-object 'special-variable-reference-form -parent- :name -form-))
+            (make-form-object 'special-variable-reference-form -parent- :name -form-
+                              :declared-type (global-variable-type-in-lexenv -form- lexenv)))
            (t
             (handle-undefined-reference :variable -form-)
-            (make-form-object 'free-variable-reference-form -parent- :name -form-))))))))
+            (make-form-object 'free-variable-reference-form -parent- :name -form-
+                              :declared-type (global-variable-type-in-lexenv -form- lexenv)))))))))
 
 ;;;; BLOCK/RETURN-FROM
 
