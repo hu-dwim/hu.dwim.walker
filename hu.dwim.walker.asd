@@ -12,8 +12,7 @@
   :class hu.dwim.system
   :author ("Attila Lendvai <attila.lendvai@gmail.com>"
            "Levente Mészáros <levente.meszaros@gmail.com>")
-  :licence "BSD / Public domain"
-  :description "Common Lisp form walker and unwalker (to and from CLOS instances)"
+  :description "Common Lisp form walker and unwalker (to and from CLOS instances)."
   :depends-on (:alexandria
                :anaphora
                :contextl
