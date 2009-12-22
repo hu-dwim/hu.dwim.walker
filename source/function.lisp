@@ -222,7 +222,7 @@
                 (loop
                   :for optional :in optionals
                   ;; TODO report bind bug: (bind (((name &optional (default-value nil default-value-supplied?) supplied-p-parameter) (ensure-list form))) )
-                  ;; it blingly replaces all nil's with '#:ignore-me-123, including the nil default value above.
+                  ;; it blingly replaces all nil's with '#:BIND-IGNORE-1305, including the nil default value above.
                   :collect (destructuring-bind (name &optional (default-value nil default-value-supplied?) supplied-p-parameter-name)
                                (ensure-list optional)
                              (with-form-object (arg 'optional-function-argument-form parent

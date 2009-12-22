@@ -286,22 +286,27 @@
 (def function %walker-handler-body (name body &optional declarations)
   (bind ((function-name (format-symbol *package* "WALKER-HANDLER/~A" name)))
     `(progn
-       (defun ,function-name (-form- -parent- -environment-)
-         (declare (ignorable -parent- -environment-)
-                  ,@declarations)
-         (block nil
-           (bind ((-form- (coerce-to-form -form-)))
-             (macrolet ((-lookup- (type name &key (otherwise nil))
-                          `(%repository/find (env/walked-environment -environment-) ,type ,name :otherwise ,otherwise))
-                        (-augment- (type name &optional datum)
-                          `(setf -environment- (augment-walk-environment -environment- ,type ,name ,datum))))
-               (flet ((recurse (node &optional (parent -parent-) (environment -environment-))
-                        (walk-form node :parent parent :environment environment)))
-                 (declare (ignorable #'recurse))
-                 (with-current-form -form-
-                   ,@body))))))
+       ,(%walker-handler-function-body name '(-form- -parent- -environment-) body
+                                       (list* '(ignorable -parent- -environment-)
+                                              declarations))
        (setf (walker-handler-definition ',name) ',function-name)
        ',name)))
+
+(def function %walker-handler-function-body (name args body &optional declarations)
+  (bind ((function-name (format-symbol *package* "WALKER-HANDLER/~A" name)))
+    `(defun ,function-name ,args
+       (declare ,@declarations)
+       (block nil
+         (bind ((-form- (coerce-to-form -form-)))
+           (macrolet ((-lookup- (type name &key (otherwise nil))
+                        `(%repository/find (env/walked-environment -environment-) ,type ,name :otherwise ,otherwise))
+                      (-augment- (type name &optional datum)
+                        `(setf -environment- (augment-walk-environment -environment- ,type ,name ,datum))))
+             (flet ((recurse (node &optional (parent -parent-) (environment -environment-))
+                      (walk-form node :parent parent :environment environment)))
+               (declare (ignorable #'recurse))
+               (with-current-form -form-
+                 ,@body))))))))
 
 (def (macro e) defwalker-handler (name &body body)
   (%walker-handler-body name body))
@@ -309,6 +314,11 @@
 (def (definer e :available-flags "od") walker (name &body body)
   (with-standard-definer-options name
     (%walker-handler-body name body (function-like-definer-declarations -options-))))
+
+#+nil ; not good as it is...
+(def (definer e :available-flags "od") walker-function (name args &body body)
+  (with-standard-definer-options name
+    (%walker-handler-function-body name args body (function-like-definer-declarations -options-))))
 
 (def function %unwalker-handler-body (class slots body &optional declarations)
   `(progn
