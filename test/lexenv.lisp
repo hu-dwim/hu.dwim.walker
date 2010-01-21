@@ -144,7 +144,7 @@ Use return to abort compilation and produce a value."
     (is (not (find-symbol-macro-in-lexenv 'f1 env)))
     (is (not (find-symbol-macro-in-lexenv 'x env)))))
 
-#-openmcl
+#-(or openmcl allegro)
 (deftest test/lexenv/query/blocks ()
   (with-captured-env (env (block b1
                             (flet ((f1 () 1)
@@ -170,7 +170,7 @@ Use return to abort compilation and produce a value."
     (is (not (find-block-in-lexenv 'f1 env)))
     (is (not (find-block-in-lexenv 'x env)))))
 
-#-openmcl
+#-(or openmcl allegro)
 (deftest test/lexenv/query/tags ()
   (with-captured-env (env (block b1
                             (tagbody
