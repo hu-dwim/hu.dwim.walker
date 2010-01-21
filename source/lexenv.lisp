@@ -149,7 +149,7 @@
 (def (function e) collect-functions-in-lexenv (lexenv &key filter)
   (let ((result (list)))
     (iterate-functions-in-lexenv
-     (lambda (name)
+     (lambda (name &key &allow-other-keys)
        (when (or (not filter)
                  (funcall filter name))
          (push name result)))
@@ -158,7 +158,7 @@
 
 (def (function e) find-function-in-lexenv (name-to-find lexenv)
   (iterate-functions-in-lexenv
-   (lambda (name)
+   (lambda (name &key &allow-other-keys)
      (when (eq name name-to-find)
        (return-from find-function-in-lexenv (values name))))
    lexenv)
