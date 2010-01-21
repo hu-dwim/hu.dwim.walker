@@ -2,68 +2,92 @@
 ;;;
 ;;; Copyright (c) 2009 by the authors.
 ;;;
-;;; See LICENCE for details.
+;;; See COPYING for details.
 
 (in-package :hu.dwim.walker)
 
-#|
+#-(and allegro (version>= 7 0))
+(error "This old version of Allegro CL is not supported by hu.dwim.walker")
 
-TODO provide the new api based on this old code. see lexenv-sbcl.lisp for an example.
+(defun make-empty-lexical-environment ()
+  (sys::make-augmentable-environment-boa :compilation))
 
-#+(and allegro (version>= 7 0))
-(progn
+(defun iterate-variables-in-lexenv (visitor lexenv &key include-ignored?
+                                    include-specials? include-macros?)
+  (system::map-over-environment-variables
+   (lambda (symbol type rest)
+     (declare (ignore type rest))
+     (multiple-value-bind (type env decl) (sys:variable-information symbol lexenv)
+       (let ((ignored (eq 'ignore (cadr (assoc 'ignore decl))))
+             (special (eq :special type))
+             (macro (eq :symbol-macro type)))
+         (when (and (if include-ignored? t (not ignored))
+                    (if include-specials? t (not special))
+                    (if include-macros? t (not macro)))
+           (funcall visitor symbol :ignored? ignored :special? special :macro? macro
+                    :macro-body (and macro (car env)))))))
+   lexenv))
 
-(defmethod lexical-variables ((env sys::augmentable-environment))
-  (let (fns)
-    (system::map-over-environment-variables
-     (lambda (symbol type rest)
-       (declare (ignore rest))
-       (when (and (eq type :lexical)
-                  (sys:variable-information symbol env))
-         (push symbol fns)))
-     env)
-    fns))
+(defun iterate-functions-in-lexenv (visitor lexenv &key include-macros?)
+  (system::map-over-environment-functions
+   (lambda (symbol type rest)
+     (declare (ignore rest))
+     (let ((macro (eq :macro type)))
+       (when (or (eq :function type)
+                 (and include-macros? macro))
+         (funcall visitor symbol :macro? macro
+                  :macro-function (and macro
+                                       (multiple-value-bind (type env decl)
+                                           (sys:function-information symbol lexenv)
+                                         (declare (ignore type decl))
+                                         (car env)))))))
+   lexenv))
 
-(defmethod lexical-functions ((env sys::augmentable-environment))
-  (let (fns)
-    (system::map-over-environment-functions
-     (lambda (name type rest)
-       (when (and (eq type :function)
-                  (sys:function-information name env))
-         (push name fns)))
-     env)
-    fns))
+(defun iterate-blocks-in-lexenv (visitor lexenv)
+  ;; Note: doesn't work using compilation environment (and probably
+  ;; won't work anytime soon [spr36543])
+  (system::map-over-environment-blocks
+   (lambda (symbol type rest)
+     (declare (ignore type rest))
+     (funcall visitor symbol))
+   lexenv))
 
-(defmethod lexical-macros ((env sys::augmentable-environment))
-  (let (fns)
-    (system::map-over-environment-functions
-     (lambda (name type rest)
-       (when (eq type :macro)
-         (push (cons name (car rest)) fns)))
-     env)
-    fns))
+(defun iterate-tags-in-lexenv (visitor lexenv)
+  ;; Note: doesn't work using compilation environment (and probably
+  ;; won't work anytime soon [spr36543])
+  (system::map-over-environment-tags
+   (lambda (symbol type rest)
+     (declare (ignore type rest))
+     (funcall visitor symbol))
+   lexenv))
 
-(defmethod lexical-symbol-macros ((env sys::augmentable-environment))
-  (let (fns)
-    (system::map-over-environment-variables
-     (lambda (symbol type rest)
-       (when (eq type :symbol-macro)
-         (push (cons symbol (car rest)) fns)))
-     env)
-    fns))
+(defun augment-lexenv-with-variable (name env &key special ignored)
+  (declare (ignore special ignored))
+  (system:augment-environment env :variable (list name)))
 
-(defmethod augment-with-variable ((env sys::augmentable-environment) var)
-  (system:augment-environment env :variable (list var)))
-
-(defmethod augment-with-function ((env sys::augmentable-environment) fun)
+(defun augment-lexenv-with-function (fun env)
   (system:augment-environment env :function (list fun)))
 
-(defmethod augment-with-macro ((env sys::augmentable-environment) mac def)
+(defun augment-lexenv-with-macro (mac def env)
   (system:augment-environment env :macro (list (list mac def))))
 
-(defmethod augment-with-symbol-macro ((env sys::augmentable-environment) symmac def)
+(defun augment-lexenv-with-symbol-macro (symmac def env)
   (system:augment-environment env :symbol-macro (list (list symmac def))))
 
-) ; #+(and allegro (version>= 7 0))
+(defun augment-lexenv-with-block (name env)
+  (system:augment-environment env :block (list name)))
 
-|#
+(defun augment-lexenv-with-tag (name env)
+  (system:augment-environment env :tag (list name)))
+
+;;; other
+
+(defun proclaimed-special-in-lexenv? (symbol lexenv)
+  (multiple-value-bind (type env decl) (sys:variable-information symbol lexenv)
+    (declare (ignore env decl))
+    (eq :special type)))
+
+(defun global-variable-type-in-lexenv (symbol lexenv)
+  (multiple-value-bind (type env decl) (sys:variable-information symbol lexenv)
+    (declare (ignore type env))
+    (cddr (assoc 'type decl)))) ;; TODO THL why is decl always nil?
