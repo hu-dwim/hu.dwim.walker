@@ -419,7 +419,7 @@
             (setf (recurse (first effective-code)))))
         ;; multiple forms
         (with-form-object (progn 'progn-form -parent-)
-          (walk-implict-progn progn effective-code -environment-)))))
+          (walk-implict-progn progn (nreverse effective-code) -environment-)))))
 
 (def unwalker setq-form (variable value)
   `(setq ,(recurse variable) ,(recurse value)))
