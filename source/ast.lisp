@@ -6,104 +6,6 @@
 
 (in-package :hu.dwim.walker)
 
-(def (generic e) map-ast (visitor form)
-  (:documentation "Recursively descend main links of the tree.")
-  (:method-combination progn)
-  (:method :around (visitor form)
-    (let ((new (funcall visitor form)))
-      ;; if the visitor returns a new AST node instead of the one being given to it, then stop descending the tree and just return the new one
-      ;; giving full control to the visitor over what to do there.
-      (if (eq new form)
-          (call-next-method)
-          new)
-      new))
-  (:method progn (visitor (form t))
-    ;; a primary method with a huge NOP
-    (declare (ignore visitor)))
-  (:method progn (visitor (form cons))
-    (map-ast visitor (car form))
-    (map-ast visitor (cdr form))))
-
-(def (generic e) rewrite-ast-fields (form visitor &key skip-main-refs include-back-refs)
-  (:documentation "Rewrite tree links using the visitor.")
-  (:method-combination progn)
-  (:method progn ((form t) visitor &key skip-main-refs include-back-refs)
-    ;; a primary method with a huge NOP
-    (declare (ignore form visitor skip-main-refs include-back-refs))))
-
-(def function rewrite-tree (parent accessor visitor value)
-  "Apply visitor to all non-nil leaf values of a cons tree."
-  (cond ((null value) nil)
-        ((consp value)
-         (mapcar (lambda (item)
-                   (rewrite-tree parent accessor visitor item))
-                 value))
-        (t
-         (funcall visitor parent accessor value))))
-
-(def (macro e) define-walker-ast-fields (type &rest accessors)
-  "Define AST-walking generic function methods for the type."
-  (let ((has-main? (not (or (null accessors)
-                            (eq (first accessors) :backrefs))))
-        (backrefs  (cdr (member :backrefs accessors))))
-    `(progn
-       ;; Read-only recursive walking
-       ,(if has-main?
-            `(defmethod map-ast progn (visitor (form ,type))
-               ,@(loop
-                    :for accessor :in accessors
-                    :until (eq accessor :backrefs)
-                    :collect `(map-ast visitor (,accessor form)))))
-       ;; Rewrite
-       (defmethod rewrite-ast-fields progn ((form ,type) visitor &key
-                                            skip-main-refs include-back-refs)
-         (declare (ignorable skip-main-refs include-back-refs))
-         ,(if has-main?
-              `(unless skip-main-refs
-                 ,@(loop
-                      :for accessor :in accessors
-                      :until (eq accessor :backrefs)
-                      :collect `(setf (,accessor form)
-                                      (rewrite-tree form ',accessor visitor
-                                                    (,accessor form))))))
-         ,(if backrefs
-              `(when include-back-refs
-                 ,@(loop
-                      :for accessor :in backrefs
-                      :collect `(setf (,accessor form)
-                                      (rewrite-tree form ',accessor visitor
-                                                    (,accessor form))))))))))
-
-(macrolet ((frob (&rest entries)
-             `(progn
-                ,@(loop
-                     :for (type . accessors) :in entries
-                     :collect `(define-walker-ast-fields ,type ,@accessors)))))
-  (frob
-   (application-form                          operator-of arguments-of)
-   (lambda-function-form                      arguments-of)
-   (function-argument-form-with-default-value default-value-of)
-   (implicit-progn-mixin                      body-of)
-   (implicit-progn-with-declarations-mixin    declarations-of)
-   (binder-form-mixin                         bindings-of)
-   (lexical-variable-binding-form             initial-value-of)
-
-   (lexical-application-form                  :backrefs definition-of)
-   (walked-lexical-function-object-form       :backrefs definition-of)
-   (walked-lexical-variable-reference-form    :backrefs definition-of)
-
-   (return-from-form                          result-of :backrefs target-block-of)
-   (throw-form                                value-of)
-   (if-form                                   condition-of then-of else-of)
-   (multiple-value-call-form                  arguments-of function-designator-of)
-   (multiple-value-prog1-form                 first-form-of other-forms-of)
-   (progv-form                                variables-form-of values-form-of)
-   (setq-form                                 variable-of value-of)
-   (go-form                                   :backrefs tag-of)
-   (the-form                                  declared-type-of value-of)
-   (unwind-protect-form                       protected-form-of cleanup-form-of)
-   (load-time-value-form                      body-of)))
-
 (def (function e) collect-variable-references (top-form &key (type 'variable-reference-form))
   (let ((result (list)))
     (map-ast (lambda (form)
@@ -141,19 +43,12 @@
              form)
            top-form))
 
-(def function copy-form (form &rest initargs)
-  "Duplicate a form instance"
-  ;; TODO: maybe define a generic function for this too?
-  ;; If so, it should be implemented in the form-class
-  ;; definer since it applies to absolutely all slots.
+(def function copy-ast-form (form &rest initargs)
+  "Duplicate an AST form instance"
   (let* ((class (class-of form))
          (copy (allocate-instance class)))
-      (dolist (slot (closer-mop:class-slots class))
-        (let ((slot-name (closer-mop:slot-definition-name slot)))
-          (when (slot-boundp form slot-name)
-            (setf (slot-value copy slot-name)
-                  (slot-value form slot-name)))))
-      (apply #'reinitialize-instance copy initargs)))
+    (copy-ast-slots copy form)
+    (apply #'reinitialize-instance copy initargs)))
 
 (def (function e) rewrite-ast (top-form visitor &key parent parent-field)
   (labels ((rewrite-rec (parent field form)
@@ -182,7 +77,7 @@
                        user-value
                        (or (gethash form lookup-table)
                            ;; Actually copy the node
-                           (let ((new-form (copy-instance form)))
+                           (let ((new-form (copy-ast-form form)))
                              (setf (parent-of new-form) parent)
                              (setf (gethash form lookup-table) new-form)
                              (rewrite-ast-fields new-form #'clone-rec)

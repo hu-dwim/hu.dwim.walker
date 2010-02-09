@@ -349,16 +349,126 @@
 (def (definer e) walker-alias (from-name to-name)
   `(defwalker-handler-alias ,from-name ,to-name))
 
+;;;
+;;; Base AST form class
+;;;
+
+(def (generic e) copy-ast-slots (new old)
+  (:documentation "Copies slots from old to new")
+  (:method-combination progn :most-specific-last))
+
+(def (generic e) map-ast (visitor form)
+  (:documentation "Recursively descend main links of the tree.")
+  (:method-combination progn :most-specific-last)
+  (:method :around (visitor form)
+    (let ((new (funcall visitor form)))
+      ;; if the visitor returns a new AST node instead of the one
+      ;; being given to it, then stop descending the tree and just
+      ;; return the new one giving full control to the visitor over
+      ;; what to do there.
+      (if (eq new form)
+          (call-next-method)
+          new)
+      new))
+  (:method progn (visitor (form t))
+    ;; a primary method with a huge NOP
+    (declare (ignore visitor)))
+  (:method progn (visitor (form cons))
+    (map-ast visitor (car form))
+    (map-ast visitor (cdr form))))
+
+(def (generic e) rewrite-ast-fields (form visitor &key skip-main-refs include-back-refs)
+  (:documentation "Rewrite tree links using the visitor.")
+  (:method-combination progn :most-specific-last)
+  (:method progn ((form t) visitor &key skip-main-refs include-back-refs)
+    ;; a primary method with a huge NOP
+    (declare (ignore form visitor skip-main-refs include-back-refs))))
+
+(def function rewrite-tree (parent slot-name visitor value)
+  "Apply visitor to all non-nil leaf values of a cons tree."
+  (cond ((null value) nil)
+        ((consp value)
+         (mapcar (lambda (item)
+                   (rewrite-tree parent slot-name visitor item))
+                 value))
+        (t
+         (funcall visitor parent slot-name value))))
+
+;; Form class definer. Also defines methods for the above functions.
+
 (def (definer e) form-class (name supers slots &rest args)
-  (when (and (not (eq name 'walked-form))
-             (zerop (length supers)))
-    (setf supers '(walked-form)))
-  `(def (class* ea) ,name ,supers ,slots ,@args))
+  (let* ((new-supers (if (and (not (eq name 'walked-form))
+                              (zerop (length supers)))
+                         '(walked-form)
+                         supers))
+         (copy-forms nil)
+         (main-refs nil)
+         (back-refs nil)
+         (flags (if (getf -options- :export t) '(ea) ()))
+         (new-slots
+          (mapcar (lambda (flags)
+                    (let ((slot (pop flags)))
+                      ;; Replicate logic from class*
+                      (when (oddp (length flags))
+                        (push :initform flags))
+                      ;; Copy by default; allow conversion
+                      (awhen (getf flags :copy-with t)
+                        (push `(when (slot-boundp old ',slot)
+                                 (setf (slot-value new ',slot)
+                                       ,(if (eq it t)
+                                            `(slot-value old ',slot)
+                                            `(funcall ,it (slot-value old ',slot)))))
+                              copy-forms))
+                      ;; Main (parent->child) and back links:
+                      (ecase (getf flags :ast-link)
+                        ((t :main) (push slot main-refs))
+                        ((:back)   (push slot back-refs))
+                        ((nil))) ; Valid, but NOP
+                      ;; Remove the non-standard attributes
+                      (list* slot (remove-from-plist flags :ast-link :copy-with))))
+                  (mapcar #'ensure-list slots)))
+         (bodies
+          (list `(def (class* ,@flags) ,name ,new-supers ,new-slots ,@args))))
+    ;; Generate AST manipulation methods
+    (when copy-forms
+      (push `(defmethod copy-ast-slots progn ((new ,name) (old ,name))
+               ,@(nreverse copy-forms))
+            bodies))
+    (when main-refs
+      (setf main-refs (nreverse main-refs))
+      (push `(defmethod map-ast progn (visitor (form ,name))
+               ,@(loop
+                    :for slot :in main-refs
+                    :collect `(map-ast visitor (slot-value form ',slot))))
+            bodies))
+    (when (or main-refs back-refs)
+      (setf back-refs (nreverse back-refs))
+      (push `(defmethod rewrite-ast-fields progn ((form ,name) visitor &key
+                                                  skip-main-refs include-back-refs)
+               (declare (ignorable skip-main-refs include-back-refs))
+               ,(if main-refs
+                    `(unless skip-main-refs
+                       ,@(loop
+                            :for slot :in main-refs
+                            :collect `(setf (slot-value form ',slot)
+                                            (rewrite-tree form ',slot visitor
+                                                          (slot-value form ',slot))))))
+               ,(if back-refs
+                    `(when include-back-refs
+                       ,@(loop
+                            :for slot :in back-refs
+                            :collect `(setf (slot-value form ',slot)
+                                            (rewrite-tree form ',slot visitor
+                                                          (slot-value form ',slot)))))))
+            bodies))
+    `(progn ,@(nreverse bodies))))
+
+;; Root form class
 
 (def form-class walked-form ()
   ((parent)
    (source *current-form*)
-   (attributes nil)))
+   (attributes nil :copy-with #'copy-list)))
 
 (def (macro e) form-attribute (form tag &optional default-value)
   "Access the attribute plist of a form."
@@ -377,7 +487,7 @@
            forms))
 
 (def form-class name-definition-form (named-walked-form)
-  ((usages)))
+  ((usages :copy-with nil)))
 
 (def method make-load-form ((object walked-form) &optional env)
   (make-load-form-saving-slots object :environment env))

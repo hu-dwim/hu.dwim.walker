@@ -7,16 +7,16 @@
 (in-package :hu.dwim.walker)
 
 (def form-class implicit-progn-mixin ()
-  ((body)))
+  ((body :ast-link t)))
 
 (def print-object implicit-progn-mixin
   (format t "~A" (body-of -self-)))
 
 (def form-class implicit-progn-with-declarations-mixin (implicit-progn-mixin)
-  ((declarations nil)))
+  ((declarations nil :ast-link t)))
 
 (def form-class binder-form-mixin ()
-  ((bindings)))
+  ((bindings :ast-link t)))
 
 (def form-class declaration-form ()
   ())

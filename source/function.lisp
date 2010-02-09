@@ -7,8 +7,8 @@
 (in-package :hu.dwim.walker)
 
 (def form-class application-form ()
-  ((operator)
-   (arguments)))
+  ((operator :ast-link t)
+   (arguments :ast-link t)))
 
 (def unwalker application-form (operator arguments)
   (cons operator (recurse-on-body arguments)))
@@ -27,7 +27,7 @@
   (princ ")"))
 
 (def form-class lexical-application-form (application-form)
-  ((definition)))
+  ((definition :ast-link :back)))
 
 (def form-class walked-lexical-application-form (lexical-application-form)
   ())
@@ -99,7 +99,7 @@
   ())
 
 (def form-class lambda-function-form (function-form implicit-progn-with-declarations-mixin)
-  ((arguments)))
+  ((arguments :ast-link t)))
 
 (def unwalker lambda-function-form (arguments body declarations)
   `#'(lambda ,(unwalk-ordinary-lambda-list arguments)
@@ -152,7 +152,7 @@
   ())
 
 (def form-class walked-lexical-function-object-form (lexical-function-object-form)
-  ((definition)))
+  ((definition :ast-link :back)))
 
 (def form-class unwalked-lexical-function-object-form (lexical-function-object-form)
   ())
@@ -287,7 +287,7 @@
       `(,name ,specializer)))
 
 (def form-class function-argument-form-with-default-value (function-argument-form)
-  ((default-value nil)))
+  ((default-value nil :ast-link t)))
 
 (def form-class function-argument-form-with-supplied-p-parameter (function-argument-form-with-default-value)
   ((supplied-p-parameter-name)))

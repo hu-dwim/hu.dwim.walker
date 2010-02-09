@@ -37,7 +37,7 @@
   ())
 
 (def form-class walked-lexical-variable-reference-form (lexical-variable-reference-form)
-  ((definition))
+  ((definition :ast-link :back))
   (:documentation "A reference to a local variable defined in the lexical environment inside the form passed to walk-form."))
 
 (def form-class unwalked-lexical-variable-reference-form (lexical-variable-reference-form)
@@ -101,8 +101,8 @@
   `(block ,name ,@(recurse-on-body body)))
 
 (def form-class return-from-form ()
-  ((target-block nil)
-   (result)))
+  ((target-block nil :ast-link :back)
+   (result :ast-link t)))
 
 (def (condition* e) return-from-unknown-block (walker-error)
   ((block-name))
@@ -146,7 +146,7 @@
 
 (def form-class throw-form ()
   ((tag)
-   (value)))
+   (value :ast-link t)))
 
 (def walker throw
   (bind (((tag &optional (result '(values))) (cdr -form-)))
@@ -175,9 +175,9 @@
 ;;;; IF
 
 (def form-class if-form ()
-  ((condition)
-   (then)
-   (else)))
+  ((condition :ast-link t)
+   (then :ast-link t)
+   (else :ast-link t)))
 
 (def walker if
   (with-form-object (if 'if-form -parent-)
@@ -198,7 +198,7 @@
   ())
 
 (def form-class lexical-variable-binding-form (name-definition-form)
-  ((initial-value)
+  ((initial-value :ast-link t)
    (special-binding nil :accessor special-binding? :type boolean)))
 
 (def form-class let-form (lexical-variable-binder-form)
@@ -309,8 +309,8 @@
 ;;;; MULTIPLE-VALUE-CALL
 
 (def form-class multiple-value-call-form ()
-  ((function-designator)
-   (arguments)))
+  ((function-designator :ast-link t)
+   (arguments :ast-link t)))
 
 (def walker multiple-value-call
   (with-form-object (m-v-c 'multiple-value-call-form -parent-)
@@ -325,8 +325,8 @@
 ;;;; MULTIPLE-VALUE-PROG1
 
 (def form-class multiple-value-prog1-form ()
-  ((first-form)
-   (other-forms)))
+  ((first-form :ast-link t)
+   (other-forms :ast-link t)))
 
 (def walker multiple-value-prog1
   (with-form-object (m-v-p1 'multiple-value-prog1-form -parent-)
@@ -370,8 +370,8 @@
 ;;;; PROGV
 
 (def form-class progv-form (implicit-progn-mixin)
-  ((variables-form)
-   (values-form)))
+  ((variables-form :ast-link t)
+   (values-form :ast-link t)))
 
 (def walker progv
   (with-form-object (progv 'progv-form -parent-)
@@ -395,8 +395,8 @@
 ;;;; SETQ
 
 (def form-class setq-form ()
-  ((variable)
-   (value)))
+  ((variable :ast-link t)
+   (value :ast-link t)))
 
 (def walker setq
   ;; the SETQ handler needs to be able to deal with symbol-macrolets
@@ -476,13 +476,13 @@
   `(tagbody ,@(recurse-on-body body)))
 
 (def form-class go-tag-form (name-definition-form)
-  ((jump-target)))
+  ((jump-target :copy-with nil)))
 
 (def unwalker go-tag-form (name)
   name)
 
 (def form-class go-form (named-walked-form)
-  ((tag)))
+  ((tag :ast-link :back)))
 
 (def method jump-target-of ((form go-form))
   (jump-target-of (tag-of form)))
@@ -503,7 +503,7 @@
 
 (def form-class the-form ()
   ((declared-type)
-   (value)))
+   (value :ast-link t)))
 
 (def walker the
   (with-form-object (the 'the-form -parent- :declared-type (second -form-))
@@ -515,8 +515,8 @@
 ;;;; UNWIND-PROTECT
 
 (def form-class unwind-protect-form ()
-  ((protected-form)
-   (cleanup-form)))
+  ((protected-form :ast-link t)
+   (cleanup-form :ast-link t)))
 
 (def walker unwind-protect
   (with-form-object (unwind-protect 'unwind-protect-form -parent-)
@@ -531,7 +531,7 @@
 ;;;; LOAD-TIME-VALUE
 
 (def form-class load-time-value-form ()
-  ((body)
+  ((body :ast-link t)
    (read-only nil :accessor read-only? :type boolean)
    (value)))
 
