@@ -470,9 +470,30 @@
    (source *current-form*)
    (attributes nil :copy-with #'copy-list)))
 
+;; Form attributes
+
 (def (macro e) form-attribute (form tag &optional default-value)
   "Access the attribute plist of a form."
   `(getf (attributes-of ,form) ,tag ,default-value))
+
+(def (definer e :options "eod") form-attribute-accessor (key &key name type default (forms 'walked-form))
+  (unless name
+    (setf name (funcall *accessor-name-transformer*
+                        key (if type (list :type type)))))
+  `(progn
+     ,@(if type
+           `((declaim (ftype (function (walked-form) ,type) ,name)
+                      (ftype (function (,type walked-form) ,type) (setf ,name)))))
+     ,@(loop :for ftype :in (ensure-list forms)
+          :collect `(def (method ,@-options-) ,name ((form ,ftype))
+                      (form-attribute form ',key ,default)))
+     ,@(loop :for ftype :in (ensure-list forms)
+          :collect `(def (method ,@-options-) (setf ,name) (value (form ,ftype))
+                      ,@(if (and type (getf -options- :debug))
+                            `((check-type value ,type)))
+                      (setf (form-attribute form ',key) value)))))
+
+;; Named forms
 
 (def form-class named-walked-form ()
   ((name)))
