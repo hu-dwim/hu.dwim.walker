@@ -224,9 +224,9 @@
                                 :for name = (name-of binding)
                                 :for lexenv = (env/lexical-environment -environment-)
                                 :do (if (and (not (special-variable-name? name lexenv))
-                                             (not (find-form-by-name name declarations
+                                             (not (find-form-by-name (coerce-to-form name) declarations
                                                                      :type 'special-variable-declaration-form)))
-                                        (-augment- :variable name binding)
+                                        (-augment- :variable (coerce-to-form name) binding)
                                         (setf (special-binding? binding) t)))
                               ;; we've extended the env, inform WALK-IMPLICT-PROGN about it
                               -environment-))))
@@ -259,9 +259,9 @@
                                                  (with-form-object (binding 'lexical-variable-binding-form let*-form :name name)
                                                    (setf (initial-value-of binding) (recurse initial-value binding))
                                                    (if (and (not (special-variable-name? name lexenv))
-                                                            (not (find-form-by-name name declarations
+                                                            (not (find-form-by-name (coerce-to-form name) declarations
                                                                                     :type 'special-variable-declaration-form)))
-                                                       (-augment- :variable name binding)
+                                                       (-augment- :variable (coerce-to-form name) binding)
                                                        (setf (special-binding? binding) t))))))
                               ;; we've extended the env, inform WALK-IMPLICT-PROGN about it
                               -environment-))))

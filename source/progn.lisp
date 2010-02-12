@@ -190,7 +190,7 @@
                (or (not declarations-allowed)
                    (typep parent 'implicit-progn-with-declarations-mixin))))
   (check-type env walk-environment)
-  (bind (((:values body declarations docstring) (parse-body (coerce-to-form forms) :documentation docstring-allowed :whole whole)))
+  (bind (((:values body declarations docstring) (parse-body forms :documentation docstring-allowed :whole whole)))
     (when docstring-allowed
       (setf (docstring-of parent) docstring))
     (when (and declarations

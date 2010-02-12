@@ -71,8 +71,11 @@
 (def layered-method macro-name? (name &optional env)
   (macro-function name env))
 
-(def layered-method symbol-macro-name? (name &optional env)
-  (nth-value 1 (macroexpand-1 name env)))
+(def layered-function lambda-form? (form &optional env)
+  (:method (form &optional env)
+    (declare (ignore env))
+    (and (consp form)
+         (eq 'lambda (car form)))))
 
 (def layered-method constant-name? (form &optional env)
   (declare (ignore env))
