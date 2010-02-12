@@ -37,13 +37,12 @@
 
 (def (layered-function e) walk-form (form &key parent environment)
   (:documentation "Entry point to initiate code walking of FORM using ENVIRONMENT. Returns a CLOS based AST that represents FORM.")
-  (:method (form &key parent environment)
-    (unless environment
-      (setf environment (make-walk-environment)))
+  (:method :around (form &key parent environment)
     (bind ((*current-form* (or *current-form*
-                               form)))
+                               form))
+           (work-env (or environment (make-walk-environment))))
       (with-current-form form
-        (funcall (find-walker-handler form) form parent environment)))))
+        (call-next-layered-method form :parent parent :environment work-env)))))
 
 (def layered-function coerce-to-form (form)
   (:method (form)
@@ -260,20 +259,27 @@
 
 (def constant +atom-marker+ '+atom-marker+)
 
-(def (layered-function e) find-walker-handler (form)
-  (:documentation "Simple function which tells us what handler should deal with FORM. Signals an error if we don't have a handler for FORM.")
-  (:method ((form cons))
-    (or (gethash (car form) *walker-handlers*)
-        (case (car form)
-          ((block declare flet function go if labels let let*
-                  macrolet progn quote return-from setq symbol-macrolet
-                  tagbody unwind-protect catch multiple-value-call
-                  multiple-value-prog1 throw load-time-value the
-                  eval-when locally progv)
-           (error "Sorry, no walker for the special operator ~S defined." (car form)))
-          (t (gethash 'application *walker-handlers*)))))
-  (:method ((form t))
-    (gethash '+atom-marker+ *walker-handlers*)))
+(def function find-walker-handler (form-name)
+  (or (gethash form-name *walker-handlers*)
+      (case form-name
+        ((block declare flet function go if labels let let*
+                macrolet progn quote return-from setq symbol-macrolet
+                tagbody unwind-protect catch multiple-value-call
+                multiple-value-prog1 throw load-time-value the
+                eval-when locally progv)
+         (error "Sorry, no walker for the special operator ~S defined." form-name))
+        (t (gethash 'application *walker-handlers*)))))
+
+(def (layered-function e) walk-compound-form (name form parent environment)
+  (:documentation "Dispatches to a form-specific walker using the name")
+  (:method ((name t) form parent environment)
+    (funcall (find-walker-handler name) form parent environment)))
+
+(def layered-method walk-form ((form cons) &key parent environment)
+  (walk-compound-form (car form) form parent environment))
+
+(def layered-method walk-form ((form t) &key parent environment)
+  (funcall (find-walker-handler +atom-marker+) form parent environment))
 
 (def function walker-handler-definition (name &optional (table *walker-handlers*))
   (gethash name table))
@@ -283,37 +289,63 @@
     (simple-style-warning "Redefining walker handler for ~S" name))
   (setf (gethash name table) handler))
 
-(def function %walker-handler-body (name body &optional declarations)
-  (bind ((function-name (format-symbol *package* "WALKER-HANDLER/~A" name)))
+(def function %walker-handler-symbol (name)
+  (format-symbol *package* "WALKER-HANDLER/~A" name))
+
+(def function %walker-handler-body (body)
+  `(block nil
+     (bind ((-form- (coerce-to-form -form-)))
+       (macrolet ((-lookup- (type name &key (otherwise nil))
+                    `(%repository/find (env/walked-environment -environment-) ,type ,name :otherwise ,otherwise))
+                  (-augment- (type name &optional datum)
+                    `(setf -environment- (augment-walk-environment -environment- ,type ,name ,datum))))
+         (flet ((recurse (node &optional (parent -parent-) (environment -environment-))
+                  (walk-form node :parent parent :environment environment)))
+           (declare (ignorable #'recurse))
+           (with-current-form -form-
+             ,@body))))))
+
+(def function %defwalker-handler-body (name body &optional declarations)
+  (bind ((function-name (%walker-handler-symbol name)))
     `(progn
-       ,(%walker-handler-function-body name '(-form- -parent- -environment-) body
-                                       (list* '(ignorable -parent- -environment-)
-                                              declarations))
+       (defun ,function-name (-form- -parent- -environment-)
+         (declare (ignorable -parent- -environment-)
+                  ,@declarations)
+         ,(%walker-handler-body body))
        (setf (walker-handler-definition ',name) ',function-name)
        ',name)))
 
-(def function %walker-handler-function-body (name args body &optional declarations)
-  (bind ((function-name (format-symbol *package* "WALKER-HANDLER/~A" name)))
-    `(defun ,function-name ,args
-       (declare ,@declarations)
-       (block nil
-         (bind ((-form- (coerce-to-form -form-)))
-           (macrolet ((-lookup- (type name &key (otherwise nil))
-                        `(%repository/find (env/walked-environment -environment-) ,type ,name :otherwise ,otherwise))
-                      (-augment- (type name &optional datum)
-                        `(setf -environment- (augment-walk-environment -environment- ,type ,name ,datum))))
-             (flet ((recurse (node &optional (parent -parent-) (environment -environment-))
-                      (walk-form node :parent parent :environment environment)))
-               (declare (ignorable #'recurse))
-               (with-current-form -form-
-                 ,@body))))))))
-
 (def (macro e) defwalker-handler (name &body body)
-  (%walker-handler-body name body))
+  (%defwalker-handler-body name body))
 
 (def (definer e :available-flags "od") walker (name &body body)
   (with-standard-definer-options name
-    (%walker-handler-body name body (function-like-definer-declarations -options-))))
+    (%defwalker-handler-body name body (function-like-definer-declarations -options-))))
+
+(def function layered-method-qualifiers (options)
+  (flatten (list
+            (awhen (or (getf options :in-layer)
+                       (getf options :in))
+              (list :in it))
+            (getf options :mode))))
+
+(def (definer e :available-flags "od") walker-method (name &body body)
+  (let ((qualifiers (layered-method-qualifiers -options-))
+        (type-match? nil))
+    (when (consp name)
+      (setf type-match? t)
+      (when (eql (first name) 'type)
+        (setf name (second name))))
+    `(progn
+       (define-layered-method ,(if type-match? 'walk-form 'walk-compound-form)
+         ,@qualifiers ,(if type-match?
+                           `((-form- ,name) &key
+                             ((:parent -parent-)) ((:environment -environment-)))
+                           `((-name- (eql ',name)) -form- -parent- -environment-))
+         (declare (ignorable -parent- -environment-)
+                  ,@(function-like-definer-declarations -options-))
+         ,(%walker-handler-body body))
+       ',name)))
 
 #+nil ; not good as it is...
 (def (definer e :available-flags "od") walker-function (name args &body body)
