@@ -211,7 +211,7 @@
           (mapcar (lambda (binding)
                     (with-current-form binding
                       (bind (((name &optional initial-value) (ensure-list (coerce-to-form binding))))
-                        (with-form-object (binding 'lexical-variable-binding-form -parent- :name name)
+                        (with-form-object (binding 'lexical-variable-binding-form let :name name)
                           (setf (initial-value-of binding) (recurse initial-value binding))))))
                   (coerce-to-form (second -form-))))
     (walk-implict-progn
