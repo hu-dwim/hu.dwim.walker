@@ -32,9 +32,11 @@
   (:method progn ((form walked-lexical-application-form))
     (push form (usages-of (definition-of form))))
   (:method progn ((form return-from-form))
-    (push form (usages-of (target-block-of form))))
+    (awhen (target-block-of form)
+      (push form (usages-of it))))
   (:method progn ((form go-form))
-    (push form (usages-of (tag-of form)))))
+    (awhen (tag-of form)
+      (push form (usages-of it)))))
 
 (def (function e) annotate-binding-usage (top-form)
   (clear-binding-usage-annotation top-form)
