@@ -81,7 +81,7 @@
          (a-def (first (bindings-of walked)))
          (b-def (second (bindings-of walked)))
          (a-arg (first (arguments-of body)))
-         (a-arg-copy (hu.dwim.walker::copy-form a-arg))
+         (a-arg-copy (hu.dwim.walker::copy-ast-form a-arg))
          (subst1 (substitute-ast-if a-arg-copy
                                     (lambda (form)
                                       (and (typep form 'lexical-variable-reference-form)
