@@ -65,9 +65,7 @@
        (not (member name '(t nil) :test #'eq))
        (or (boundp name)
            (proclaimed-special-in-lexenv? name lexenv)
-           ;; This is the only portable way to check if a symbol is
-           ;; declared special, without being boundp, i.e. (defvar 'foo).
-           ;; Maybe we should make it optional with a compile-time flag?
+           ;; This is the only portable way to check if a symbol is declared special, without being boundp, i.e. (defvar 'foo). Maybe we should make it optional with a compile-time flag?
            #+nil
            (eval `((lambda ()
                      (flet ((func ()
@@ -204,7 +202,7 @@
                     name type environment)
              (handle-otherwise otherwise)))))
 
-#+(or) ;; it's not used for now
+#+nil ;; it's not used for now
 (defun (setf %repository/find) (value environment type name &key (error-p nil))
   (loop
      :for env-piece :in environment
