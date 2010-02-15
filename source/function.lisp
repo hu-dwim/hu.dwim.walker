@@ -45,53 +45,48 @@
   ;; KLUDGE: The cadr is for getting rid of (function ...) which we can't have at the beginning of a form.
   (cons (cadr (recurse operator)) (recurse-on-body arguments)))
 
-(def (layered-function e) walk-application (form parent operator arguments env)
-  (:method (-form- -parent- operator arguments -environment-)
-    (macrolet ((-lookup- (type name &key (otherwise nil))
-                 `(%repository/find (env/walked-environment -environment-) ,type ,name :otherwise ,otherwise)))
-      (labels ((recurse (node &optional (parent -parent-))
-                 (walk-form node :parent parent :environment -environment-))
-               (walk-arguments (application-form)
-                 (loop
-                   :for index :from 1
-                   :for arg :in arguments
-                   :collect (recurse arg application-form))))
-        (when (lambda-form? operator)
-          (return-from walk-application
-            (with-form-object (application 'lambda-application-form -parent-)
-              (setf (operator-of application) (walk-lambda operator application -environment-)
-                    (arguments-of application) (walk-arguments application)))))
-        (bind ((lexenv (env/lexical-environment -environment-))
-               ((:values innermost-lexical-definition-type nil expander) (-lookup- nil operator)))
-          (awhen (eq :macro innermost-lexical-definition-type)
-            (bind ((*inside-macroexpansion* t)
-                   (expansion (funcall expander -form- lexenv)))
-              (return-from walk-application (recurse expansion))))
-          (when (and (symbolp operator)
-                     (macro-name? operator lexenv)
-                     (not (member innermost-lexical-definition-type '(:function :unwalked-function))))
-            (bind (((:values expansion expanded?) (walker-macroexpand-1 -form- lexenv)))
-              (when expanded?
-                (bind ((*inside-macroexpansion* t))
-                  (return-from walk-application (recurse expansion)))))))
-        (bind ((application-form (aif (-lookup- :function operator)
-                                      (make-instance 'walked-lexical-application-form :definition it)
-                                      (if (-lookup- :unwalked-function operator)
-                                          (make-instance 'unwalked-lexical-application-form)
-                                          (progn
-                                            (when (and (symbolp operator)
-                                                       (not (function-name? operator)))
-                                              (handle-undefined-reference :function operator))
-                                            (make-instance 'free-application-form))))))
-          (setf (operator-of application-form) operator)
-          (setf (parent-of application-form) -parent-)
-          (setf (source-of application-form) -form-)
-          (setf (arguments-of application-form) (walk-arguments application-form))
-          application-form)))))
-
-(def walker application
-  (bind (((operator &rest arguments) -form-))
-    (walk-application -form- -parent- operator arguments -environment-)))
+(def layered-method walk-form/application (-form- -parent- operator arguments -environment-)
+  (macrolet ((-lookup- (type name &key (otherwise nil))
+               `(%repository/find (env/walked-environment -environment-) ,type ,name :otherwise ,otherwise)))
+    (labels ((recurse (node &optional (parent -parent-))
+               (walk-form node :parent parent :environment -environment-))
+             (walk-arguments (application-form)
+               (loop
+                 :for index :from 1
+                 :for arg :in arguments
+                 :collect (recurse arg application-form))))
+      (when (lambda-form? operator)
+        (return-from walk-form/application
+          (with-form-object (application 'lambda-application-form -parent-)
+            (setf (operator-of application) (walk-form/lambda operator application -environment-)
+                  (arguments-of application) (walk-arguments application)))))
+      (bind ((lexenv (env/lexical-environment -environment-))
+             ((:values innermost-lexical-definition-type nil expander) (-lookup- nil operator)))
+        (awhen (eq :macro innermost-lexical-definition-type)
+          (bind ((*inside-macroexpansion* t)
+                 (expansion (funcall expander -form- lexenv)))
+            (return-from walk-form/application (recurse expansion))))
+        (when (and (symbolp operator)
+                   (macro-name? operator lexenv)
+                   (not (member innermost-lexical-definition-type '(:function :unwalked-function))))
+          (bind (((:values expansion expanded?) (walker-macroexpand-1 -form- lexenv)))
+            (when expanded?
+              (bind ((*inside-macroexpansion* t))
+                (return-from walk-form/application (recurse expansion)))))))
+      (bind ((application-form (aif (-lookup- :function operator)
+                                    (make-instance 'walked-lexical-application-form :definition it)
+                                    (if (-lookup- :unwalked-function operator)
+                                        (make-instance 'unwalked-lexical-application-form)
+                                        (progn
+                                          (when (and (symbolp operator)
+                                                     (not (function-name? operator)))
+                                            (handle-undefined-reference :function operator))
+                                          (make-instance 'free-application-form))))))
+        (setf (operator-of application-form) operator)
+        (setf (parent-of application-form) -parent-)
+        (setf (source-of application-form) -form-)
+        (setf (arguments-of application-form) (walk-arguments application-form))
+        application-form))))
 
 ;;;; Functions
 
@@ -113,9 +108,9 @@
 (def walker defun
   (bind (((name args &rest body) (rest -form-)))
     (with-form-object (node 'function-definition-form -parent- :name name)
-      (walk-lambda-like node args body
-                        (-augment- :function name node)
-                        :docstring-allowed t :declarations-allowed t))))
+      (walk-form/lambda-like node args body
+                             (-augment- :function name node)
+                             :docstring-allowed t :declarations-allowed t))))
 
 (def unwalker function-definition-form (form name arguments body docstring declarations)
   `(defun ,name ,(unwalk-ordinary-lambda-list arguments)
@@ -164,7 +159,7 @@
   (cond
     ((lambda-form? (second -form-))
      ;; specially handling (function (lambda ...))
-     (walk-lambda (second -form-) -parent- -environment-))
+     (walk-form/lambda (second -form-) -parent- -environment-))
     #+sbcl
     ((and (consp (second -form-))
           (eq (first (second -form-)) 'sb-int:named-lambda))
@@ -172,10 +167,10 @@
        (with-form-object (node 'named-lambda-function-form -parent-
                                :special-form (first named-lambda-form)
                                :name (second named-lambda-form))
-         (walk-lambda-like node (third named-lambda-form)
-                           (nthcdr 3 named-lambda-form)
-                           (-augment- :function (name-of node) node)
-                           :declarations-allowed t))))
+         (walk-form/lambda-like node (third named-lambda-form)
+                                (nthcdr 3 named-lambda-form)
+                                (-augment- :function (name-of node) node)
+                                :declarations-allowed t))))
     (t
      ;; (function foo)
      (bind ((function-name (second -form-))
@@ -190,13 +185,12 @@
                              -parent-
                              :name function-name))))))
 
-(def (layered-function e) walk-lambda (form parent env)
-  (:method (form parent env)
-    (assert (string-equal (first form) "lambda")) ;; because the js walker comes in with '|lambda|...
-    (with-form-object (ast-node 'lambda-function-form parent)
-      (walk-lambda-like ast-node (second form) (cddr form) env :declarations-allowed t))))
+(def layered-method walk-form/lambda (form parent env)
+  (assert (string-equal (first form) "lambda")) ;; because the js walker comes in with '|lambda|...
+  (with-form-object (ast-node 'lambda-function-form parent)
+    (walk-form/lambda-like ast-node (second form) (cddr form) env :declarations-allowed t)))
 
-(def (layered-function e) walk-lambda-like (ast-node args body env &key docstring-allowed declarations-allowed whole)
+(def layered-methods walk-form/lambda-like
   (:method :before (ast-node args body env &key &allow-other-keys)
     (check-type env walk-environment))
   (:method (ast-node args body env &key docstring-allowed declarations-allowed (whole *current-form*))
@@ -403,7 +397,7 @@
                            (error "Illegal FLET binding form ~S" entry))
                          (with-current-form entry
                            (with-form-object (lambda-node 'lexical-function-form flet :name name)
-                             (walk-lambda-like lambda-node arguments body -environment- :declarations-allowed t))))))
+                             (walk-form/lambda-like lambda-node arguments body -environment- :declarations-allowed t))))))
       ;; augment the walkenv with the new flet bindings
       (loop
          :for definition :in (bindings-of flet)
@@ -444,7 +438,7 @@
          :for definition :in (bindings-of labels)
          :do (progn
                (assert (eq name (name-of definition)))
-               (walk-lambda-like definition arguments body -environment-)))
+               (walk-form/lambda-like definition arguments body -environment-)))
       (walk-implict-progn labels body -environment- :declarations-allowed t))))
 
 (def unwalker labels-form (bindings body declarations)

@@ -51,38 +51,39 @@
 (def form-class free-variable-reference-form (special-variable-reference-form)
   ())
 
-(def walker +atom-marker+
-  (bind ((lexenv (env/lexical-environment -environment-)))
-    (cond
-      ((constant-name? -form-)
-       (make-form-object 'constant-form -parent- :value -form-))
-      (t
-       (bind (((:values closest-lexenv-entry-type nil definition) (-lookup- '(:variable :unwalked-variable :symbol-macro) -form-)))
-         (cond
-           (closest-lexenv-entry-type
-            ;; we check the closest entry in the lexenv with one of the listed types (i.e. skipping type DECLARE's). please note that it is NOT THE SAME AS
-            ;; looking for each type individually in three separate calls to LOOKUP!
-            (ecase closest-lexenv-entry-type
-              (:variable
-               (make-form-object 'walked-lexical-variable-reference-form -parent- :name -form- :definition definition))
-              (:unwalked-variable
-               (if (eql (car definition) :special) ; Local special declaration?
-                   (make-form-object 'special-variable-reference-form -parent-
-                                     :name -form- :declared-type (cdr definition))
-                   (make-form-object 'unwalked-lexical-variable-reference-form -parent-
-                                     :name -form- :declared-type (cdr definition))))
-              (:symbol-macro
-               (bind ((*inside-macroexpansion* t))
-                 (recurse (-lookup- :symbol-macro -form-))))))
-           ((symbol-macro-name? -form- lexenv) ; Global symbol macro?
-            (recurse (walker-macroexpand-1 -form- lexenv)))
-           ((special-variable-name? -form- lexenv) ; Globally proclaimed special variable?
-            (make-form-object 'special-variable-reference-form -parent- :name -form-
-                              :declared-type (global-variable-type-in-lexenv -form- lexenv)))
-           (t
-            (handle-undefined-reference :variable -form-)
-            (make-form-object 'free-variable-reference-form -parent- :name -form-
-                              :declared-type (global-variable-type-in-lexenv -form- lexenv)))))))))
+(def layered-method walk-form/atom (-form- -parent- -environment-)
+  (with-walker-handler-lexical-environment
+    (bind ((lexenv (env/lexical-environment -environment-)))
+      (cond
+        ((constant-name? -form-)
+         (make-form-object 'constant-form -parent- :value -form-))
+        (t
+         (bind (((:values closest-lexenv-entry-type nil definition) (-lookup- '(:variable :unwalked-variable :symbol-macro) -form-)))
+           (cond
+             (closest-lexenv-entry-type
+              ;; we check the closest entry in the lexenv with one of the listed types (i.e. skipping type DECLARE's). please note that it is NOT THE SAME AS
+              ;; looking for each type individually in three separate calls to LOOKUP!
+              (ecase closest-lexenv-entry-type
+                (:variable
+                 (make-form-object 'walked-lexical-variable-reference-form -parent- :name -form- :definition definition))
+                (:unwalked-variable
+                 (if (eql (car definition) :special) ; Local special declaration?
+                     (make-form-object 'special-variable-reference-form -parent-
+                                       :name -form- :declared-type (cdr definition))
+                     (make-form-object 'unwalked-lexical-variable-reference-form -parent-
+                                       :name -form- :declared-type (cdr definition))))
+                (:symbol-macro
+                 (bind ((*inside-macroexpansion* t))
+                   (recurse (-lookup- :symbol-macro -form-))))))
+             ((symbol-macro-name? -form- lexenv) ; Global symbol macro?
+              (recurse (walker-macroexpand-1 -form- lexenv)))
+             ((special-variable-name? -form- lexenv) ; Globally proclaimed special variable?
+              (make-form-object 'special-variable-reference-form -parent- :name -form-
+                                :declared-type (global-variable-type-in-lexenv -form- lexenv)))
+             (t
+              (handle-undefined-reference :variable -form-)
+              (make-form-object 'free-variable-reference-form -parent- :name -form-
+                                :declared-type (global-variable-type-in-lexenv -form- lexenv))))))))))
 
 ;;;; BLOCK/RETURN-FROM
 
