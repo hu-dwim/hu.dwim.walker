@@ -99,14 +99,15 @@
 
 (def function %env/augment (environment type name datum)
   (ecase type
-    ((:variable :unwalked-variable :symbol-macro :declare)
+    ((:variable :unwalked-variable :symbol-macro :variable-type)
      (push (list* name type datum) (env/variable-defs environment)))
     ((:function :unwalked-function :macro)
      (push (list* name type datum) (env/function-defs environment)))
     (:block
      (push (cons name datum) (env/block-defs environment)))
     (:tag
-     (push (cons name datum) (env/tag-defs environment)))))
+     (push (cons name datum) (env/tag-defs environment)))
+    (:declare)))
 
 (def (function e) make-walk-environment (&optional lexenv)
   (bind ((lexenv (or lexenv (make-empty-lexical-environment)))
@@ -142,7 +143,8 @@
                     (assert (eql (car datum) :special))
                     (augment-lexenv-with-variable name lexenv :special t))
                    ;; TODO
-                   (:declare      lexenv)))
+                   (:variable-type lexenv)
+                   (:declare       lexenv)))
          (newenv (copy-walk-environment env)))
     (%env/augment newenv type name datum)
     (setf (env/lexical-environment newenv) newlex)
@@ -173,15 +175,19 @@
             (not-found)))
       ((:variable-like)
        (loop
-          :with decl-data = nil
+          :with decl-type = nil
           :for (.name .type . data) :in (env/variable-defs environment)
           :when (eq .name name)
-            :if (eq .type :declare)
-              :do (setf decl-data data)
-            :else
-              :return (values .type data decl-data)
+          :do (case .type
+                (:variable-type
+                 (unless decl-type
+                   (setf decl-type data)))
+                (t
+                 (return (values .type data decl-type))))
           :finally
-            (not-found))))))
+            (if (null otherwise)
+                (return (values nil nil decl-type))
+                (not-found)))))))
 
 #+nil ;; it's not used for now
 (defun (setf %repository/find) (value environment type name &key (error-p nil))

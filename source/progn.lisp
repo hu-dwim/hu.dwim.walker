@@ -174,16 +174,23 @@
             (appendf walked-declarations walked-declaration)))))
     walked-declarations))
 
-(def function augment-with-special-vars (env declarations)
-  (reduce (lambda (env form)
-            (if (typep form 'special-variable-declaration-form)
-                (let* ((name (name-of form))
-                       (type-form (find-form-by-name name declarations
-                                                     :type 'type-declaration-form))
-                       (type (if type-form (declared-type-of type-form))))
-                  (augment-walk-environment env :unwalked-variable name (cons :special type)))
-                env))
-          declarations :initial-value env))
+(def function augment-with-special-vars (env declarations local-names)
+  ;; Append special var markers
+  (dolist (form declarations)
+    (when (typep form 'special-variable-declaration-form)
+      (let* ((name (name-of form))
+             (type-form (find-form-by-name name declarations
+                                           :type 'type-declaration-form))
+             (type (if type-form (declared-type-of type-form))))
+        (augment-walk-environment! env :unwalked-variable name (cons :special type))
+        (push name local-names))))
+  ;; Append floating type declarations (i.e. skip vars defined here)
+  (dolist (form declarations)
+    (when (and (typep form 'type-declaration-form)
+               (not (member (name-of form) local-names)))
+      (augment-walk-environment! env :variable-type (name-of form) (declared-type-of form))))
+  ;; Done
+  env)
 
 (def (function e) walk-implict-progn (parent forms env &key declarations-callback docstring-allowed declarations-allowed (whole *current-form*))
   (assert (and (typep parent 'implicit-progn-mixin)
@@ -197,13 +204,14 @@
                (not declarations-allowed))
       (error "Declarations are not allowed at ~S" whole))
     (when declarations-allowed
-      (bind ((walked-declarations (walk-declarations declarations parent env)))
+      (bind ((walked-declarations (walk-declarations declarations parent env))
+             (local-names nil))
         (setf (declarations-of parent) walked-declarations)
         (when declarations-callback
           ;; always call declarations-callback because some crucial sideffects may happen inside them (like in LET's walker)
-          (setf env (funcall declarations-callback walked-declarations)))
+          (setf (values env local-names) (funcall declarations-callback walked-declarations)))
         ;; Add special declarations to the environment
-        (setf env (augment-with-special-vars env walked-declarations))))
+        (setf env (augment-with-special-vars env walked-declarations local-names))))
     (setf (body-of parent) (mapcar (lambda (form)
                                      (walk-form form :parent parent :environment env))
                                    (coerce-to-form body)))

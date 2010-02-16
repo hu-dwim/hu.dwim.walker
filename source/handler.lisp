@@ -25,7 +25,7 @@
   (format t "!~S" (value-of -self-)))
 
 (def form-class variable-reference-form (named-walked-form)
-  ())
+  (declared-type))
 
 (def unwalker variable-reference-form (name)
   name)
@@ -41,12 +41,12 @@
   (:documentation "A reference to a local variable defined in the lexical environment inside the form passed to walk-form."))
 
 (def form-class unwalked-lexical-variable-reference-form (lexical-variable-reference-form)
-  (declared-type)
+  ()
   (:documentation "A reference to a local variable defined in the lexical environment outside of the form passed to walk-form."))
 
 ;; TODO should we add/handle walked-special-variable-reference-form?
 (def form-class special-variable-reference-form (variable-reference-form)
-  (declared-type))
+  ())
 
 (def form-class free-variable-reference-form (special-variable-reference-form)
   ())
@@ -60,7 +60,10 @@
        (bind (((:values closest-lexenv-entry-type definition decl-type) (-lookup- :variable-like -form-)))
          (ecase closest-lexenv-entry-type
            (:variable
-            (make-form-object 'walked-lexical-variable-reference-form -parent- :name -form- :definition definition))
+            (make-form-object 'walked-lexical-variable-reference-form -parent-
+                              :name -form- :definition definition
+                              ;; non-NIL if redeclared, e.g. (let (a) (locally (fixnum a) a))
+                              :declared-type decl-type))
            (:unwalked-variable
             (if (eql (car definition) :special) ; Local special declaration?
                 (make-form-object 'special-variable-reference-form -parent-
@@ -77,11 +80,13 @@
                      (recurse expansion))
                     ((special-variable-name? -form- lexenv) ; Globally proclaimed special variable?
                      (make-form-object 'special-variable-reference-form -parent- :name -form-
-                                       :declared-type (global-variable-type-in-lexenv -form- lexenv)))
+                                       :declared-type (or decl-type
+                                                          (global-variable-type-in-lexenv -form- lexenv))))
                     (t
                      (handle-undefined-reference :variable -form-)
                      (make-form-object 'free-variable-reference-form -parent- :name -form-
-                                       :declared-type (global-variable-type-in-lexenv -form- lexenv))))))))))))
+                                       :declared-type (or decl-type
+                                                          (global-variable-type-in-lexenv -form- lexenv)))))))))))))
 
 ;;;; BLOCK/RETURN-FROM
 
@@ -215,19 +220,20 @@
     (walk-implict-progn
      let (cddr -form-) -environment-
      :declarations-allowed t
-     :declarations-callback (lambda (declarations)
+     :declarations-callback (lambda (declarations &aux var-names)
                               ;; extend the walkenv before we walk the body with the lexical variables introduced by this LET form
                               (loop
                                 :for binding :in (bindings-of let)
                                 :for name = (name-of binding)
                                 :for lexenv = (env/lexical-environment -environment-)
+                                :do (push name var-names)
                                 :do (if (and (not (special-variable-name? name lexenv))
                                              (not (find-form-by-name (coerce-to-form name) declarations
                                                                      :type 'special-variable-declaration-form)))
                                         (-augment- :variable (coerce-to-form name) binding)
                                         (setf (special-binding? binding) t)))
                               ;; we've extended the env, inform WALK-IMPLICT-PROGN about it
-                              -environment-))))
+                              (values -environment- var-names)))))
 
 (def function let/let*-form-unwalker (name bindings body declarations)
   `(,name ,(mapcar (lambda (bind)
@@ -247,7 +253,7 @@
     (walk-implict-progn
      let*-form (cddr -form-) -environment-
      :declarations-allowed t
-     :declarations-callback (lambda (declarations)
+     :declarations-callback (lambda (declarations &aux var-names)
                               ;; extend the walkenv before we walk the body with the lexical variables introduced by this LET* form
                               (setf (bindings-of let*-form)
                                     (loop
@@ -256,13 +262,14 @@
                                       :collect (bind (((name &optional initial-value) (ensure-list entry)))
                                                  (with-form-object (binding 'lexical-variable-binding-form let*-form :name name)
                                                    (setf (initial-value-of binding) (recurse initial-value binding))
+                                                   (push name var-names)
                                                    (if (and (not (special-variable-name? name lexenv))
                                                             (not (find-form-by-name (coerce-to-form name) declarations
                                                                                     :type 'special-variable-declaration-form)))
                                                        (-augment- :variable (coerce-to-form name) binding)
                                                        (setf (special-binding? binding) t))))))
                               ;; we've extended the env, inform WALK-IMPLICT-PROGN about it
-                              -environment-))))
+                              (values -environment- var-names)))))
 
 (def unwalker let*-form (bindings body declarations)
   (let/let*-form-unwalker 'let* bindings body declarations))
