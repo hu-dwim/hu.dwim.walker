@@ -12,9 +12,7 @@
 (def (layered-function e) walk-form (form &key parent environment)
   (:documentation "Entry point to initiate code walking of FORM using ENVIRONMENT. Returns a CLOS based AST that represents FORM.")
   (:method ((form cons) &key parent environment)
-    (walk-form/compound (car form) form parent environment))
-  (:method ((form t) &key parent environment)
-    (walk-form/atom form parent environment)))
+    (walk-form/compound (car form) form parent environment)))
 
 (def (layered-function e) walk-form/compound (name form parent environment)
   (:documentation "Dispatches to a form-specific walker using the first symbol as operator name.")
@@ -28,8 +26,6 @@
                                declare))
         (error "No walker for the special operator ~S defined." operator))
       (walk-form/application form parent operator arguments environment))))
-
-(def (layered-function e) walk-form/atom (form parent environment))
 
 (def (layered-function e) walk-form/application (form parent operator arguments env))
 (def (layered-function e) walk-form/lambda (form parent env))
