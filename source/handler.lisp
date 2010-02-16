@@ -54,35 +54,34 @@
 (def walker (type t) ; atom
   (bind ((lexenv (env/lexical-environment -environment-)))
     (cond
-      ((constant-name? -form-)
+      ((or (constant-name? -form-) (not (symbolp -form-)))
        (make-form-object 'constant-form -parent- :value -form-))
       (t
-       (bind (((:values closest-lexenv-entry-type nil definition) (-lookup- '(:variable :unwalked-variable :symbol-macro) -form-)))
-         (cond
-           (closest-lexenv-entry-type
-            ;; we check the closest entry in the lexenv with one of the listed types (i.e. skipping type DECLARE's). please note that it is NOT THE SAME AS
-            ;; looking for each type individually in three separate calls to LOOKUP!
-            (ecase closest-lexenv-entry-type
-              (:variable
-               (make-form-object 'walked-lexical-variable-reference-form -parent- :name -form- :definition definition))
-              (:unwalked-variable
-               (if (eql (car definition) :special) ; Local special declaration?
-                   (make-form-object 'special-variable-reference-form -parent-
-                                     :name -form- :declared-type (cdr definition))
-                   (make-form-object 'unwalked-lexical-variable-reference-form -parent-
-                                     :name -form- :declared-type (cdr definition))))
-              (:symbol-macro
-               (bind ((*inside-macroexpansion* t))
-                 (recurse (-lookup- :symbol-macro -form-))))))
-           ((symbol-macro-name? -form- lexenv) ; Global symbol macro?
-            (recurse (walker-macroexpand-1 -form- lexenv)))
-           ((special-variable-name? -form- lexenv) ; Globally proclaimed special variable?
-            (make-form-object 'special-variable-reference-form -parent- :name -form-
-                              :declared-type (global-variable-type-in-lexenv -form- lexenv)))
-           (t
-            (handle-undefined-reference :variable -form-)
-            (make-form-object 'free-variable-reference-form -parent- :name -form-
-                              :declared-type (global-variable-type-in-lexenv -form- lexenv)))))))))
+       (bind (((:values closest-lexenv-entry-type definition decl-type) (-lookup- :variable-like -form-)))
+         (ecase closest-lexenv-entry-type
+           (:variable
+            (make-form-object 'walked-lexical-variable-reference-form -parent- :name -form- :definition definition))
+           (:unwalked-variable
+            (if (eql (car definition) :special) ; Local special declaration?
+                (make-form-object 'special-variable-reference-form -parent-
+                                  :name -form- :declared-type (or decl-type (cdr definition)))
+                (make-form-object 'unwalked-lexical-variable-reference-form -parent-
+                                  :name -form- :declared-type (or decl-type (cdr definition)))))
+           (:symbol-macro
+            (bind ((*inside-macroexpansion* t))
+              (recurse definition)))
+           ((nil)
+            ;; Try expanding a symbol macro
+            (bind (((:values expansion expanded?) (walker-macroexpand-1 -form- lexenv)))
+              (cond (expanded?
+                     (recurse expansion))
+                    ((special-variable-name? -form- lexenv) ; Globally proclaimed special variable?
+                     (make-form-object 'special-variable-reference-form -parent- :name -form-
+                                       :declared-type (global-variable-type-in-lexenv -form- lexenv)))
+                    (t
+                     (handle-undefined-reference :variable -form-)
+                     (make-form-object 'free-variable-reference-form -parent- :name -form-
+                                       :declared-type (global-variable-type-in-lexenv -form- lexenv))))))))))))
 
 ;;;; BLOCK/RETURN-FROM
 
@@ -405,7 +404,7 @@
   (let ((effective-code '()))
     (loop
        :for (name value) :on (cdr -form-) :by #'cddr
-       :do (push (aif (-lookup- :symbol-macro name)
+       :do (push (aif (eq (-lookup- :variable-like name) :symbol-macro)
                       `(setf ,it ,value)
                       `(setq ,name ,value))
                  effective-code))
@@ -452,7 +451,6 @@
 (def walker tagbody
   (with-form-object (tagbody 'tagbody-form -parent-
                              :body (cdr -form-))
-    (-augment- :tagbody 'enclosing-tagbody tagbody)
     (flet ((go-tag? (form)
              (or (symbolp form)
                  (integerp form))))

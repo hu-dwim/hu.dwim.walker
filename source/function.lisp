@@ -47,7 +47,7 @@
 
 (def layered-method walk-form/application (-form- -parent- operator arguments -environment-)
   (macrolet ((-lookup- (type name &key (otherwise nil))
-               `(%repository/find (env/walked-environment -environment-) ,type ,name :otherwise ,otherwise)))
+               `(%env/find -environment- ,type ,name :otherwise ,otherwise)))
     (labels ((recurse (node &optional (parent -parent-))
                (walk-form node :parent parent :environment -environment-))
              (walk-arguments (application-form)
@@ -61,27 +61,28 @@
             (setf (operator-of application) (walk-form/lambda operator application -environment-)
                   (arguments-of application) (walk-arguments application)))))
       (bind ((lexenv (env/lexical-environment -environment-))
-             ((:values innermost-lexical-definition-type nil expander) (-lookup- nil operator)))
-        (awhen (eq :macro innermost-lexical-definition-type)
-          (bind ((*inside-macroexpansion* t)
-                 (expansion (funcall expander -form- lexenv)))
-            (return-from walk-form/application (recurse expansion))))
-        (when (and (symbolp (coerce-to-form operator))
-                   (macro-name? (coerce-to-form operator) lexenv)
-                   (not (member innermost-lexical-definition-type '(:function :unwalked-function))))
-          (bind (((:values expansion expanded?) (walker-macroexpand-1 -form- lexenv)))
-            (when expanded?
-              (bind ((*inside-macroexpansion* t))
-                (return-from walk-form/application (recurse expansion)))))))
-      (bind ((application-form (aif (-lookup- :function operator)
-                                    (make-instance 'walked-lexical-application-form :definition it)
-                                    (if (-lookup- :unwalked-function operator)
-                                        (make-instance 'unwalked-lexical-application-form)
-                                        (progn
-                                          (when (and (symbolp operator)
-                                                     (not (function-name? operator)))
-                                            (handle-undefined-reference :function operator))
-                                          (make-instance 'free-application-form))))))
+             ((:values innermost-lexical-definition-type def-value) (-lookup- :function-like operator))
+             (application-form
+              (ecase innermost-lexical-definition-type
+                (:macro
+                 (bind ((*inside-macroexpansion* t)
+                        (expansion (funcall def-value -form- lexenv)))
+                   (return-from walk-form/application (recurse expansion))))
+                (:function
+                 (make-instance 'walked-lexical-application-form :definition def-value))
+                (:unwalked-function
+                 (make-instance 'unwalked-lexical-application-form))
+                ((nil)
+                 (if (symbolp operator)
+                     (bind (((:values expansion expanded?) (walker-macroexpand-1 -form- lexenv)))
+                       (if expanded?
+                           (bind ((*inside-macroexpansion* t))
+                             (return-from walk-form/application (recurse expansion)))
+                           (progn
+                             (unless (function-name? operator)
+                               (handle-undefined-reference :function operator))
+                             (make-instance 'free-application-form))))
+                     (make-instance 'free-application-form))))))
         (setf (operator-of application-form) operator)
         (setf (parent-of application-form) -parent-)
         (setf (source-of application-form) -form-)
@@ -174,16 +175,22 @@
     (t
      ;; (function foo)
      (bind ((function-name (second -form-))
-            (walked-lexical-function (-lookup- :function function-name)))
-       (if walked-lexical-function
-           (make-form-object 'walked-lexical-function-object-form -parent-
-                             :name function-name
-                             :definition walked-lexical-function)
-           (make-form-object (if (-lookup- :unwalked-function function-name)
-                                 'unwalked-lexical-function-object-form
-                                 'free-function-object-form)
-                             -parent-
-                             :name function-name))))))
+            ((:values definition-type definition) (-lookup- :function-like function-name)))
+       (ecase definition-type
+         (:function
+          (make-form-object 'walked-lexical-function-object-form -parent-
+                            :name function-name
+                            :definition definition))
+         (:unwalked-function
+          (make-form-object 'unwalked-lexical-function-object-form
+                            -parent-
+                            :name function-name))
+         (:macro
+          (simple-walker-error "Cannot obtain a function reference for macro ~S" function-name))
+         ((nil)
+          (make-form-object 'free-function-object-form
+                            -parent-
+                            :name function-name)))))))
 
 (def layered-method walk-form/lambda (form parent env)
   (assert (string-equal (coerce-to-form (first form)) "lambda")) ;; because the js walker comes in with '|lambda|...
