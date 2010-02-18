@@ -241,16 +241,17 @@
 (def (macro e) defwalker-handler (name &body body)
   (%expand-walker-handler-definition name body))
 
+(def function layered-method-qualifiers (options)
+  (flatten (list (awhen (or (getf options :in-layer)
+                            (getf options :in))
+                   (list :in it))
+                 (getf options :mode))))
+
 (def (definer e :available-flags "od") walker (name &body body)
   (with-standard-definer-options name
-    (flet ((layered-method-qualifiers (options)
-             (flatten (list (awhen (or (getf options :in-layer)
-                                       (getf options :in))
-                              (list :in it))
-                            (getf options :mode)))))
-      (%expand-walker-handler-definition name body
-                                         (layered-method-qualifiers -options-)
-                                         (function-like-definer-declarations -options-)))))
+    (%expand-walker-handler-definition name body
+                                       (layered-method-qualifiers -options-)
+                                       (function-like-definer-declarations -options-))))
 
 (def function %expand-unwalker-handler-definition (class slots body &optional declarations)
   `(progn
@@ -273,6 +274,40 @@
 (def (definer e :available-flags "od") unwalker (class (&rest slots) &body body)
   (with-standard-definer-options class
     (%expand-unwalker-handler-definition class slots body (function-like-definer-declarations -options-))))
+
+;;; declaration walking
+
+(defvar *known-declaration-types* (append
+                                   #+sbcl
+                                   '(sb-ext:muffle-conditions
+                                     )
+                                   ))
+
+(defvar *known-direct-type-declarations* nil
+  "Declaration names that are implicitly converted to type decls.")
+
+(def layered-function walk-declaration (type decl-form parent environment))
+
+(def (definer e :available-flags "od") declaration-walker (name argspec &body code)
+  (let ((qualifiers (layered-method-qualifiers -options-)))
+    `(progn
+       (define-layered-method walk-declaration
+         ,@qualifiers ((-name- (eql ',name)) -form- -parent- -environment-)
+         (declare (ignorable -parent- -environment-)
+                  ,@(function-like-definer-declarations -options-))
+         (flet ((function-name (form)
+                  (if (and (consp form)
+                           (eql (car form) 'function))
+                      (second form)
+                      nil)))
+           (macrolet ((make-declaration (formclass &rest rest)
+                        `(make-form-object ,formclass -parent- ,@rest))
+                      (do-list-collect ((var list) &body code)
+                        `(loop :for ,var :in ,list
+                            :when (progn ,@code) :collect it)))
+             (destructuring-bind ,argspec (cdr -form-)
+               ,@code))))
+       ',name)))
 
 ;;;
 ;;; Base AST form class

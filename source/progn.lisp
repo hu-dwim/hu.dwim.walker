@@ -35,11 +35,22 @@
                                            named-walked-form)
   ())
 
-(def form-class dynamic-extent-declaration-form (variable-declaration-form)
+(def form-class dynamic-extent-declaration-form-mixin (declaration-form)
   ())
 
-(def unwalker dynamic-extent-declaration-form (name)
+(def form-class variable-dynamic-extent-declaration-form (variable-declaration-form
+                                                          dynamic-extent-declaration-form-mixin)
+  ())
+
+(def unwalker variable-dynamic-extent-declaration-form (name)
   `(dynamic-extent ,name))
+
+(def form-class function-dynamic-extent-declaration-form (function-declaration-form
+                                                          dynamic-extent-declaration-form-mixin)
+  ())
+
+(def unwalker function-dynamic-extent-declaration-form (name)
+  `(dynamic-extent #',name))
 
 (def form-class ignorable-declaration-form-mixin (declaration-form)
   ())
@@ -80,6 +91,12 @@
 (def unwalker notinline-declaration-form (name)
   `(notinline ,name))
 
+(def form-class inline-declaration-form (function-declaration-form)
+  ())
+
+(def unwalker inline-declaration-form (name)
+  `(inline ,name))
+
 (def form-class unknown-declaration-form (declaration-form)
   ((declaration-form :initarg :declaration-form :accessor declaration-form-of)))
 
@@ -89,73 +106,62 @@
 (def unwalker unknown-declaration-form (declaration-form)
   declaration-form)
 
-(defvar *known-declaration-types* (append
-                                   #+sbcl
-                                   '(sb-ext:muffle-conditions
-                                     )
-                                   ))
+;;; built-in declaration walkers
 
-(defun walk-declaration (declaration parent environment)
-  (let ((declares nil))
-    (flet ((function-name (form)
-             (if (and (consp form)
-                      (eql (car form) 'function))
-                 (second form)
-                 nil)))
-      (macrolet ((make-declaration (formclass &rest rest)
-                   `(make-form-object ,formclass parent ,@rest))
-                 (extend-env ((var list) newdeclare &rest datum)
-                   `(dolist (,var ,list)
-                      (push ,newdeclare declares)
-                      (augment-walk-environment! environment :declare ,@datum))))
-        (bind (((type &rest arguments) declaration))
-          (case type
-            (dynamic-extent
-             (extend-env (var arguments)
-                         (make-declaration 'dynamic-extent-declaration-form :name var)
-                         var `(dynamic-extent)))
-            (ftype
-             (extend-env (function-name (cdr arguments))
-                         (make-form-object 'ftype-declaration-form parent
-                                           :name function-name
-                                           :declared-type (first arguments))
-                         function-name `(ftype ,(first arguments))))
-            ((ignore ignorable)
-             (extend-env (var arguments)
-                         (aif (function-name var)
-                              (make-declaration 'function-ignorable-declaration-form :name it)
-                              (make-declaration 'variable-ignorable-declaration-form :name var))
-                         var `(,type)))
-            (inline
-              (extend-env (function arguments)
-                          (make-declaration 'function-ignorable-declaration-form :name function)
-                          function `(inline)))
-            (notinline
-             (extend-env (function arguments)
-                         (make-declaration 'notinline-declaration-form :name function)
-                         function `(notinline)))
-            (optimize
-             (extend-env (optimize-spec arguments)
-                         (make-declaration 'optimize-declaration-form :specification optimize-spec)
-                         'optimize optimize-spec))
-            (special
-             (extend-env (var arguments)
-                         (make-declaration 'special-variable-declaration-form :name var)
-                         var `(special)))
-            (type
-             (extend-env (var (rest arguments))
-                         (make-form-object 'type-declaration-form parent
-                                           :name var
-                                           :declared-type (first arguments))
-                         var `(type ,(first arguments))))
-            (t
-             (unless (member type *known-declaration-types* :test #'eq)
-               (simple-walker-style-warning "Ignoring unknown declaration ~S while walking forms. If it's a type declaration, then use the full form to avoid this warning: `(type ,type ,@variables), or you can also (pushnew ~S ~S)."
-                                            declaration type '*known-declaration-types*))
-             (push (make-form-object 'unknown-declaration-form parent
-                                     :declaration-form declaration)
-                   declares))))))
-    (values environment declares)))
+(def layered-method walk-declaration (type declaration parent environment)
+  (when (member type *known-direct-type-declarations*)
+    (return-from walk-declaration
+      (walk-declaration 'type (list* 'type declaration) parent environment)))
+  (unless (member type *known-declaration-types* :test #'eq)
+    (simple-walker-style-warning "Ignoring unknown declaration ~S while walking forms. If it's a type declaration, then use the full form to avoid this warning: `(type ,type ,@variables), or you can also (pushnew ~S ~S) or (pushnew ~S ~S)."
+                                 declaration type '*known-declaration-types*
+                                 type '*known-direct-type-declarations*))
+  (list (make-form-object 'unknown-declaration-form parent
+                          :declaration-form declaration)))
+
+(def declaration-walker ftype (type &rest names)
+  (do-list-collect (function-name names)
+    (make-declaration 'ftype-declaration-form
+                      :name function-name :declared-type type)))
+
+(def declaration-walker type (type &rest vars)
+  (do-list-collect (var vars)
+    (make-declaration 'type-declaration-form
+                      :name var :declared-type type)))
+
+(def declaration-walker dynamic-extent (&rest vars)
+  (do-list-collect (var vars)
+    (aif (function-name var)
+         (make-declaration 'function-dynamic-extent-declaration-form :name it)
+         (make-declaration 'variable-dynamic-extent-declaration-form :name var))))
+
+(def declaration-walker ignorable (&rest names)
+  (do-list-collect (var names)
+    (aif (function-name var)
+         (make-declaration 'function-ignorable-declaration-form :name it)
+         (make-declaration 'variable-ignorable-declaration-form :name var))))
+
+(def declaration-walker ignore (&rest names)
+  (do-list-collect (var names)
+    (aif (function-name var)
+         (make-declaration 'function-ignorable-declaration-form :name it)
+         (make-declaration 'variable-ignorable-declaration-form :name var))))
+
+(def declaration-walker inline (&rest functions)
+  (do-list-collect (function functions)
+    (make-declaration 'inline-declaration-form :name function)))
+
+(def declaration-walker notinline (&rest functions)
+  (do-list-collect (function functions)
+    (make-declaration 'notinline-declaration-form :name function)))
+
+(def declaration-walker optimize (&rest specs)
+  (do-list-collect (optimize-spec specs)
+    (make-declaration 'optimize-declaration-form :specification optimize-spec)))
+
+(def declaration-walker special (&rest vars)
+  (do-list-collect (var vars)
+    (make-declaration 'special-variable-declaration-form :name var)))
 
 (defun unwalk-declarations (decls)
   ;; Return a list so declarations can be easily spliced.
@@ -164,15 +170,13 @@
       (list `(declare ,@(unwalk-forms decls)))))
 
 (def function walk-declarations (declarations parent env)
-  (bind ((walked-declarations '()))
-    (dolist (declaration declarations)
-      (assert (eq (first declaration) 'declare))
-      (dolist (entry (rest declaration))
-        (with-current-form entry
-          (bind ((walked-declaration nil))
-            (setf (values env walked-declaration) (walk-declaration entry parent env))
-            (appendf walked-declarations walked-declaration)))))
-    walked-declarations))
+  (loop :for declaration :in declarations
+    :do (assert (eq (first declaration) 'declare))
+    :append
+      (loop :for entry :in (rest declaration)
+        :append
+          (with-current-form entry
+            (walk-declaration (car entry) entry parent env)))))
 
 (def function augment-with-special-vars (env declarations local-names)
   ;; Append special var markers
