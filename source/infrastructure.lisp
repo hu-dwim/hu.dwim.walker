@@ -426,7 +426,7 @@
 ;; Root form class
 
 (def form-class walked-form ()
-  ((parent)
+  ((parent :copy-with nil) ; becomes unbound on copy
    (source *current-form*)
    (attributes nil :copy-with #'copy-list)))
 

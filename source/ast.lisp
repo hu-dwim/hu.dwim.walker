@@ -45,7 +45,7 @@
              form)
            top-form))
 
-(def function copy-ast-form (form &rest initargs)
+(def (function e) copy-ast-form (form &rest initargs)
   "Duplicate an AST form instance"
   (let* ((class (class-of form))
          (copy (allocate-instance class)))
