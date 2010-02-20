@@ -237,7 +237,9 @@
 
 (def function let/let*-form-unwalker (name bindings body declarations)
   `(,name ,(mapcar (lambda (bind)
-                     (list (name-of bind) (unwalk-form (initial-value-of bind))))
+                     (aif (initial-value-of bind)
+                          (list (name-of bind) (unwalk-form it))
+                          (name-of bind)))
                    bindings)
      ,@(unwalk-declarations declarations)
      ,@(unwalk-forms body)))
