@@ -7,7 +7,7 @@
 (in-package :hu.dwim.walker)
 
 (def form-class application-form ()
-  ((operator :ast-link t)
+  ((operator) ; contains a symbol, or a lambda form
    (arguments :ast-link t)))
 
 (def unwalker application-form (operator arguments)
@@ -27,10 +27,10 @@
   (princ ")"))
 
 (def form-class lexical-application-form (application-form)
-  ((definition :ast-link :back)))
+  ())
 
 (def form-class walked-lexical-application-form (lexical-application-form)
-  ())
+  ((definition :ast-link :back)))
 
 (def form-class unwalked-lexical-application-form (lexical-application-form)
   ())
@@ -39,7 +39,7 @@
   ())
 
 (def form-class lambda-application-form (application-form)
-  ())
+  ((operator :ast-link t))) ; re-declare as an AST link
 
 (def unwalker lambda-application-form (operator arguments)
   ;; KLUDGE: The cadr is for getting rid of (function ...) which we can't have at the beginning of a form.
