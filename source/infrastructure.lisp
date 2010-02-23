@@ -350,7 +350,7 @@
 
 ;; Form class definer. Also defines methods for the above functions.
 
-(def (definer e) form-class (name supers slots &rest args)
+(def (definer e :available-flags "e") form-class (name supers slots &rest args)
   (let* ((new-supers (if (and (not (eq name 'walked-form))
                               (zerop (length supers)))
                          '(walked-form)
@@ -358,7 +358,7 @@
          (copy-forms nil)
          (main-refs nil)
          (back-refs nil)
-         (flags (if (getf -options- :export t) '(ea) ()))
+         (flags (if (getf -options- :export) '(ea) ()))
          (new-slots
           (mapcar (lambda (flags)
                     (let ((slot (pop flags)))
@@ -412,7 +412,7 @@
 
 ;; Root form class
 
-(def form-class walked-form ()
+(def (form-class e) walked-form ()
   ((parent :copy-with nil) ; becomes unbound on copy
    (source *current-form*)
    (attributes nil :copy-with #'copy-list)))
@@ -442,7 +442,7 @@
 
 ;; Named forms
 
-(def form-class named-walked-form ()
+(def (form-class e) named-walked-form ()
   ((name)))
 
 (def (function e) find-form-by-name (name forms &key (type 't))
@@ -454,7 +454,7 @@
                   (eq (name-of item) name)))
            forms))
 
-(def form-class name-definition-form (named-walked-form)
+(def (form-class e) name-definition-form (named-walked-form)
   ((usages :copy-with nil)))
 
 (def method make-load-form ((object walked-form) &optional env)

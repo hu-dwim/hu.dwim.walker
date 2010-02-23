@@ -6,7 +6,7 @@
 
 (in-package :hu.dwim.walker)
 
-(def form-class application-form ()
+(def (form-class e) application-form ()
   ((operator) ; contains a symbol, or a lambda form
    (arguments :ast-link t)))
 
@@ -26,19 +26,19 @@
       (setf first nil)))
   (princ ")"))
 
-(def form-class lexical-application-form (application-form)
+(def (form-class e) lexical-application-form (application-form)
   ())
 
-(def form-class walked-lexical-application-form (lexical-application-form)
+(def (form-class e) walked-lexical-application-form (lexical-application-form)
   ((definition :ast-link :back)))
 
-(def form-class unwalked-lexical-application-form (lexical-application-form)
+(def (form-class e) unwalked-lexical-application-form (lexical-application-form)
   ())
 
-(def form-class free-application-form (application-form)
+(def (form-class e) free-application-form (application-form)
   ())
 
-(def form-class lambda-application-form (application-form)
+(def (form-class e) lambda-application-form (application-form)
   ((operator :ast-link t))) ; re-declare as an AST link
 
 (def unwalker lambda-application-form (operator arguments)
@@ -91,10 +91,10 @@
 
 ;;;; Functions
 
-(def form-class function-form ()
+(def (form-class e) function-form ()
   ())
 
-(def form-class lambda-function-form (function-form implicit-progn-with-declarations-mixin)
+(def (form-class e) lambda-function-form (function-form implicit-progn-with-declarations-mixin)
   ((arguments :ast-link t)))
 
 (def unwalker lambda-function-form (arguments body declarations)
@@ -102,8 +102,8 @@
        ,@(unwalk-declarations declarations)
        ,@(recurse-on-body body)))
 
-(def form-class function-definition-form (lambda-function-form
-                                          name-definition-form)
+(def (form-class e) function-definition-form (lambda-function-form
+                                              name-definition-form)
   ((docstring nil)))
 
 (def walker defun
@@ -119,8 +119,8 @@
      ,@(unwalk-declarations declarations)
      ,@(recurse-on-body body)))
 
-(def form-class named-lambda-function-form (lambda-function-form
-                                            name-definition-form)
+(def (form-class e) named-lambda-function-form (lambda-function-form
+                                                name-definition-form)
   ((special-form)))
 
 (def unwalker named-lambda-function-form (special-form name arguments body declarations)
@@ -129,8 +129,8 @@
      ,@(unwalk-declarations declarations)
      ,@(recurse-on-body body))))
 
-(def form-class lexical-function-form (lambda-function-form
-                                       name-definition-form)
+(def (form-class e) lexical-function-form (lambda-function-form
+                                           name-definition-form)
   ())
 
 (def unwalker lexical-function-form (name arguments body declarations)
@@ -138,22 +138,22 @@
      ,@(unwalk-declarations declarations)
      ,@(recurse-on-body body)))
 
-(def form-class function-object-form (named-walked-form)
+(def (form-class e) function-object-form (named-walked-form)
   ())
 
 (def unwalker function-object-form (name)
   `(function ,name))
 
-(def form-class lexical-function-object-form (function-object-form)
+(def (form-class e) lexical-function-object-form (function-object-form)
   ())
 
-(def form-class walked-lexical-function-object-form (lexical-function-object-form)
+(def (form-class e) walked-lexical-function-object-form (lexical-function-object-form)
   ((definition :ast-link :back)))
 
-(def form-class unwalked-lexical-function-object-form (lexical-function-object-form)
+(def (form-class e) unwalked-lexical-function-object-form (lexical-function-object-form)
   ())
 
-(def form-class free-function-object-form (function-object-form)
+(def (form-class e) free-function-object-form (function-object-form)
   ())
 
 (def walker function
@@ -267,19 +267,19 @@
                                  (setf (default-value-of arg) (walk-form default-value :parent arg :environment env)))))))))
     (values args env)))
 
-(def form-class function-argument-form (name-definition-form)
+(def (form-class e) function-argument-form (name-definition-form)
   ())
 
 (def print-object function-argument-form
   (format t "~S" (name-of -self-)))
 
-(def form-class required-function-argument-form (function-argument-form)
+(def (form-class e) required-function-argument-form (function-argument-form)
   ())
 
 (def unwalker required-function-argument-form (name)
   name)
 
-(def form-class specialized-function-argument-form (required-function-argument-form)
+(def (form-class e) specialized-function-argument-form (required-function-argument-form)
   ((specializer)))
 
 (def unwalker specialized-function-argument-form (name specializer)
@@ -287,13 +287,13 @@
       name
       `(,name ,specializer)))
 
-(def form-class function-argument-form-with-default-value (function-argument-form)
+(def (form-class e) function-argument-form-with-default-value (function-argument-form)
   ((default-value nil :ast-link t)))
 
-(def form-class function-argument-form-with-supplied-p-parameter (function-argument-form-with-default-value)
+(def (form-class e) function-argument-form-with-supplied-p-parameter (function-argument-form-with-default-value)
   ((supplied-p-parameter-name)))
 
-(def form-class optional-function-argument-form (function-argument-form-with-supplied-p-parameter)
+(def (form-class e) optional-function-argument-form (function-argument-form-with-supplied-p-parameter)
   ())
 
 (def unwalker optional-function-argument-form (name supplied-p-parameter-name)
@@ -306,7 +306,7 @@
           (name name)
           (t (error "Invalid optional argument")))))
 
-(def form-class keyword-function-argument-form (function-argument-form-with-supplied-p-parameter)
+(def (form-class e) keyword-function-argument-form (function-argument-form-with-supplied-p-parameter)
   ((keyword-name)))
 
 (def (function e) effective-keyword-name-of (k)
@@ -325,19 +325,19 @@
           (name name)
           (t (error "Invalid keyword argument")))))
 
-(def form-class allow-other-keys-function-argument-form (function-argument-form)
+(def (form-class e) allow-other-keys-function-argument-form (function-argument-form)
   ())
 
 (def unwalker allow-other-keys-function-argument-form ()
   '&allow-other-keys)
 
-(def form-class rest-function-argument-form (function-argument-form)
+(def (form-class e) rest-function-argument-form (function-argument-form)
   ())
 
 (def unwalker rest-function-argument-form (name)
   name)
 
-(def form-class auxiliary-function-argument-form (function-argument-form-with-default-value)
+(def (form-class e) auxiliary-function-argument-form (function-argument-form-with-default-value)
   ())
 
 (def unwalker auxiliary-function-argument-form (name supplied-p-parameter)
@@ -384,11 +384,11 @@
 
 ;;;; FLET/LABELS
 
-(def form-class function-binding-form (binder-form-mixin
-                                       implicit-progn-with-declarations-mixin)
+(def (form-class e) function-binding-form (binder-form-mixin
+                                           implicit-progn-with-declarations-mixin)
   ())
 
-(def form-class flet-form (function-binding-form)
+(def (form-class e) flet-form (function-binding-form)
   ())
 
 (def walker flet
@@ -420,7 +420,7 @@
 (def unwalker flet-form (bindings body declarations)
   (unwalk-flet-or-labels 'flet bindings body declarations))
 
-(def form-class labels-form (function-binding-form)
+(def (form-class e) labels-form (function-binding-form)
   ())
 
 (def walker labels

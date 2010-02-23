@@ -8,7 +8,7 @@
 
 ;;;; Atoms
 
-(def form-class constant-form ()
+(def (form-class e) constant-form ()
   ((value)))
 
 (def unwalker constant-form (value)
@@ -24,7 +24,7 @@
 (def print-object constant-form
   (format t "!~S" (value-of -self-)))
 
-(def form-class variable-reference-form (named-walked-form)
+(def (form-class e) variable-reference-form (named-walked-form)
   (declared-type))
 
 (def unwalker variable-reference-form (name)
@@ -33,22 +33,22 @@
 (def print-object variable-reference-form
   (format t "!~S" (name-of -self-)))
 
-(def form-class lexical-variable-reference-form (variable-reference-form)
+(def (form-class e) lexical-variable-reference-form (variable-reference-form)
   ())
 
-(def form-class walked-lexical-variable-reference-form (lexical-variable-reference-form)
+(def (form-class e) walked-lexical-variable-reference-form (lexical-variable-reference-form)
   ((definition :ast-link :back))
   (:documentation "A reference to a local variable defined in the lexical environment inside the form passed to walk-form."))
 
-(def form-class unwalked-lexical-variable-reference-form (lexical-variable-reference-form)
+(def (form-class e) unwalked-lexical-variable-reference-form (lexical-variable-reference-form)
   ()
   (:documentation "A reference to a local variable defined in the lexical environment outside of the form passed to walk-form."))
 
 ;; TODO should we add/handle walked-special-variable-reference-form?
-(def form-class special-variable-reference-form (variable-reference-form)
+(def (form-class e) special-variable-reference-form (variable-reference-form)
   ())
 
-(def form-class free-variable-reference-form (special-variable-reference-form)
+(def (form-class e) free-variable-reference-form (special-variable-reference-form)
   ())
 
 (def walker (type t) ; atom
@@ -90,7 +90,7 @@
 
 ;;;; BLOCK/RETURN-FROM
 
-(def form-class block-form (implicit-progn-mixin name-definition-form)
+(def (form-class e) block-form (implicit-progn-mixin name-definition-form)
   ())
 
 (def walker block
@@ -104,7 +104,7 @@
 (def unwalker block-form (name body)
   `(block ,name ,@(recurse-on-body body)))
 
-(def form-class return-from-form ()
+(def (form-class e) return-from-form ()
   ((target-block nil :ast-link :back)
    (result :ast-link t)))
 
@@ -136,7 +136,7 @@
 
 ;;;; CATCH/THROW
 
-(def form-class catch-form (implicit-progn-mixin)
+(def (form-class e) catch-form (implicit-progn-mixin)
   ((tag)))
 
 (def walker catch
@@ -148,7 +148,7 @@
 (def unwalker catch-form (tag body)
   `(catch ,(recurse tag) ,@(recurse-on-body body)))
 
-(def form-class throw-form ()
+(def (form-class e) throw-form ()
   ((tag)
    (value :ast-link t)))
 
@@ -163,7 +163,7 @@
 
 ;;;; EVAL-WHEN
 
-(def form-class eval-when-form (implicit-progn-mixin)
+(def (form-class e) eval-when-form (implicit-progn-mixin)
   ((eval-when-times)))
 
 (def walker eval-when
@@ -178,7 +178,7 @@
 
 ;;;; IF
 
-(def form-class if-form ()
+(def (form-class e) if-form ()
   ((condition :ast-link t)
    (then :ast-link t)
    (else :ast-link t)))
@@ -197,15 +197,15 @@
 
 ;;;; LET/LET*
 
-(def form-class lexical-variable-binder-form (binder-form-mixin
-                                              implicit-progn-with-declarations-mixin)
+(def (form-class e) lexical-variable-binder-form (binder-form-mixin
+                                                  implicit-progn-with-declarations-mixin)
   ())
 
-(def form-class lexical-variable-binding-form (name-definition-form)
+(def (form-class e) lexical-variable-binding-form (name-definition-form)
   ((initial-value :ast-link t)
    (special-binding nil :accessor special-binding? :type boolean)))
 
-(def form-class let-form (lexical-variable-binder-form)
+(def (form-class e) let-form (lexical-variable-binder-form)
   ())
 
 (def walker let
@@ -247,7 +247,7 @@
 (def unwalker let-form (bindings body declarations)
   (let/let*-form-unwalker 'let bindings body declarations))
 
-(def form-class let*-form (lexical-variable-binder-form)
+(def (form-class e) let*-form (lexical-variable-binder-form)
   ())
 
 (def walker let*
@@ -278,7 +278,7 @@
 
 ;;;; LOCALLY
 
-(def form-class locally-form (implicit-progn-with-declarations-mixin)
+(def (form-class e) locally-form (implicit-progn-with-declarations-mixin)
   ())
 
 (def walker locally
@@ -292,11 +292,11 @@
 
 ;;;; MACROLET
 
-(def form-class macro-binding-form (name-definition-form)
+(def (form-class e) macro-binding-form (name-definition-form)
   (expansion))
 
-(def form-class macrolet-form (binder-form-mixin
-                               implicit-progn-with-declarations-mixin)
+(def (form-class e) macrolet-form (binder-form-mixin
+                                   implicit-progn-with-declarations-mixin)
   ())
 
 (def walker macrolet
@@ -321,7 +321,7 @@
 
 ;;;; MULTIPLE-VALUE-CALL
 
-(def form-class multiple-value-call-form ()
+(def (form-class e) multiple-value-call-form ()
   ((function-designator :ast-link t)
    (arguments :ast-link t)))
 
@@ -337,7 +337,7 @@
 
 ;;;; MULTIPLE-VALUE-PROG1
 
-(def form-class multiple-value-prog1-form ()
+(def (form-class e) multiple-value-prog1-form ()
   ((first-form :ast-link t)
    (other-forms :ast-link t)))
 
@@ -353,7 +353,7 @@
 
 ;;;; PROGN
 
-(def form-class progn-form (implicit-progn-mixin)
+(def (form-class e) progn-form (implicit-progn-mixin)
   ())
 
 (def walker progn
@@ -382,7 +382,7 @@
 
 ;;;; PROGV
 
-(def form-class progv-form (implicit-progn-mixin)
+(def (form-class e) progv-form (implicit-progn-mixin)
   ((variables-form :ast-link t)
    (values-form :ast-link t)))
 
@@ -407,7 +407,7 @@
 
 ;;;; SETQ
 
-(def form-class setq-form ()
+(def (form-class e) setq-form ()
   ((variable :ast-link t)
    (value :ast-link t)))
 
@@ -439,8 +439,8 @@
 
 ;;;; SYMBOL-MACROLET
 
-(def form-class symbol-macrolet-form (binder-form-mixin
-                                      implicit-progn-with-declarations-mixin)
+(def (form-class e) symbol-macrolet-form (binder-form-mixin
+                                          implicit-progn-with-declarations-mixin)
   ())
 
 (def walker symbol-macrolet
@@ -462,7 +462,7 @@
 
 ;;;; TAGBODY/GO
 
-(def form-class tagbody-form (implicit-progn-mixin)
+(def (form-class e) tagbody-form (implicit-progn-mixin)
   ())
 
 (def walker tagbody
@@ -490,13 +490,13 @@
 (def unwalker tagbody-form (body)
   `(tagbody ,@(recurse-on-body body)))
 
-(def form-class go-tag-form (name-definition-form)
+(def (form-class e) go-tag-form (name-definition-form)
   ((jump-target :copy-with nil)))
 
 (def unwalker go-tag-form (name)
   name)
 
-(def form-class go-form (named-walked-form)
+(def (form-class e) go-form (named-walked-form)
   ((tag :ast-link :back)))
 
 (def method jump-target-of ((form go-form))
@@ -516,7 +516,7 @@
 
 ;;;; THE
 
-(def form-class the-form ()
+(def (form-class e) the-form ()
   ((declared-type)
    (value :ast-link t)))
 
@@ -529,7 +529,7 @@
 
 ;;;; UNWIND-PROTECT
 
-(def form-class unwind-protect-form ()
+(def (form-class e) unwind-protect-form ()
   ((protected-form :ast-link t)
    (cleanup-form :ast-link t)))
 
@@ -545,7 +545,7 @@
 
 ;;;; LOAD-TIME-VALUE
 
-(def form-class load-time-value-form ()
+(def (form-class e) load-time-value-form ()
   ((body :ast-link t)
    (read-only nil :accessor read-only? :type boolean)
    (value)))
