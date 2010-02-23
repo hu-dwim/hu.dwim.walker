@@ -292,6 +292,9 @@
 
 ;;;; MACROLET
 
+(def form-class macro-binding-form (name-definition-form)
+  (expansion))
+
 (def form-class macrolet-form (binder-form-mixin
                                implicit-progn-with-declarations-mixin)
   ())
@@ -300,12 +303,14 @@
   ;; TODO is there any point in constructing a macrolet form if we macroexpand the body anyways?
   (with-form-object (macrolet 'macrolet-form -parent-
                               :bindings '())
-    (dolist* ((name args &body body) (second -form-))
+    (dolist* ((&whole defn name args &body body) (second -form-))
       (bind ((handler (parse-macro-definition name args body (env/lexical-environment -environment-))))
         (-augment- :macro name handler)
         ;; there's not much point in keeping the bindings when we expand the macrolet body anyway, so don't.
         ;; it would just hinder the saving of the form into fasl's for no apparent benefit.
-        (push (cons name nil) (bindings-of macrolet))))
+        (push (with-current-form defn
+                (make-form-object 'macro-binding-form macrolet :name name))
+              (bindings-of macrolet))))
     (setf (bindings-of macrolet) (nreverse (bindings-of macrolet)))
     (walk-implict-progn macrolet (cddr -form-) -environment- :declarations-allowed t)))
 
@@ -441,9 +446,12 @@
 (def walker symbol-macrolet
   (with-form-object (symbol-macrolet 'symbol-macrolet-form -parent-
                                      :bindings '())
-    (dolist* ((symbol expansion) (second -form-))
+    (dolist* ((&whole defn symbol expansion) (second -form-))
       (-augment- :symbol-macro symbol expansion)
-      (push (cons symbol expansion) (bindings-of symbol-macrolet)))
+      (push (with-current-form defn
+              (make-form-object 'macro-binding-form symbol-macrolet
+                                :name symbol :expansion expansion))
+            (bindings-of symbol-macrolet)))
     (nreversef (bindings-of symbol-macrolet))
     (walk-implict-progn symbol-macrolet (cddr -form-) -environment- :declarations-allowed t)))
 

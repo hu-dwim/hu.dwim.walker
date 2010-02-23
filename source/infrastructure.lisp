@@ -317,39 +317,33 @@
   (:documentation "Copies slots from old to new")
   (:method-combination progn :most-specific-last))
 
-(def (generic e) map-ast (visitor form)
-  (:documentation "Recursively descend main links of the tree.")
+(def (generic e) enum-ast-fields (form visitor &key include-main-refs include-back-refs raw-lists)
+  (:documentation "Enumerate tree links using the visitor.")
   (:method-combination progn :most-specific-last)
-  (:method :around (visitor form)
-    (let ((new (funcall visitor form)))
-      ;; if the visitor returns a new AST node instead of the one
-      ;; being given to it, then stop descending the tree and just
-      ;; return the new one giving full control to the visitor over
-      ;; what to do there.
-      (if (eq new form)
-          (call-next-method)
-          new)
-      new))
-  (:method progn (visitor (form t))
+  (:method progn ((form t) visitor &key (include-main-refs t) include-back-refs raw-lists)
     ;; a primary method with a huge NOP
-    (declare (ignore visitor)))
-  (:method progn (visitor (form cons))
-    (map-ast visitor (car form))
-    (map-ast visitor (cdr form))))
+    (declare (ignore form visitor include-main-refs include-back-refs raw-lists))))
 
-(def (generic e) rewrite-ast-fields (form visitor &key skip-main-refs include-back-refs)
+(def (generic e) rewrite-ast-fields (form visitor &key include-main-refs include-back-refs raw-lists)
   (:documentation "Rewrite tree links using the visitor.")
   (:method-combination progn :most-specific-last)
-  (:method progn ((form t) visitor &key skip-main-refs include-back-refs)
+  (:method progn ((form t) visitor &key (include-main-refs t) include-back-refs raw-lists)
     ;; a primary method with a huge NOP
-    (declare (ignore form visitor skip-main-refs include-back-refs))))
+    (declare (ignore form visitor include-main-refs include-back-refs raw-lists))))
 
-(def function rewrite-tree (parent slot-name visitor value)
+(def function enum-tree (parent slot-name visitor value raw)
   "Apply visitor to all non-nil leaf values of a cons tree."
-  (cond ((null value) nil)
-        ((consp value)
+  (cond ((and (listp value) (not raw))
+         (dolist (item value)
+           (enum-tree parent slot-name visitor item raw)))
+        (t
+         (funcall visitor parent slot-name value))))
+
+(def function rewrite-tree (parent slot-name visitor value raw)
+  "Apply visitor to all non-nil leaf values of a cons tree."
+  (cond ((and (listp value) (not raw))
          (mapcar (lambda (item)
-                   (rewrite-tree parent slot-name visitor item))
+                   (rewrite-tree parent slot-name visitor item raw))
                  value))
         (t
          (funcall visitor parent slot-name value))))
@@ -394,33 +388,26 @@
       (push `(defmethod copy-ast-slots progn ((new ,name) (old ,name))
                ,@(nreverse copy-forms))
             bodies))
-    (when main-refs
-      (setf main-refs (nreverse main-refs))
-      (push `(defmethod map-ast progn (visitor (form ,name))
-               ,@(loop
-                    :for slot :in main-refs
-                    :collect `(map-ast visitor (slot-value form ',slot))))
-            bodies))
     (when (or main-refs back-refs)
+      (setf main-refs (nreverse main-refs))
       (setf back-refs (nreverse back-refs))
-      (push `(defmethod rewrite-ast-fields progn ((form ,name) visitor &key
-                                                  skip-main-refs include-back-refs)
-               (declare (ignorable skip-main-refs include-back-refs))
-               ,(if main-refs
-                    `(unless skip-main-refs
-                       ,@(loop
-                            :for slot :in main-refs
-                            :collect `(setf (slot-value form ',slot)
-                                            (rewrite-tree form ',slot visitor
-                                                          (slot-value form ',slot))))))
-               ,(if back-refs
-                    `(when include-back-refs
-                       ,@(loop
-                            :for slot :in back-refs
-                            :collect `(setf (slot-value form ',slot)
-                                            (rewrite-tree form ',slot visitor
-                                                          (slot-value form ',slot)))))))
-            bodies))
+      (macrolet ((mkrefs ((reflist reffield) code)
+                   `(if ,reflist
+                        `((when ,,reffield
+                            ,@(loop :for slot :in ,reflist :collect ,code)))))
+                 (mkmethod (name code)
+                   ``(defmethod ,,name progn ((form ,name) visitor &key
+                                              (include-main-refs t) include-back-refs raw-lists)
+                       (declare (ignorable include-main-refs include-back-refs))
+                       ,@(mkrefs (main-refs 'include-main-refs) ,code)
+                       ,@(mkrefs (back-refs 'include-back-refs) ,code))))
+        (push (mkmethod 'enum-ast-fields
+                        `(enum-tree form ',slot visitor (slot-value form ',slot) raw-lists))
+              bodies)
+        (push (mkmethod 'rewrite-ast-fields
+                        `(setf (slot-value form ',slot)
+                               (rewrite-tree form ',slot visitor (slot-value form ',slot) raw-lists)))
+              bodies)))
     `(progn ,@(nreverse bodies))))
 
 ;; Root form class

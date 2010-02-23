@@ -6,6 +6,27 @@
 
 (in-package :hu.dwim.walker)
 
+(def (macro e) do-ast-fields ((item form &rest flags) &body code)
+  (with-unique-names (closure)
+    `(flet ((,closure (-parent- -field- ,item)
+              (declare (ignorable -parent- -field-))
+              ,@code))
+       (declare (dynamic-extent #',closure))
+       (enum-ast-fields ,form #',closure ,@flags))))
+
+(def (function e) map-ast (visitor form)
+  (labels ((recurse (parent field form)
+             (declare (ignore parent field))
+             (aprog1 (funcall visitor form)
+               ;; if the visitor returns a new AST node instead of the one
+               ;; being given to it, then stop descending the tree and just
+               ;; return the new one giving full control to the visitor over
+               ;; what to do there.
+               (when (eq it form)
+                 (enum-ast-fields form #'recurse)))))
+    (declare (dynamic-extent #'recurse))
+    (recurse nil nil form)))
+
 (def (function e) collect-variable-references (top-form &key (type 'variable-reference-form))
   (let ((result (list)))
     (map-ast (lambda (form)
@@ -93,7 +114,7 @@
                  (when upper-table
                    (setf (gethash new-form upper-table) new-form))
                  (rewrite-ast-fields new-form #'lookup-cb
-                                     :skip-main-refs t
+                                     :include-main-refs nil
                                      :include-back-refs t))
                lookup-table))))
 
