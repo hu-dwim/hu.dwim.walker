@@ -6,13 +6,13 @@
 
 (in-package :hu.dwim.walker)
 
-(def (macro e) do-ast-fields ((item form &rest flags) &body code)
+(def (macro e) do-ast-links ((item form &rest flags) &body code)
   (with-unique-names (closure)
     `(flet ((,closure (-parent- -field- ,item)
               (declare (ignorable -parent- -field-))
               ,@code))
        (declare (dynamic-extent #',closure))
-       (enum-ast-fields ,form #',closure ,@flags))))
+       (enum-ast-links ,form #',closure ,@flags))))
 
 (def (function e) map-ast (visitor form)
   (labels ((recurse (parent field form)
@@ -23,7 +23,7 @@
                ;; return the new one giving full control to the visitor over
                ;; what to do there.
                (when (eq it form)
-                 (enum-ast-fields form #'recurse)))))
+                 (enum-ast-links form #'recurse)))))
     (declare (dynamic-extent #'recurse))
     (recurse nil nil form)))
 
@@ -79,7 +79,7 @@
                  (funcall visitor parent field form)
                (prog1 new-form
                  (when (or (eq form new-form) continue)
-                   (rewrite-ast-fields new-form #'rewrite-rec))))))
+                   (rewrite-ast-links new-form #'rewrite-rec))))))
     (rewrite-rec parent parent-field top-form)))
 
 (def (function e) deep-copy-ast (top-form &key replace-cb parent parent-field
@@ -103,7 +103,7 @@
                            (let ((new-form (copy-ast-form form)))
                              (setf (parent-of new-form) parent)
                              (setf (gethash form lookup-table) new-form)
-                             (rewrite-ast-fields new-form #'clone-rec)
+                             (rewrite-ast-links new-form #'clone-rec)
                              new-form))))
                  form)))
     (prog1
@@ -113,9 +113,9 @@
                  (declare (ignore key))
                  (when upper-table
                    (setf (gethash new-form upper-table) new-form))
-                 (rewrite-ast-fields new-form #'lookup-cb
-                                     :include-main-refs nil
-                                     :include-back-refs t))
+                 (rewrite-ast-links new-form #'lookup-cb
+                                    :include-main-refs nil
+                                    :include-back-refs t))
                lookup-table))))
 
 (def (function e) substitute-ast-if (new test tree &key in-place first-without-copy)

@@ -317,14 +317,14 @@
   (:documentation "Copies slots from old to new")
   (:method-combination progn :most-specific-last))
 
-(def (generic e) enum-ast-fields (form visitor &key include-main-refs include-back-refs raw-lists)
+(def (generic e) enum-ast-links (form visitor &key include-main-refs include-back-refs raw-lists)
   (:documentation "Enumerate tree links using the visitor.")
   (:method-combination progn :most-specific-last)
   (:method progn ((form t) visitor &key (include-main-refs t) include-back-refs raw-lists)
     ;; a primary method with a huge NOP
     (declare (ignore form visitor include-main-refs include-back-refs raw-lists))))
 
-(def (generic e) rewrite-ast-fields (form visitor &key include-main-refs include-back-refs raw-lists)
+(def (generic e) rewrite-ast-links (form visitor &key include-main-refs include-back-refs raw-lists)
   (:documentation "Rewrite tree links using the visitor.")
   (:method-combination progn :most-specific-last)
   (:method progn ((form t) visitor &key (include-main-refs t) include-back-refs raw-lists)
@@ -401,10 +401,10 @@
                        (declare (ignorable include-main-refs include-back-refs))
                        ,@(mkrefs (main-refs 'include-main-refs) ,code)
                        ,@(mkrefs (back-refs 'include-back-refs) ,code))))
-        (push (mkmethod 'enum-ast-fields
+        (push (mkmethod 'enum-ast-links
                         `(enum-tree form ',slot visitor (slot-value form ',slot) raw-lists))
               bodies)
-        (push (mkmethod 'rewrite-ast-fields
+        (push (mkmethod 'rewrite-ast-links
                         `(setf (slot-value form ',slot)
                                (rewrite-tree form ',slot visitor (slot-value form ',slot) raw-lists)))
               bodies)))
