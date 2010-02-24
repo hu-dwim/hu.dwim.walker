@@ -70,6 +70,7 @@
   (with-expected-failures
     ;; FIXME &aux is not supported
     #'(lambda (x &aux auxfoo)))
+  #'(lambda (&key &allow-other-keys))
   #'(lambda (x &rest args &key key1 (key2 nil key2?) (key3 42) &allow-other-keys)))
 
 (define-walk-unwalk-test test/eval-when/1
