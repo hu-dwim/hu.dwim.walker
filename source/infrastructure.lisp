@@ -111,6 +111,7 @@
                     (cons (cond (special? :special)
                                 (ignored? :ignored)
                                 (t t))
+                          ;; TODO why into the CRD? why not a proper list, or even better a plist?
                           type))))
       (do-functions-in-lexenv (lexenv name macro? macro-fn)
         (if macro?
@@ -191,7 +192,7 @@
                 (return (values nil nil decl-type))
                 (not-found)))))))
 
-#+nil ;; it's not used for now
+#+nil ;; it's not used for now, and also bitrotten
 (defun (setf %repository/find) (value environment type name &key (error-p nil))
   (loop
      :for env-piece :in environment
