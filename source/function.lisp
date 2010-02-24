@@ -350,34 +350,36 @@
          (rest-seen? nil)
          (keyword-seen? nil)
          (auxiliary-seen? nil))
-    (mapcan #'(lambda (form)
-                (append
-                 (etypecase form
-                   (required-function-argument-form
-                    (assert (not (or optional-seen? rest-seen? keyword-seen? auxiliary-seen?))))
-                   (optional-function-argument-form
-                    (unless optional-seen?
-                      (assert (not (or rest-seen? keyword-seen? auxiliary-seen?)))
-                      (setq optional-seen? t)
-                      '(&optional)))
-                   (rest-function-argument-form
-                    (unless rest-seen?
-                      (assert (not (or keyword-seen? auxiliary-seen?)))
-                      (setq rest-seen? t)
-                      '(&rest)))
-                   (keyword-function-argument-form
-                    (unless keyword-seen?
+    (labels ((ensure-&key ()
+               (unless keyword-seen?
+                 (assert (not auxiliary-seen?))
+                 (setq keyword-seen? t)
+                 '(&key))))
+      (loop
+        :for form :in arguments
+        :appending (etypecase form
+                     (required-function-argument-form
+                      (assert (not (or optional-seen? rest-seen? keyword-seen? auxiliary-seen?))))
+                     (optional-function-argument-form
+                      (unless optional-seen?
+                        (assert (not (or rest-seen? keyword-seen? auxiliary-seen?)))
+                        (setq optional-seen? t)
+                        '(&optional)))
+                     (rest-function-argument-form
+                      (unless rest-seen?
+                        (assert (not (or keyword-seen? auxiliary-seen?)))
+                        (setq rest-seen? t)
+                        '(&rest)))
+                     (keyword-function-argument-form
+                      (ensure-&key))
+                     (allow-other-keys-function-argument-form
                       (assert (not auxiliary-seen?))
-                      (setq keyword-seen? t)
-                      '(&key)))
-                   (allow-other-keys-function-argument-form
-                    (assert (not auxiliary-seen?)))
-                   (auxiliary-function-argument-form
-                    (unless auxiliary-seen?
-                      (setq auxiliary-seen? t)
-                      '(&aux))))
-                 (list (unwalk-form form))))
-            arguments)))
+                      (ensure-&key))
+                     (auxiliary-function-argument-form
+                      (unless auxiliary-seen?
+                        (setq auxiliary-seen? t)
+                        '(&aux))))
+        :collect (unwalk-form form)))))
 
 ;;;; FLET/LABELS
 
