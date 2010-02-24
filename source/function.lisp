@@ -204,6 +204,7 @@
                         :whole whole)
     ast-node))
 
+;; TODO lambda list args should be in a mixin, not in an ordered list of typed arg nodes
 (def (function e) walk-ordinary-lambda-list (lambda-list parent env &key allow-specializers)
   (bind (((:values requireds optionals rest keywords allow-other-keys? auxiliaries) (parse-ordinary-lambda-list (mapcar 'coerce-to-form lambda-list) :normalize nil))
          (args (nconc
