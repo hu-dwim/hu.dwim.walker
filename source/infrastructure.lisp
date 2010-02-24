@@ -6,12 +6,14 @@
 
 (in-package :hu.dwim.walker)
 
-(def structure (walk-environment (:constructor %make-walk-environment)
-                                 (:conc-name #:env/))
-  (function-defs '())
-  (variable-defs '())
-  (block-defs '())
-  (tag-defs '())
+(def (structure ea :export-constructor nil)
+    (walk-environment (:constructor %make-walk-environment)
+                      (:conc-name #:walk-environment/))
+  ;; these are the different _namespaces_ of Common Lisp
+  (functions '())
+  (variables '())
+  (blocks '())
+  (tags '())
   (lexical-environment (make-empty-lexical-environment)))   ; the underlying lisp's internal lexenv
 
 (def (function e) macroexpand-all (form &optional (env (make-empty-lexical-environment)))
@@ -97,23 +99,11 @@
 ;;; Walk environment
 ;;;
 
-(def function %env/augment (environment type name datum)
-  (ecase type
-    ((:variable :unwalked-variable :symbol-macro :variable-type)
-     (push (list* name type datum) (env/variable-defs environment)))
-    ((:function :unwalked-function :macro)
-     (push (list* name type datum) (env/function-defs environment)))
-    (:block
-     (push (cons name datum) (env/block-defs environment)))
-    (:tag
-     (push (cons name datum) (env/tag-defs environment)))
-    (:declare)))
-
 (def (function e) make-walk-environment (&optional lexenv)
   (bind ((lexenv (or lexenv (make-empty-lexical-environment)))
          (walkedenv (%make-walk-environment :lexical-environment lexenv)))
     (macrolet ((extend (type name datum)
-                 `(%env/augment walkedenv ,type ,name ,datum)))
+                 `(%walk-environment/augment/primitive walkedenv ,type ,name ,datum)))
       (do-variables-in-lexenv (lexenv name ignored? special? macro? macro-body type)
         (if macro?
             (extend :symbol-macro name macro-body)
@@ -126,12 +116,24 @@
         (if macro?
             (extend :macro name macro-fn)
             (extend :unwalked-function name t))))
-    (nreversef (env/variable-defs walkedenv))
-    (nreversef (env/function-defs walkedenv))
+    (nreversef (walk-environment/variables walkedenv))
+    (nreversef (walk-environment/functions walkedenv))
     walkedenv))
 
-(def function augment-walk-environment (env type name &optional datum)
-  (bind ((lexenv (env/lexical-environment env))
+(def function %walk-environment/augment/primitive (environment type name datum)
+  (ecase type
+    ((:variable :unwalked-variable :symbol-macro :variable-type)
+     (push (list* name type datum) (walk-environment/variables environment)))
+    ((:function :unwalked-function :macro)
+     (push (list* name type datum) (walk-environment/functions environment)))
+    (:block
+     (push (cons name datum) (walk-environment/blocks environment)))
+    (:tag
+     (push (cons name datum) (walk-environment/tags environment)))
+    (:declare)))
+
+(def function walk-environment/augment (env type name &optional datum)
+  (bind ((lexenv (walk-environment/lexical-environment env))
          (newlex (ecase type
                    (:variable     (augment-lexenv-with-variable     name lexenv))
                    (:macro        (augment-lexenv-with-macro        name datum lexenv))
@@ -146,16 +148,16 @@
                    (:variable-type lexenv)
                    (:declare       lexenv)))
          (newenv (copy-walk-environment env)))
-    (%env/augment newenv type name datum)
-    (setf (env/lexical-environment newenv) newlex)
+    (%walk-environment/augment/primitive newenv type name datum)
+    (setf (walk-environment/lexical-environment newenv) newlex)
     newenv))
 
-(defmacro augment-walk-environment! (env type name datum &rest other-datum)
-  `(setf ,env (augment-walk-environment ,env ,type ,name ,datum ,@other-datum)))
+(defmacro walk-environment/augment! (env type name datum &rest other-datum)
+  `(setf ,env (walk-environment/augment ,env ,type ,name ,datum ,@other-datum)))
 
-(def function %env/find (environment type name &key (otherwise nil))
+(def (function e) walk-environment/find (environment type name &key (otherwise nil))
   (labels ((not-found ()
-             (return-from %env/find
+             (return-from walk-environment/find
                (if (eq otherwise :error)
                    (error "No value for ~S of type ~S in environment ~S was found."
                           name type environment)
@@ -166,17 +168,17 @@
                   (not-found))))
     (ecase type
       ((:block)
-       (search-assoc (env/block-defs environment)))
+       (search-assoc (walk-environment/blocks environment)))
       ((:tag)
-       (search-assoc (env/tag-defs environment)))
+       (search-assoc (walk-environment/tags environment)))
       ((:function-like)
-       (aif (assoc name (env/function-defs environment))
+       (aif (assoc name (walk-environment/functions environment))
             (values (cadr it) (cddr it))
             (not-found)))
       ((:variable-like)
        (loop
           :with decl-type = nil
-          :for (.name .type . data) :in (env/variable-defs environment)
+          :for (.name .type . data) :in (walk-environment/variables environment)
           :when (eq .name name)
           :do (case .type
                 (:variable-type
@@ -210,9 +212,9 @@
   `(block nil
      (bind ((-form- (coerce-to-form -form-)))
        (macrolet ((-lookup- (type name &key (otherwise nil))
-                    `(%env/find -environment- ,type ,name :otherwise ,otherwise))
+                    `(walk-environment/find -environment- ,type ,name :otherwise ,otherwise))
                   (-augment- (type name &optional datum)
-                    `(setf -environment- (augment-walk-environment -environment- ,type ,name ,datum))))
+                    `(walk-environment/augment! -environment- ,type ,name ,datum)))
          (flet ((recurse (node &optional (parent -parent-) (environment -environment-))
                   (walk-form node :parent parent :environment environment)))
            (declare (ignorable #'recurse))

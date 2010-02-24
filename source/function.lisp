@@ -57,7 +57,7 @@
           (with-form-object (application 'lambda-application-form -parent-)
             (setf (operator-of application) (walk-form/lambda operator application -environment-)
                   (arguments-of application) (walk-arguments application)))))
-      (bind ((lexenv (env/lexical-environment -environment-))
+      (bind ((lexenv (walk-environment/lexical-environment -environment-))
              ((:values innermost-lexical-definition-type def-value) (-lookup- :function-like operator))
              (application-form
               (ecase innermost-lexical-definition-type
@@ -215,7 +215,7 @@
                                                              :specializer (or (second (ensure-list required)) t))
                                            (make-form-object 'required-function-argument-form parent
                                                              :name required))))
-                             (augment-walk-environment! env :variable (name-of arg) arg)
+                             (walk-environment/augment! env :variable (name-of arg) arg)
                              arg))
                 (loop
                   :for optional :in optionals
@@ -226,15 +226,15 @@
                              (with-form-object (arg 'optional-function-argument-form parent
                                                     :name name
                                                     :supplied-p-parameter-name supplied-p-parameter-name)
-                               (augment-walk-environment! env :variable name arg)
+                               (walk-environment/augment! env :variable name arg)
                                (when default-value-supplied?
                                  (setf (default-value-of arg) (walk-form default-value :parent arg :environment env)))
                                (when supplied-p-parameter-name
                                  ;; TODO so, what on earth do we want to store for supplied-p-parameter-name? it should be a full lexical-variable-binding-form so that ...
-                                 (augment-walk-environment! env :variable supplied-p-parameter-name t)))))
+                                 (walk-environment/augment! env :variable supplied-p-parameter-name t)))))
                 (when rest
                   (bind ((arg (make-form-object 'rest-function-argument-form parent :name rest)))
-                    (augment-walk-environment! env :variable rest arg)
+                    (walk-environment/augment! env :variable rest arg)
                     (list arg)))
                 (loop
                   :for keyword :in keywords
@@ -246,12 +246,12 @@
                                                       :name name
                                                       :keyword-name keyword
                                                       :supplied-p-parameter-name supplied-p-parameter-name)
-                                 (augment-walk-environment! env :variable name arg)
+                                 (walk-environment/augment! env :variable name arg)
                                  (when default-value-supplied?
                                    (setf (default-value-of arg) (walk-form default-value :parent arg :environment env)))
                                  (when supplied-p-parameter-name
                                    ;; TODO see similar comment at &optional
-                                   (augment-walk-environment! env :variable supplied-p-parameter-name t))))))
+                                   (walk-environment/augment! env :variable supplied-p-parameter-name t))))))
                 (when allow-other-keys?
                   (list (make-form-object 'allow-other-keys-function-argument-form parent)))
                 (loop
@@ -259,7 +259,7 @@
                   :collect (destructuring-bind (name &optional (default-value nil default-value-supplied?))
                                (ensure-list auxiliary)
                              (with-form-object (arg 'auxiliary-function-argument-form parent :name name)
-                               (augment-walk-environment! env :variable name arg)
+                               (walk-environment/augment! env :variable name arg)
                                (when default-value-supplied?
                                  (setf (default-value-of arg) (walk-form default-value :parent arg :environment env)))))))))
     (values args env)))

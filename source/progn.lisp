@@ -186,13 +186,13 @@
              (type-form (find-form-by-name name declarations
                                            :type 'type-declaration-form))
              (type (if type-form (declared-type-of type-form))))
-        (augment-walk-environment! env :unwalked-variable name (cons :special type))
+        (walk-environment/augment! env :unwalked-variable name (cons :special type))
         (push name local-names))))
   ;; Append floating type declarations (i.e. skip vars defined here)
   (dolist (form declarations)
     (when (and (typep form 'type-declaration-form)
                (not (member (name-of form) local-names)))
-      (augment-walk-environment! env :variable-type (name-of form) (declared-type-of form))))
+      (walk-environment/augment! env :variable-type (name-of form) (declared-type-of form))))
   ;; Done
   env)
 

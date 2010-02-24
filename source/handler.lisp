@@ -52,7 +52,7 @@
   ())
 
 (def walker (type t) ; atom
-  (bind ((lexenv (env/lexical-environment -environment-)))
+  (bind ((lexenv (walk-environment/lexical-environment -environment-)))
     (cond
       ((or (constant-name? -form-) (not (symbolp -form-)))
        (make-form-object 'constant-form -parent- :value -form-))
@@ -225,7 +225,7 @@
                               (loop
                                 :for binding :in (bindings-of let)
                                 :for name = (name-of binding)
-                                :for lexenv = (env/lexical-environment -environment-)
+                                :for lexenv = (walk-environment/lexical-environment -environment-)
                                 :do (push name var-names)
                                 :do (if (and (not (special-variable-name? name lexenv))
                                              (not (find-form-by-name (coerce-to-form name) declarations
@@ -260,7 +260,7 @@
                               (setf (bindings-of let*-form)
                                     (loop
                                       :for entry :in (second -form-)
-                                      :for lexenv = (env/lexical-environment -environment-)
+                                      :for lexenv = (walk-environment/lexical-environment -environment-)
                                       :collect (bind (((name &optional initial-value) (ensure-list entry)))
                                                  (with-form-object (binding 'lexical-variable-binding-form let*-form :name name)
                                                    (setf (initial-value-of binding) (recurse initial-value binding))
@@ -304,7 +304,7 @@
   (with-form-object (macrolet 'macrolet-form -parent-
                               :bindings '())
     (dolist* ((&whole defn name args &body body) (second -form-))
-      (bind ((handler (parse-macro-definition name args body (env/lexical-environment -environment-))))
+      (bind ((handler (parse-macro-definition name args body (walk-environment/lexical-environment -environment-))))
         (-augment- :macro name handler)
         ;; there's not much point in keeping the bindings when we expand the macrolet body anyway, so don't.
         ;; it would just hinder the saving of the form into fasl's for no apparent benefit.
