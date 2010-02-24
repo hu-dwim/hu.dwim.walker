@@ -46,11 +46,8 @@
   (cons (cadr (recurse operator)) (recurse-on-body arguments)))
 
 (def layered-method walk-form/application (-form- -parent- operator arguments -environment-)
-  (macrolet ((-lookup- (type name &key (otherwise nil))
-               `(%env/find -environment- ,type ,name :otherwise ,otherwise)))
-    (labels ((recurse (node &optional (parent -parent-))
-               (walk-form node :parent parent :environment -environment-))
-             (walk-arguments (application-form)
+  (with-walker-handler-lexical-environment
+    (labels ((walk-arguments (application-form)
                (loop
                  :for index :from 1
                  :for arg :in arguments
