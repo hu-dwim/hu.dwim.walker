@@ -272,6 +272,7 @@
                             (setf (default-value-of arg) (walk-form default-value :target-node arg :environment env))))))))
     env))
 
+;; TODO rename to lambda-argument-form?
 (def (form-class e) function-argument-form (name-definition-form)
   ())
 
