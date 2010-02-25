@@ -259,7 +259,7 @@
 (def test test/semantics/lambda/args ()
   (let* ((ast (walk-form '(lambda (a &optional (b a) &key (c b))
                            a b c)))
-         (args (arguments-of ast)))
+         (args (bindings-of ast)))
     (is (every (lambda (x) (typep x 'name-definition-form))
                args))
     (is (every #'eql args
@@ -279,9 +279,9 @@
 (def test test/semantics/lambda/bug/2 ()
   (bind ((walked (walk-form '(lambda (&optional a (b 42)) ; no default value for A
                               )))
-         (optional-argument-form (second (arguments-of walked)))
+         (optional-argument-form (second (bindings-of walked)))
          (default-value-form (default-value-of optional-argument-form)))
-    (is (null (default-value-of (first (arguments-of walked)))))
+    (is (null (default-value-of (first (bindings-of walked)))))
     (is (typep optional-argument-form 'optional-function-argument-form))
     (is (typep default-value-form 'constant-form))
     (is (eq (value-of default-value-form) 42))
