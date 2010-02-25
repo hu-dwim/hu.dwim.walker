@@ -8,6 +8,13 @@
 
 (def project :hu.dwim.walker :path (system-pathname :hu.dwim.walker))
 
+(def method make-project-tab-pages ((component project/detail/inspector) (project (eql (find-project :hu.dwim.walker))))
+  (append (list (tab-page/widget (:selector (icon switch-to-tab-page :label "User guide"))
+                  (make-value-inspector (find-book 'user-guide)))
+                (tab-page/widget (:selector (icon switch-to-tab-page :label "Dictionary"))
+                  (make-value-inspector (mapcar 'find-dictionary '(walker)))))
+          (call-next-method)))
+
 (def book user-guide (:title "User guide")
   (chapter (:title "Introduction")
     (paragraph ()
@@ -32,3 +39,7 @@
   (chapter (:title "Tutorial")
     (paragraph ()
       "TODO")))
+
+(def dictionary walker ()
+  walk-form
+  unwalk-form)
