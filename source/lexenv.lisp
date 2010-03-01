@@ -46,24 +46,6 @@
                    (declare (ignore args))
                    (missing-lexical-environment-function))))))
 
-;; TODO delme? this may be obsolete, because its interface is too naiive about scanning the complex function and/or variable namespace...
-;; or merge :function and :macro? similarly :variable and :symbol-macro?
-(def (function e) lookup-in-lexenv (kind name lexenv &key (otherwise :error))
-  (bind ((result (multiple-value-list
-                  (ecase kind
-                    (:variable     (find-variable-in-lexenv name lexenv))
-                    (:function     (find-function-in-lexenv name lexenv))
-                    (:macro        (find-macro-in-lexenv name lexenv))
-                    (:symbol-macro (find-symbol-macro-in-lexenv name lexenv))
-                    (:block        (find-block-in-lexenv name lexenv))
-                    (:tag          (find-tag-in-lexenv name lexenv))))))
-    (if (first result)
-        (values-list result)
-        (handle-otherwise (case otherwise
-                            (:error `(:error "Could not find ~S of kind ~S in lexenv" ,name ,kind))
-                            (:warn `(:warn  "Could not find ~S of kind ~S in lexenv" ,name ,kind))
-                            (t otherwise))))))
-
 (defun augment-lexenv (kind name lexenv &rest args)
   (ecase kind
     (:variable     (progn
