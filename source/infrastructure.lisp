@@ -156,13 +156,11 @@
 (defmacro walk-environment/augment! (env type name datum &rest other-datum)
   `(setf ,env (walk-environment/augment ,env ,type ,name ,datum ,@other-datum)))
 
-(def (function e) walk-environment/find (environment type name &key (otherwise nil))
+(def (function e) walk-environment/find (environment type name &key (otherwise :error otherwise?))
   (labels ((not-found ()
              (return-from walk-environment/find
-               (if (eq otherwise :error)
-                   (error "No value for ~S of type ~S in environment ~S was found."
-                          name type environment)
-                   (handle-otherwise otherwise))))
+               (handle-otherwise (error "No value for ~S of type ~S in environment ~S was found."
+                                        name type environment))))
            (search-assoc (list)
              (aif (assoc name list)
                   (values (cdr it) t)
