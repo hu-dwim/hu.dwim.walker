@@ -18,29 +18,29 @@
    (lambda (symbol type rest)
      (declare (ignore type rest))
      (multiple-value-bind (type env decl) (sys:variable-information symbol lexenv)
-       (let ((ignored (eq 'ignore (cadr (assoc 'ignore decl))))
-             (special (eq :special type))
-             (macro (eq :symbol-macro type)))
-         (when (and (if include-ignored? t (not ignored))
-                    (if include-specials? t (not special))
-                    (if include-macros? t (not macro)))
-           (funcall visitor symbol :ignored? ignored :special? special :macro? macro
-                    :macro-body (and macro (car env)))))))
+       (when type
+         (let ((ignored (eq 'ignore (cadr (assoc 'ignore decl))))
+               (special (eq :special type))
+               (macro (eq :symbol-macro type)))
+           (when (and (if include-ignored? t (not ignored))
+                      (if include-specials? t (not special))
+                      (if include-macros? t (not macro)))
+             (funcall visitor symbol :ignored? ignored :special? special :macro? macro
+                      :macro-body (and macro (car env))))))))
    lexenv))
 
 (defun iterate-functions-in-lexenv (visitor lexenv &key include-macros?)
   (system::map-over-environment-functions
    (lambda (symbol type rest)
-     (declare (ignore rest))
-     (let ((macro (eq :macro type)))
-       (when (or (eq :function type)
-                 (and include-macros? macro))
-         (funcall visitor symbol :macro? macro
-                  :macro-function (and macro
-                                       (multiple-value-bind (type env decl)
-                                           (sys:function-information symbol lexenv)
-                                         (declare (ignore type decl))
-                                         (car env)))))))
+     (declare (ignore type rest))
+     (multiple-value-bind (type env decl) (sys:function-information symbol lexenv)
+       (declare (ignore decl))
+       (when type
+         (let ((macro (eq :macro type)))
+           (when (or (eq :function type)
+                     (and include-macros? macro))
+             (funcall visitor symbol
+                      :macro? macro :macro-function (and macro (car env))))))))
    lexenv))
 
 (defun iterate-blocks-in-lexenv (visitor lexenv)
@@ -48,8 +48,9 @@
   ;; won't work anytime soon [spr36543])
   (system::map-over-environment-blocks
    (lambda (symbol type rest)
-     (declare (ignore type rest))
-     (funcall visitor symbol))
+     (declare (ignore rest))
+     (when type
+       (funcall visitor symbol)))
    lexenv))
 
 (defun iterate-tags-in-lexenv (visitor lexenv)
@@ -57,8 +58,9 @@
   ;; won't work anytime soon [spr36543])
   (system::map-over-environment-tags
    (lambda (symbol type rest)
-     (declare (ignore type rest))
-     (funcall visitor symbol))
+     (declare (ignore rest))
+     (when type
+       (funcall visitor symbol)))
    lexenv))
 
 (defun augment-lexenv-with-variable (name env &key special ignored)
