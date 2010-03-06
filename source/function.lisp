@@ -104,8 +104,11 @@
        ,@(unwalk-declarations declarations)
        ,@(recurse-on-body body)))
 
-(def (form-class e) function-definition-form (lambda-function-form
-                                              name-definition-form)
+;; A lambda with an implicit block
+(def (form-class e) block-lambda-function-form (lambda-function-form block-form)
+  ())
+
+(def (form-class e) function-definition-form (block-lambda-function-form)
   ((docstring nil)))
 
 (def walker defun
@@ -121,8 +124,7 @@
      ,@(unwalk-declarations declarations)
      ,@(recurse-on-body body)))
 
-(def (form-class e) named-lambda-function-form (lambda-function-form
-                                                name-definition-form)
+(def (form-class e) named-lambda-function-form (block-lambda-function-form)
   ((special-form)))
 
 (def unwalker named-lambda-function-form (special-form name body declarations)
@@ -131,8 +133,7 @@
      ,@(unwalk-declarations declarations)
      ,@(recurse-on-body body))))
 
-(def (form-class e) lexical-function-form (lambda-function-form
-                                           name-definition-form)
+(def (form-class e) lexical-function-form (block-lambda-function-form)
   ())
 
 (def unwalker lexical-function-form (name body declarations)
@@ -201,7 +202,11 @@
 
 (def layered-methods walk-form/lambda-like
   (:method :before (ast-node args body env &key &allow-other-keys)
+    (declare (ignore ast-node args body))
     (check-type env walk-environment))
+  (:method ((ast-node block-lambda-function-form) args body env &rest keys)
+    (walk-environment/augment! env :block (name-of ast-node) ast-node)
+    (apply #'call-next-layered-method ast-node args body env keys))
   (:method (ast-node args body env &key docstring-allowed declarations-allowed (whole *current-form*))
     (setf env (walk-ordinary-lambda-list (coerce-to-form args) ast-node env))
     (walk-implict-progn ast-node body env
