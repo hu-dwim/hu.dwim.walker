@@ -6,13 +6,15 @@
 
 (in-package :hu.dwim.walker)
 
-(def (macro e) do-ast-links ((item form &rest flags) &body code)
-  (with-unique-names (closure)
-    `(flet ((,closure (-parent- -field- ,item)
-              (declare (ignorable -parent- -field-))
-              ,@code))
-       (declare (dynamic-extent #',closure))
-       (enum-ast-links ,form #',closure ,@flags))))
+(def (macro e) do-ast-links ((item form &rest flags &key rewrite &allow-other-keys) &body code)
+  (with-unique-names (link-walker)
+    `(block nil
+       (flet ((,link-walker (-parent- -field- ,item)
+                (declare (ignorable -parent- -field-))
+                ,@(append code (if rewrite (list item) nil))))
+         (declare (dynamic-extent #',link-walker))
+         (,(if rewrite 'rewrite-ast-links 'enum-ast-links)
+           ,form #',link-walker ,@(remove-from-plist flags :rewrite))))))
 
 (def (function e) map-ast (visitor form)
   (labels ((recurse (parent field form)
