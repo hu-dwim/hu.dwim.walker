@@ -340,6 +340,10 @@
         (t
          (funcall visitor parent slot-name value))))
 
+(def method enum-ast-links progn ((form cons) visitor &key include-main-refs include-back-refs raw-lists)
+  (declare (ignore include-main-refs include-back-refs))
+  (enum-tree form 'car visitor form raw-lists))
+
 (def function rewrite-tree (parent slot-name visitor value raw)
   "Apply visitor to all non-nil leaf values of a cons tree."
   (cond ((and (listp value) (not raw))
