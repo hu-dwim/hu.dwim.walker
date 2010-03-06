@@ -240,7 +240,7 @@
                                                :supplied-p-parameter-name supplied-p-parameter-name)
                           (walk-environment/augment! env :variable name arg)
                           (when default-value-supplied?
-                            (setf (default-value-of arg) (walk-form default-value :target-node arg :environment env)))
+                            (setf (default-value-of arg) (walk-form default-value :parent arg :environment env)))
                           (when supplied-p-parameter-name
                             ;; TODO so, what on earth do we want to store for supplied-p-parameter-name? it should be a full lexical-variable-binding-form so that ...
                             (walk-environment/augment! env :variable supplied-p-parameter-name t)))))
@@ -260,7 +260,7 @@
                                                  :supplied-p-parameter-name supplied-p-parameter-name)
                             (walk-environment/augment! env :variable name arg)
                             (when default-value-supplied?
-                              (setf (default-value-of arg) (walk-form default-value :target-node arg :environment env)))
+                              (setf (default-value-of arg) (walk-form default-value :parent arg :environment env)))
                             (when supplied-p-parameter-name
                               ;; TODO see similar comment at &optional
                               (walk-environment/augment! env :variable supplied-p-parameter-name t))))))
@@ -274,7 +274,7 @@
                         (with-form-object (arg 'auxiliary-function-argument-form target-node :name name)
                           (walk-environment/augment! env :variable name arg)
                           (when default-value-supplied?
-                            (setf (default-value-of arg) (walk-form default-value :target-node arg :environment env))))))))
+                            (setf (default-value-of arg) (walk-form default-value :parent arg :environment env))))))))
     env))
 
 ;; TODO rename to lambda-argument-form?
