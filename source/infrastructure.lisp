@@ -282,6 +282,8 @@
                                    #+sbcl
                                    '(sb-ext:muffle-conditions
                                      )
+                                   #+ecl
+                                   '(:read-only)
                                    ))
 
 (defvar *known-direct-type-declarations* nil
