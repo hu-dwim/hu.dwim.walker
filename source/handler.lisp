@@ -205,6 +205,11 @@
   ((initial-value :ast-link t)
    (special-binding nil :accessor special-binding? :type boolean)))
 
+(def unwalker lexical-variable-binding-form (name initial-value)
+  (if initial-value
+      (list name (unwalk-form initial-value))
+      name))
+
 (def (form-class e) let-form (lexical-variable-binder-form)
   ())
 
@@ -236,11 +241,7 @@
                               (values -environment- var-names)))))
 
 (def function let/let*-form-unwalker (name bindings body declarations)
-  `(,name ,(mapcar (lambda (bind)
-                     (aif (initial-value-of bind)
-                          (list (name-of bind) (unwalk-form it))
-                          (name-of bind)))
-                   bindings)
+  `(,name ,(unwalk-forms bindings)
      ,@(unwalk-declarations declarations)
      ,@(unwalk-forms body)))
 
