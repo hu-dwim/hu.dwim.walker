@@ -436,8 +436,8 @@
                         key (if type (list :type type)))))
   `(progn
      ,@(if type
-           `((declaim (ftype (function (walked-form) ,type) ,name)
-                      (ftype (function (,type walked-form) ,type) (setf ,name)))))
+           `((declaim (ftype (function (t) ,type) ,name)
+                      (ftype (function (,type t) ,type) (setf ,name)))))
      ,@(loop :for ftype :in (ensure-list forms)
           :collect `(def (method ,@-options-) ,name ((form ,ftype))
                       (form-attribute form ',key ,default)))
