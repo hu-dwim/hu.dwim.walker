@@ -16,6 +16,10 @@
   (tags '())
   (lexical-environment (make-empty-lexical-environment)))   ; the underlying lisp's internal lexenv
 
+(def (function e) walk-environment/copy (source)
+  ;; alias to follow naming convention
+  (copy-walk-environment source))
+
 (def (function e) macroexpand-all (form &optional (env (make-empty-lexical-environment)))
   (unwalk-form (walk-form form :environment (make-walk-environment env))))
 
@@ -133,7 +137,7 @@
      (push (cons name datum) (walk-environment/tags environment)))
     (:declare)))
 
-(def function walk-environment/augment (env type name &optional datum)
+(def (function e) walk-environment/augment (env type name &optional datum)
   (bind ((lexenv (walk-environment/lexical-environment env))
          (newlex (ecase type
                    (:variable     (augment-lexenv-with-variable     name lexenv))
@@ -153,7 +157,7 @@
     (setf (walk-environment/lexical-environment newenv) newlex)
     newenv))
 
-(defmacro walk-environment/augment! (env type name datum &rest other-datum)
+(def (macro e) walk-environment/augment! (env type name &optional datum &rest other-datum)
   `(setf ,env (walk-environment/augment ,env ,type ,name ,datum ,@other-datum)))
 
 (def (function e) walk-environment/find (environment type name &key (otherwise :error otherwise?))
