@@ -428,6 +428,13 @@
    (source *current-form*)
    (attributes nil :copy-with #'copy-list)))
 
+(def (form-class e) unwalked-form ()
+  ()
+  (:documentation "A quote regarding walking, the source slot contains the original form ready to be emitted as-is by UNWALK-FORM."))
+
+(def layered-method unwalk-form ((node unwalked-form))
+  (source-of node))
+
 ;; Form attributes
 
 (def (macro e) form-attribute (form tag &optional default-value)
