@@ -419,10 +419,11 @@
   (let ((effective-code '()))
     (loop
        :for (name value) :on (cdr -form-) :by #'cddr
-       :do (push (aif (eq (-lookup- :variable-like name) :symbol-macro)
-                      `(setf ,it ,value)
-                      `(setq ,name ,value))
-                 effective-code))
+       :do (bind (((:values type expansion) (-lookup- :variable-like name)))
+             (push (if (eq type :symbol-macro)
+                       `(setf ,expansion ,value)
+                       `(setq ,name ,value))
+                   effective-code)))
     (if (= 1 (length effective-code))
         ;; only one form, the "simple case"
         (bind (((type variable value) (first effective-code)))
