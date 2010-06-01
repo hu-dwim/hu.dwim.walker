@@ -319,3 +319,14 @@
     (is (eql (enclosing-tagbody-of go1) (first body1)))
     (is (eql (enclosing-tagbody-of go2) ast))))
 
+(deftest test/semantics/setq/bug/1 ()
+  (is (equal '(1 43)
+             (eval (unwalk-form
+                    (walk-form
+                     '(let ((x 1)
+                            (y 2))
+                       (symbol-macrolet ((x y))
+                         ;; setq must take symbol macros into account
+                         (setq x 42)
+                         (incf x))
+                       (list x y))))))))
