@@ -523,23 +523,25 @@
                        (setq environment-var i)
                        (error "Multiple &ENVIRONMENT clauses in macro lambda list: ~S" lambda-list))))
          (handler-env (if (eq environment-var nil) (gensym "ENV-") environment-var))
-         whole-list
-         lambda-list-without-whole)
-    (if (eq '&whole (car lambda-list-without-environment))
-        (setq whole-list (list '&whole (second lambda-list-without-environment))
-              lambda-list-without-whole (cddr lambda-list-without-environment))
-        (setq whole-list '()
-              lambda-list-without-whole lambda-list-without-environment))
+         (lambda-list-without-whole lambda-list-without-environment)
+         whole-var)
+    (when (eq '&whole (car lambda-list-without-environment))
+      (setf whole-var (second lambda-list-without-environment)
+            lambda-list-without-whole (cddr lambda-list-without-environment)))
     (eval
      (with-unique-names (handler-args form-name)
        `(lambda (,handler-args &optional ,handler-env)
           ,@(unless environment-var
               `((declare (ignore ,handler-env))))
-          (destructuring-bind (,@whole-list ,form-name ,@lambda-list-without-whole)
+          (destructuring-bind (,@(when whole-var `(&whole ,whole-var)) ,form-name ,@lambda-list-without-whole)
               ,handler-args
             (declare (ignore ,form-name))
             ,@(progn
                (when lexenv
+                 (when environment-var
+                   (augment-lexenv! :variable environment-var lexenv))
+                 (when whole-var
+                   (augment-lexenv! :variable whole-var lexenv))
                  (dolist (variable (lambda-list-to-variable-name-list
                                     lambda-list-without-whole :macro t :include-specials t))
                    ;; augment the lexenv with the macro's variables, so
