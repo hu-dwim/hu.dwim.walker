@@ -71,7 +71,7 @@
 ;;;
 
 (defun iterate-variables-in-lexenv (visitor lexenv
-                                    &key include-ignored? include-specials? include-macros?)
+                                    &key include-ignored? (include-specials? t) include-macros?)
   (bind ((defenv (ccl::definition-environment lexenv))
          (hide-list ())
          (var-types ()))

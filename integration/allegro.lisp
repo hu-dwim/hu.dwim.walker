@@ -13,7 +13,7 @@
   (sys::make-augmentable-environment-boa :compilation))
 
 (defun iterate-variables-in-lexenv (visitor lexenv &key include-ignored?
-                                    include-specials? include-macros?)
+                                    (include-specials? t) include-macros?)
   (system::map-over-environment-variables
    (lambda (symbol type rest)
      (declare (ignore type rest))

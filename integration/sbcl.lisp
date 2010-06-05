@@ -34,7 +34,7 @@
 ;;; Iteration
 
 (defun iterate-variables-in-lexenv (visitor lexenv &key
-                                    include-ignored? include-specials? include-macros?)
+                                    include-ignored? (include-specials? t) include-macros?)
   (loop
      :with types = (sb-c::lexenv-type-restrictions lexenv)
      :for entry :in (sb-c::lexenv-vars lexenv)

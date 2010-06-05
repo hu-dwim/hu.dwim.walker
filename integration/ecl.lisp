@@ -67,7 +67,7 @@
 ;;;
 
 (defun iterate-variables-in-lexenv (visitor lexenv
-                                    &key include-ignored? include-specials? include-macros?)
+                                    &key include-ignored? (include-specials? t) include-macros?)
   (dolist (spec (c::cmp-env-variables lexenv))
     (when (ecl-symbol-macro-spec-p spec)
       (when include-macros?

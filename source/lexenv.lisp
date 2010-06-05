@@ -92,7 +92,7 @@
       :include-ignored? ,ignored-provided?
       :include-specials? ,special-provided?)))
 
-(def (function e) collect-variables-in-lexenv (lexenv &key include-ignored? include-specials? filter)
+(def (function e) collect-variables-in-lexenv (lexenv &key include-ignored? (include-specials? t) filter)
   (let ((result (list)))
     (iterate-variables-in-lexenv
      (lambda (name &key ignored? special? &allow-other-keys)
@@ -104,7 +104,7 @@
      :include-specials? include-specials?)
     (nreverse result)))
 
-(def (function e) find-variable-in-lexenv (name-to-find lexenv &key include-ignored? include-specials?)
+(def (function e) find-variable-in-lexenv (name-to-find lexenv &key include-ignored? (include-specials? t))
   (iterate-variables-in-lexenv
    (lambda (name &key ignored? &allow-other-keys)
      (when (eq name name-to-find)
