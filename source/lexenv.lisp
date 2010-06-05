@@ -72,7 +72,7 @@
 ;;;
 ;;; variables
 ;;;
-(def (macro e) do-variables-in-lexenv ((lexenv name &optional
+(def (macro e) do-variables-in-lexenv ((lexenv name &key
                                                (ignored? (gensym) ignored-provided?)
                                                (special? (gensym) special-provided?)
                                                (macro? (gensym) macro-provided?)

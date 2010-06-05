@@ -136,7 +136,8 @@
          (walkedenv (%make-walk-environment :lexical-environment lexenv)))
     (macrolet ((extend (type name datum)
                  `(%walk-environment/augment/primitive walkedenv ,type ,name ,datum)))
-      (do-variables-in-lexenv (lexenv name ignored? special? macro? macro-body type)
+      (do-variables-in-lexenv (lexenv name :ignored? ignored? :special? special?
+                                      :macro? macro? :macro-body macro-body :type type)
         (if macro?
             (extend :symbol-macro name macro-body)
             (extend :unwalked-variable name
