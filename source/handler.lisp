@@ -54,7 +54,8 @@
 (def walker (type t) ; atom
   (bind ((lexenv (walk-environment/lexical-environment -environment-)))
     (cond
-      ((or (constant-name? -form-) (not (symbolp -form-)))
+      ((or (constant-name? -form-)
+           (not (symbolp -form-)))
        (make-form-object 'constant-form -parent- :value -form-))
       (t
        (bind (((:values closest-lexenv-entry-type definition decl-type) (-lookup- :variable-like -form-)))
@@ -78,7 +79,7 @@
             (bind (((:values expansion expanded?) (walker-macroexpand-1 -form- lexenv)))
               (cond (expanded?
                      (recurse expansion))
-                    ((special-variable-name? -form- lexenv) ; Globally proclaimed special variable?
+                    ((special-variable-name? -form- lexenv)
                      (make-form-object 'special-variable-reference-form -parent- :name -form-
                                        :declared-type (or decl-type
                                                           (declared-variable-type -form- lexenv))))
@@ -417,7 +418,7 @@
 (def walker setq
   ;; the SETQ handler needs to be able to deal with symbol-macrolets
   ;; which haven't yet been expanded and may expand into something
-  ;; requiring setf and not setq.
+  ;; requiring SETF and not SETQ.
   (let ((effective-code '()))
     (loop
        :for (name value) :on (cdr -form-) :by #'cddr

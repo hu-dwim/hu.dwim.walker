@@ -55,7 +55,7 @@
 (defun declared-variable-type/global (name)
   (or (cdr (assoc name ccl::*nx-compile-time-types*))
       (cdr (assoc name ccl::*nx-proclaimed-types*))
-      't))
+      +top-type+))
 
 (defun ccl-defined-const-p (name &optional lexenv)
   (let* ((defenv (ccl::definition-environment lexenv))

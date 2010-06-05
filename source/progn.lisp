@@ -196,11 +196,11 @@
   ;; Done
   env)
 
-(def (function e) walk-implict-progn (parent forms env &key declarations-callback docstring-allowed declarations-allowed (whole *current-form*))
+(def (function e) walk-implict-progn (parent forms walk-env &key declarations-callback docstring-allowed declarations-allowed (whole *current-form*))
   (assert (and (typep parent 'implicit-progn-mixin)
                (or (not declarations-allowed)
                    (typep parent 'implicit-progn-with-declarations-mixin))))
-  (check-type env walk-environment)
+  (check-type walk-env walk-environment)
   (bind (((:values body declarations docstring) (parse-body forms :documentation docstring-allowed :whole whole)))
     (when docstring-allowed
       (setf (docstring-of parent) docstring))
@@ -208,15 +208,15 @@
                (not declarations-allowed))
       (error "Declarations are not allowed at ~S" whole))
     (when declarations-allowed
-      (bind ((walked-declarations (walk-declarations declarations parent env))
+      (bind ((walked-declarations (walk-declarations declarations parent walk-env))
              (local-names nil))
         (setf (declarations-of parent) walked-declarations)
         (when declarations-callback
           ;; always call declarations-callback because some crucial sideffects may happen inside them (like in LET's walker)
-          (setf (values env local-names) (funcall declarations-callback walked-declarations)))
+          (setf (values walk-env local-names) (funcall declarations-callback walked-declarations)))
         ;; Add special declarations to the environment
-        (setf env (augment-with-special-vars env walked-declarations local-names))))
+        (setf walk-env (augment-with-special-vars walk-env walked-declarations local-names))))
     (setf (body-of parent) (mapcar (lambda (form)
-                                     (walk-form form :parent parent :environment env))
+                                     (walk-form form :parent parent :environment walk-env))
                                    (coerce-to-form body)))
     (values)))

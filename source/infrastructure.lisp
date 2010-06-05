@@ -143,7 +143,7 @@
                     (cons (cond (special? :special)
                                 (ignored? :ignored)
                                 (t t))
-                          ;; TODO why into the CRD? why not a proper list, or even better a plist?
+                          ;; TODO why into the CDR? why not a proper list, or even better a plist?
                           type))))
       (do-functions-in-lexenv (lexenv name macro? macro-fn)
         (if macro?
@@ -534,7 +534,7 @@
      ,@body
      ,variable))
 
-(defun parse-macro-definition (name lambda-list body &optional lexenv)
+(def function parse-macro-definition (name lambda-list body &optional lexenv)
   "Sort of like parse-macro from CLtL2."
   (declare (ignore name))
   ;; TODO could use parse-lambda-list
