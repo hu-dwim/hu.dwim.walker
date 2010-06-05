@@ -78,18 +78,19 @@
                                                (macro-body (gensym))
                                                (type (gensym) type-provided?))
                                         &body body)
-  `(iterate-variables-in-lexenv
-    (lambda (,name &key ((:ignored? ,ignored?) nil) ((:special? ,special?) nil)
-        ((:macro? ,macro?) nil) ((:macro-body ,macro-body) nil) ((:type ,type) nil))
-      (declare (ignorable ,@(unless ignored-provided? (list ignored?))
-                          ,@(unless special-provided? (list special?))
-                          ,@(unless macro-provided? (list macro? macro-body))
-                          ,@(unless type-provided? (list type))))
-      ,@body)
-    ,lexenv
-    :include-macros? ,macro-provided?
-    :include-ignored? ,ignored-provided?
-    :include-specials? ,special-provided?))
+  `(block nil
+     (iterate-variables-in-lexenv
+      (lambda (,name &key ((:ignored? ,ignored?) nil) ((:special? ,special?) nil)
+          ((:macro? ,macro?) nil) ((:macro-body ,macro-body) nil) ((:type ,type) nil))
+        (declare (ignorable ,@(unless ignored-provided? (list ignored?))
+                            ,@(unless special-provided? (list special?))
+                            ,@(unless macro-provided? (list macro? macro-body))
+                            ,@(unless type-provided? (list type))))
+        ,@body)
+      ,lexenv
+      :include-macros? ,macro-provided?
+      :include-ignored? ,ignored-provided?
+      :include-specials? ,special-provided?)))
 
 (def (function e) collect-variables-in-lexenv (lexenv &key include-ignored? include-specials? filter)
   (let ((result (list)))
@@ -120,13 +121,14 @@
                                                (macro? (gensym) macro-provided?)
                                                (macro-function (gensym) macro-function-provided?))
                                        &body body)
-  `(iterate-functions-in-lexenv
-    (lambda (,name &key ((:macro? ,macro?)) ((:macro-function ,macro-function)))
-      (declare (ignorable ,@(unless macro-provided? (list macro?))
-                          ,@(unless macro-function-provided? (list macro-function))))
-      ,@body)
-    ,lexenv
-    :include-macros? ,macro-provided?))
+  `(block nil
+     (iterate-functions-in-lexenv
+      (lambda (,name &key ((:macro? ,macro?)) ((:macro-function ,macro-function)))
+        (declare (ignorable ,@(unless macro-provided? (list macro?))
+                            ,@(unless macro-function-provided? (list macro-function))))
+        ,@body)
+      ,lexenv
+      :include-macros? ,macro-provided?)))
 
 (def (function e) collect-functions-in-lexenv (lexenv &key filter)
   (let ((result (list)))
@@ -151,14 +153,15 @@
 ;;;
 (def (macro e) do-macros-in-lexenv ((lexenv name &optional (macro-fn (gensym) macro-fn-provided?))
                                      &body body &aux (macro? (gensym)))
-  `(iterate-functions-in-lexenv
-    (lambda (,name &key ((:macro? ,macro?)) ((:macro-function ,macro-fn)))
-      ,@(unless macro-fn-provided?
-        `((declare (ignore ,macro-fn))))
-      (when ,macro?
-        ,@body))
-    ,lexenv
-    :include-macros? t))
+  `(block nil
+     (iterate-functions-in-lexenv
+      (lambda (,name &key ((:macro? ,macro?)) ((:macro-function ,macro-fn)))
+        ,@(unless macro-fn-provided?
+                  `((declare (ignore ,macro-fn))))
+        (when ,macro?
+          ,@body))
+      ,lexenv
+      :include-macros? t)))
 
 (def (function e) collect-macros-in-lexenv (lexenv &key filter)
   (let ((result (list)))
@@ -188,14 +191,15 @@
 (def (macro e) do-symbol-macros-in-lexenv ((lexenv name &optional (definition (gensym) definition-provided?))
                                             &body body)
   (with-unique-names (macro?)
-    `(iterate-variables-in-lexenv
-      (lambda (,name &key ((:macro-body ,definition)) ((:macro? ,macro?)) &allow-other-keys)
-        ,@(unless definition-provided?
-            `((declare (ignore ,definition))))
-        (when ,macro?
-          ,@body))
-      ,lexenv
-      :include-macros? t)))
+    `(block nil
+       (iterate-variables-in-lexenv
+        (lambda (,name &key ((:macro-body ,definition)) ((:macro? ,macro?)) &allow-other-keys)
+          ,@(unless definition-provided?
+                    `((declare (ignore ,definition))))
+          (when ,macro?
+            ,@body))
+        ,lexenv
+        :include-macros? t))))
 
 (def (function e) collect-symbol-macros-in-lexenv (lexenv &key filter)
   (let ((result (list)))
@@ -223,10 +227,11 @@
 ;;; blocks
 ;;;
 (def (macro e) do-blocks-in-lexenv ((lexenv name) &body body)
-  `(iterate-blocks-in-lexenv
-    (lambda (,name)
-      ,@body)
-    ,lexenv))
+  `(block nil
+     (iterate-blocks-in-lexenv
+      (lambda (,name)
+        ,@body)
+      ,lexenv)))
 
 (def (function e) collect-blocks-in-lexenv (lexenv &key filter)
   (let ((result (list)))
@@ -250,10 +255,11 @@
 ;;; tags
 ;;;
 (def (macro e) do-tags-in-lexenv ((lexenv name) &body body)
-  `(iterate-tags-in-lexenv
-    (lambda (,name)
-      ,@body)
-    ,lexenv))
+  `(block nil
+     (iterate-tags-in-lexenv
+      (lambda (,name)
+        ,@body)
+      ,lexenv)))
 
 (def (function e) collect-tags-in-lexenv (lexenv &key filter)
   (let ((result (list)))
