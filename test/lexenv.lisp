@@ -6,51 +6,27 @@
 
 (in-package :hu.dwim.walker.test)
 
-(defsuite* (test/lexenv :in test))
+(def suite* (test/lexenv :in test))
 
-;; TODO would be better to use macroexpand-all for this, because stefil's errors get to compile
-;; which aborts at the first failure and skips the other assertions
-(defun compile* (form)
-  (handler-bind ((warning #'muffle-warning)
-                 #+sbcl (sb-ext:compiler-note #'muffle-warning))
-    (compile nil `(lambda ()
-                    ,form)))
-  (values))
+(def suite* (test/lexenv/query :in test/lexenv))
 
-(defmacro with-captured-env ((env-variable form) &body code)
-  "Executes code with env captured at the point marked -here-.
-The captured environment includes a '-here-' macrolet.
-Use return to abort compilation and produce a value."
-  (with-unique-names (body)
-    `(block nil
-       (let ((,body (lambda (,env-variable) ,@code)))
-         (declare (special ,body)) ; For the macrolet
-         (compile* ',(subst `(macrolet ((-here- (&environment env)
-                                          (declare (special ,body))
-                                          (funcall ,body env)
-                                          nil))
-                               (-here-))
-                            '-here- form))))))
-
-(defsuite* (test/lexenv/query :in test/lexenv))
-
-(deftest test/lexenv/query/variables ()
-  (with-captured-env (env (symbol-macrolet ((a 42)
-                                            (b 43))
-                            (flet ((f1 () 1)
-                                   (f2 () 2))
-                              (macrolet ((m1 () 1)
-                                         (m2 () 2))
-                                (let ((x 1)
-                                      (y 2)
-                                      (z 3))
-                                  (declare (ignore z))
-                                  -here-)))))
-    (is (subsetp '(y x)
-               (collect-variables-in-lexenv env)))
+(def test test/lexenv/query/variables ()
+  (with-captured-lexical-environment
+      (env (symbol-macrolet ((a 42)
+                             (b 43))
+             (flet ((f1 () 1)
+                    (f2 () 2))
+               (macrolet ((m1 () 1)
+                          (m2 () 2))
+                 (let ((x 1)
+                       (y 2)
+                       (z 3))
+                   (declare (ignore z))
+                   -here-)))))
+    (is (subsetp '(y x) (collect-variables-in-lexenv env)))
     (bind ((ignored 0)
            (non-ignored 0))
-      (do-variables-in-lexenv (env name ignored?)
+      (do-variables-in-lexenv (env name :ignored? ignored?)
         (when (eq (symbol-package name) *package*)
           (is (symbolp name))
           (if ignored?
@@ -67,18 +43,19 @@ Use return to abort compilation and produce a value."
     (is (not (find-variable-in-lexenv 'm1 env)))
     (is (find-variable-in-lexenv 'z env :include-ignored? t))))
 
-(deftest test/lexenv/query/functions ()
-  (with-captured-env (env (symbol-macrolet ((a 42)
-                                            (b 43))
-                            (flet ((f1 () 1)
-                                   (f2 () 2))
-                              (macrolet ((m1 () 1)
-                                         (m2 () 2))
-                                (let ((x 1)
-                                      (y 2)
-                                      (z 3))
-                                  (declare (ignore z))
-                                  -here-)))))
+(def test test/lexenv/query/functions ()
+  (with-captured-lexical-environment
+      (env (symbol-macrolet ((a 42)
+                             (b 43))
+             (flet ((f1 () 1)
+                    (f2 () 2))
+               (macrolet ((m1 () 1)
+                          (m2 () 2))
+                 (let ((x 1)
+                       (y 2)
+                       (z 3))
+                   (declare (ignore z))
+                   -here-)))))
     (is (equal '(f2 f1)
                (collect-functions-in-lexenv env)))
     (bind ((functions 0))
@@ -93,43 +70,45 @@ Use return to abort compilation and produce a value."
     (is (not (find-function-in-lexenv 'm1 env)))
     (is (not (find-function-in-lexenv '-here- env)))))
 
-(deftest test/lexenv/query/macros ()
-  (with-captured-env (env (symbol-macrolet ((a 42)
-                                            (b 43))
-                            (flet ((f1 () 1)
-                                   (f2 () 2))
-                              (macrolet ((m1 () 1)
-                                         (m2 () 2))
-                                (let ((x 1)
-                                      (y 2)
-                                      (z 3))
-                                  (declare (ignore z))
-                                  -here-)))))
-    (is (subsetp '(-here- m1 m2) (collect-macros-in-lexenv env)))
+(def test test/lexenv/query/macros ()
+  (with-captured-lexical-environment
+      (env (symbol-macrolet ((a 42)
+                             (b 43))
+             (flet ((f1 () 1)
+                    (f2 () 2))
+               (macrolet ((m1 () 1)
+                          (m2 () 2))
+                 (let ((x 1)
+                       (y 2)
+                       (z 3))
+                   (declare (ignore z))
+                   -here-)))))
+    (is (subsetp '(m1 m2) (collect-macros-in-lexenv env)))
     (bind ((macros 0))
       (do-macros-in-lexenv (env name fn)
         (when (eq (symbol-package name) *package*)
           (is (symbolp name))
           (is (functionp fn))
           (incf macros)))
-      (is (= macros 3)))
+      (is (= macros 2)))
     (is (find-macro-in-lexenv 'm1 env))
     (is (not (find-macro-in-lexenv 'f1 env)))
     (is (not (find-macro-in-lexenv 'a env)))
     (is (not (find-macro-in-lexenv 'x env)))))
 
 (deftest test/lexenv/query/symbol-macros ()
-  (with-captured-env (env (symbol-macrolet ((a 42)
-                                            (b 43))
-                            (flet ((f1 () 1)
-                                   (f2 () 2))
-                              (macrolet ((m1 () 1)
-                                         (m2 () 2))
-                                (let ((x 1)
-                                      (y 2)
-                                      (z 3))
-                                  (declare (ignore z))
-                                  -here-)))))
+  (with-captured-lexical-environment
+      (env (symbol-macrolet ((a 42)
+                             (b 43))
+             (flet ((f1 () 1)
+                    (f2 () 2))
+               (macrolet ((m1 () 1)
+                          (m2 () 2))
+                 (let ((x 1)
+                       (y 2)
+                       (z 3))
+                   (declare (ignore z))
+                   -here-)))))
     (is (set-equal (collect-symbol-macros-in-lexenv env)
                    '(a b)))
     (bind ((symbol-macros 0))
@@ -146,15 +125,16 @@ Use return to abort compilation and produce a value."
 
 #-(or openmcl allegro)
 (deftest test/lexenv/query/blocks ()
-  (with-captured-env (env (block b1
-                            (flet ((f1 () 1)
-                                   (f2 () 2))
-                              (block b2
-                                (let ((x 1)
-                                      (y 2)
-                                      (z 3))
-                                  (declare (ignore z))
-                                  -here-)))))
+  (with-captured-lexical-environment
+      (env (block b1
+             (flet ((f1 () 1)
+                    (f2 () 2))
+               (block b2
+                 (let ((x 1)
+                       (y 2)
+                       (z 3))
+                   (declare (ignore z))
+                   -here-)))))
     (is (equal '(b2 b1)
                (remove-if-not #'symbol-package
                               (collect-blocks-in-lexenv env))))
@@ -172,17 +152,18 @@ Use return to abort compilation and produce a value."
 
 #-(or openmcl allegro)
 (deftest test/lexenv/query/tags ()
-  (with-captured-env (env (block b1
-                            (tagbody
-                             t1
-                               (progn)
-                             t2
-                               (tagbody
-                                t21
-                                  (progn)
-                                t22
-                                  (block b2
-                                    -here-)))))
+  (with-captured-lexical-environment
+      (env (block b1
+             (tagbody
+              t1
+                (progn)
+              t2
+                (tagbody
+                 t21
+                   (progn)
+                 t22
+                   (block b2
+                     -here-)))))
     (is (set-equal (collect-tags-in-lexenv env)
                    '(t21 t22 t1 t2)))
     (bind ((tags 0))
@@ -196,5 +177,11 @@ Use return to abort compilation and produce a value."
     (is (not (find-tag-in-lexenv 'f1 env)))
     (is (not (find-tag-in-lexenv 'x env)))))
 
-;; TODO (defsuite* (test/lexenv/augment :in test/lexenv))
+(def test test/lexenv/query/special-variable ()
+  (with-captured-lexical-environment
+      (env (let ((x 42))
+             (declare (special x))
+             -here-))
+    (is (special-variable-name? 'x env))))
 
+;; TODO (defsuite* (test/lexenv/augment :in test/lexenv))
