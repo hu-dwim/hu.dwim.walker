@@ -564,21 +564,19 @@
           (destructuring-bind (,@(when whole-var `(&whole ,whole-var)) ,form-name ,@lambda-list-without-whole)
               ,handler-args
             (declare (ignore ,form-name))
-            ,@(progn
-               (when lexenv
-                 (when environment-var
-                   (augment-lexenv! :variable environment-var lexenv))
-                 (when whole-var
-                   (augment-lexenv! :variable whole-var lexenv))
-                 (dolist (variable (lambda-list-to-variable-name-list
-                                    lambda-list-without-whole :macro t :include-specials t))
-                   ;; augment the lexenv with the macro's variables, so
-                   ;; that we don't get free variable warnings while
-                   ;; walking the body of the macro.
-                   (when (symbolp variable)
-                     ;; TODO protect against brokenness, see TEST/MACRO/1
-                     ;; it does not handle destructuring bind, which is available for macro lambda args
-                     (augment-lexenv! :variable variable lexenv))))
-               (mapcar (lambda (form)
-                         (macroexpand-all form lexenv))
-                       body))))))))
+            ,(progn
+              (when lexenv
+                (when environment-var
+                  (augment-lexenv! :variable environment-var lexenv))
+                (when whole-var
+                  (augment-lexenv! :variable whole-var lexenv))
+                (dolist (variable (lambda-list-to-variable-name-list
+                                   lambda-list-without-whole :macro t :include-specials t))
+                  ;; augment the lexenv with the macro's variables, so
+                  ;; that we don't get free variable warnings while
+                  ;; walking the body of the macro.
+                  (when (symbolp variable)
+                    ;; TODO protect against brokenness, see TEST/MACRO/1
+                    ;; it does not handle destructuring bind, which is available for macro lambda args
+                    (augment-lexenv! :variable variable lexenv))))
+              (macroexpand-all `(locally ,@body) lexenv))))))))
