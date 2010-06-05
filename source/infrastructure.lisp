@@ -169,7 +169,7 @@
 (def (function e) walk-environment/augment (env type name &optional datum)
   (bind ((lexenv (walk-environment/lexical-environment env))
          (newlex (ecase type
-                   (:variable     (augment-lexenv-with-variable     name lexenv :special (eq datum :special)))
+                   (:variable     (augment-lexenv-with-variable     name lexenv :special (proclaimed-special-variable?/global name)))
                    (:macro        (augment-lexenv-with-macro        name datum lexenv))
                    (:function     (augment-lexenv-with-function     name lexenv))
                    (:symbol-macro (augment-lexenv-with-symbol-macro name datum lexenv))
