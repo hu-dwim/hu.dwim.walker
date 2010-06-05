@@ -34,15 +34,17 @@
   (let ((lst (ccl::lexenv.variables env)))
     (if (listp lst) lst)))
 
-(defun proclaimed-special-in-lexenv? (name lexenv)
+(defun proclaimed-special-variable?/lexenv (name lexenv)
   ;; During compilation the special proclamations are
   ;; collected in the definition environment.
   (let* ((defenv (if (and lexenv (ccl-defenv-p lexenv))
                      lexenv
                      (ccl::definition-environment lexenv)))
          (specials (if defenv (ccl::defenv.specials defenv))))
-    (or (ccl::assq name specials)
-        (ccl:proclaimed-special-p name))))
+    (ccl::assq name specials)))
+
+(defun proclaimed-special-variable?/global (name)
+  (ccl:proclaimed-special-p name))
 
 (defun ccl-find-var-decl (name type decls)
   (cdr (find-if (lambda (item)
@@ -50,8 +52,7 @@
                        (eq (second item) type)))
                 decls)))
 
-(defun declared-variable-type/lexenv (name lexenv)
-  (declare (ignore lexenv))
+(defun declared-variable-type/global (name)
   (or (cdr (assoc name ccl::*nx-compile-time-types*))
       (cdr (assoc name ccl::*nx-proclaimed-types*))
       't))
@@ -105,7 +106,8 @@
                        (macro?    (ccl-symbol-macro-p var-spec))
                        (ignored?  (cdr (ccl-find-var-decl name 'ignore decls)))
                        (special?  (or (find name special-decls :key #'car)
-                                      (proclaimed-special-in-lexenv? name defenv)))
+                                      ;; TODO why is it not needed here? (proclaimed-special-variable?/lexenv name defenv)
+                                      (proclaimed-special-variable?/global name)))
                        (type      (pop-type-decl name)))
                   (when special?
                     (deletef special-decls name :key #'car))

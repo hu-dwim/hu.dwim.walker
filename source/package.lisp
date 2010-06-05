@@ -31,6 +31,6 @@
    #:iterate-functions-in-lexenv
    #:iterate-blocks-in-lexenv
    #:iterate-tags-in-lexenv
-   #:proclaimed-special-in-lexenv?
-   #:declared-variable-type/lexenv
+   #:proclaimed-special-variable?/global
+   #:declared-variable-type/global
    ))

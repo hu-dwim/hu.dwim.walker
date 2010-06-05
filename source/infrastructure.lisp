@@ -44,19 +44,47 @@
 
 (def (function e) special-variable-name? (name &optional lexenv)
   "Determines if the name has been globally proclaimed special."
-  (and (symbolp name)
-       (not (keywordp name))
-       (not (member name '(t nil) :test #'eq))
-       (or (boundp name)
-           (proclaimed-special-in-lexenv? name lexenv)
-           ;; This is the only portable way to check if a symbol is declared special, without being boundp, i.e. (defvar 'foo). Maybe we should make it optional with a compile-time flag?
-           #+nil
-           (eval `((lambda ()
-                     (flet ((func ()
-                              (symbol-value ',var)))
-                       (let ((,var t))
-                         (declare (ignorable ,var))
-                         (ignore-errors (func))))))))))
+  (and (typep name 'variable-name)
+       (proclaimed-special-variable? name lexenv)))
+
+(def (function e) proclaimed-special-variable?/lexical (name lexenv)
+  (check-type name variable-name)
+  (do-variables-in-lexenv (lexenv var :special? special?)
+    (when (eq var name)
+      (return (values special? t)))))
+
+(def (function e) proclaimed-special-variable? (name &optional lexenv)
+  (check-type name variable-name)
+  (when lexenv
+    (bind (((:values special? found?) (proclaimed-special-variable?/lexical name lexenv)))
+      (when found?
+        (return-from proclaimed-special-variable? special?))))
+  (or (boundp name)
+      (proclaimed-special-variable?/global name)
+      ;; This is the only portable way to check if a symbol is declared special, without being boundp (i.e. using defvar). Maybe we should make it optional with a compile-time flag?
+      #+nil
+      (eval `((lambda ()
+                (flet ((func ()
+                         (symbol-value ',var)))
+                  (let ((,var t))
+                    (declare (ignorable ,var))
+                    (ignore-errors (func)))))))))
+
+(def (function e) declared-variable-type/lexical (name lexenv)
+  (check-type name variable-name)
+  (do-variables-in-lexenv (lexenv var :type type)
+    (when (eq var name)
+      (return (if type
+                  (values type t)
+                  (values nil nil))))))
+
+(def (function e) declared-variable-type (name &optional lexenv)
+  (check-type name variable-name)
+  (when lexenv
+    (bind (((:values type found?) (declared-variable-type/lexical name lexenv)))
+      (when found?
+        (return-from declared-variable-type (values type t)))))
+  (declared-variable-type/global name))
 
 (def (function e) collect-standard-walked-form-subclasses ()
   "Returns a list of all the subclasses of hu.dwim.walker:walked-form whose name is in the hu.dwim.walker package. This is useful if you want to generate a complete AST-NODE-TYPE-MAPPING hashtable with a mixin in the class of each walked node."

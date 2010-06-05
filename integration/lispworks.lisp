@@ -9,8 +9,7 @@
 ;;;;;;
 ;;; Miscellaneous
 
-(def function proclaimed-special-in-lexenv? (name lexenv)
-  (declare (ignore lexenv))
+(def function proclaimed-special-variable?/global (name)
   (eq (common-lisp::variable-information name) :special))
 
 #+(and lispworks macosx)

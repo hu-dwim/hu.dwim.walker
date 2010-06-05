@@ -15,20 +15,19 @@
 ;;;;;;
 ;;; Miscellaneous
 
-(def function proclaimed-special-in-lexenv? (name lexenv)
-  (declare (ignore lexenv))
+(def function proclaimed-special-variable?/global (name)
   (eq (sb-int:info :variable :kind name) :special))
+
+(def function declared-variable-type/global (name)
+  (bind (((:values type found) (sb-int:info :variable :type name)))
+    (if found
+        (values (sbcl-unparse-type type) found)
+        (values +top-type+ nil))))
 
 (def function sbcl-unparse-type (type)
   (if (null type) 't
       (let ((info (sb-kernel::type-class-info type)))
         (funcall (sb-kernel::type-class-unparse info) type))))
-
-(def function declared-variable-type/lexenv (name lexenv)
-  (declare (ignore lexenv))
-  (multiple-value-bind (type found)
-      (sb-int:info :variable :type name)
-    (if found (sbcl-unparse-type type) t)))
 
 ;;;;;;
 ;;; Iteration

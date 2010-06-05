@@ -20,8 +20,9 @@
     (augment-lexenv-with-symbol-macro)
     (augment-lexenv-with-block)
     (augment-lexenv-with-tag)
-    (proclaimed-special-in-lexenv?)
-    (declared-variable-type/lexenv)
+    ;; err, they are not lexical...
+    (proclaimed-special-variable?/global)
+    (declared-variable-type/global)
     ))
 
 ;;; set up some docstrings

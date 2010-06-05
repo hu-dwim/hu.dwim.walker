@@ -81,12 +81,12 @@
                     ((special-variable-name? -form- lexenv) ; Globally proclaimed special variable?
                      (make-form-object 'special-variable-reference-form -parent- :name -form-
                                        :declared-type (or decl-type
-                                                          (declared-variable-type/lexenv -form- lexenv))))
+                                                          (declared-variable-type -form- lexenv))))
                     (t
                      (handle-undefined-reference :variable -form-)
                      (make-form-object 'free-variable-reference-form -parent- :name -form-
                                        :declared-type (or decl-type
-                                                          (declared-variable-type/lexenv -form- lexenv)))))))))))))
+                                                          (declared-variable-type -form- lexenv)))))))))))))
 
 ;;;; BLOCK/RETURN-FROM
 
@@ -232,7 +232,9 @@
                                 :for name = (name-of binding)
                                 :for lexenv = (walk-environment/lexical-environment -environment-)
                                 :do (push name var-names)
-                                :do (if (and (not (special-variable-name? name lexenv))
+                                ;; NOTE: only the local declarations and global proclaminations affect the specialness of
+                                ;; the new binding, so we don't pass the lexenv to PROCLAIMED-SPECIAL-VARIABLE?.
+                                :do (if (and (not (proclaimed-special-variable? name))
                                              (not (find-form-by-name (coerce-to-form name) declarations
                                                                      :type 'special-variable-declaration-form)))
                                         (-augment- :variable (coerce-to-form name) binding)

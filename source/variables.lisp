@@ -8,3 +8,8 @@
 
 (def special-variable *current-form* nil)
 (def special-variable *inside-macroexpansion* nil)
+
+(def type variable-name ()
+  '(and symbol
+        (not keyword)
+        (not (member nil t))))

@@ -54,12 +54,10 @@
 ;;; miscellaneous
 ;;;
 
-(def function proclaimed-special-in-lexenv? (name lexenv)
-  (declare (ignore lexenv))
+(def function proclaimed-special-variable?/global (name)
   (sys:specialp name))
 
-(def function declared-variable-type/lexenv (name lexenv)
-  (declare (ignore lexenv))
+(def function declared-variable-type/global (name)
   (or (si::get-sysprop name 'c::CMP-TYPE) t))
 
 ;;;
