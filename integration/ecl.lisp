@@ -58,7 +58,7 @@
   (declare (ignore lexenv))
   (sys:specialp name))
 
-(def function global-variable-type-in-lexenv (name lexenv)
+(def function declared-variable-type/lexenv (name lexenv)
   (declare (ignore lexenv))
   (or (si::get-sysprop name 'c::CMP-TYPE) t))
 

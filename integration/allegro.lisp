@@ -89,7 +89,7 @@
     (declare (ignore env decl))
     (eq :special type)))
 
-(defun global-variable-type-in-lexenv (symbol lexenv)
+(defun declared-variable-type/lexenv (symbol lexenv)
   (multiple-value-bind (type env decl) (sys:variable-information symbol lexenv)
     (declare (ignore type env))
     (cddr (assoc 'type decl)))) ;; TODO THL why is decl always nil?

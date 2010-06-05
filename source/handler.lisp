@@ -81,12 +81,12 @@
                     ((special-variable-name? -form- lexenv) ; Globally proclaimed special variable?
                      (make-form-object 'special-variable-reference-form -parent- :name -form-
                                        :declared-type (or decl-type
-                                                          (global-variable-type-in-lexenv -form- lexenv))))
+                                                          (declared-variable-type/lexenv -form- lexenv))))
                     (t
                      (handle-undefined-reference :variable -form-)
                      (make-form-object 'free-variable-reference-form -parent- :name -form-
                                        :declared-type (or decl-type
-                                                          (global-variable-type-in-lexenv -form- lexenv)))))))))))))
+                                                          (declared-variable-type/lexenv -form- lexenv)))))))))))))
 
 ;;;; BLOCK/RETURN-FROM
 

@@ -50,7 +50,7 @@
                        (eq (second item) type)))
                 decls)))
 
-(defun global-variable-type-in-lexenv (name lexenv)
+(defun declared-variable-type/lexenv (name lexenv)
   (declare (ignore lexenv))
   (or (cdr (assoc name ccl::*nx-compile-time-types*))
       (cdr (assoc name ccl::*nx-proclaimed-types*))

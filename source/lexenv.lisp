@@ -21,7 +21,7 @@
     (augment-lexenv-with-block)
     (augment-lexenv-with-tag)
     (proclaimed-special-in-lexenv?)
-    (global-variable-type-in-lexenv)
+    (declared-variable-type/lexenv)
     ))
 
 ;;; set up some docstrings

@@ -32,5 +32,5 @@
    #:iterate-blocks-in-lexenv
    #:iterate-tags-in-lexenv
    #:proclaimed-special-in-lexenv?
-   #:global-variable-type-in-lexenv
+   #:declared-variable-type/lexenv
    ))

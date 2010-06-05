@@ -24,7 +24,7 @@
       (let ((info (sb-kernel::type-class-info type)))
         (funcall (sb-kernel::type-class-unparse info) type))))
 
-(def function global-variable-type-in-lexenv (name lexenv)
+(def function declared-variable-type/lexenv (name lexenv)
   (declare (ignore lexenv))
   (multiple-value-bind (type found)
       (sb-int:info :variable :type name)
