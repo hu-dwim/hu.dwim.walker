@@ -6,7 +6,7 @@
 
 (in-package :hu.dwim.walker.documentation)
 
-(def project :hu.dwim.walker :path (system-pathname :hu.dwim.walker))
+(def project :hu.dwim.walker)
 
 (def method make-project-tab-pages ((component project/detail/inspector) (project (eql (find-project :hu.dwim.walker))))
   (append (list (tab-page/widget (:selector (icon/widget switch-to-tab-page :label "User guide"))
