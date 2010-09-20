@@ -163,6 +163,28 @@
     (is (typep (nth 5 body) 'walked-lexical-variable-reference-form))
     (is (typep (nth 6 body) 'walked-lexical-variable-reference-form))))
 
+(def test test/semantics/specials/compile-time-bug-on-ccl ()
+  (bind ((var-name (intern (string+ "SPEC-VAR-" (integer-to-string (random 10000)))))
+         (form `(progn
+                  (defvar ,var-name)
+                  (eval-when (:compile-toplevel)
+                    (is (typep (walk-form ',var-name) 'special-variable-reference-form)))
+                  (eval-when (:load-toplevel :execute)
+                    (error "This was not meant to be loaded!"))))
+         (temp-lisp-filename (filename-for-temporary-file "walker-ccl-bug" "lisp"))
+         (temp-fasl-filename nil))
+    (unwind-protect
+         (progn
+           (with-output-to-file (*standard-output* temp-lisp-filename)
+             (bind ((*print-readably* t))
+               (write '(in-package :hu.dwim.walker.test))
+               (write form)))
+           (setf temp-fasl-filename (compile-file temp-lisp-filename)))
+      (unintern var-name)
+      (delete-file temp-lisp-filename)
+      (when temp-fasl-filename
+        (delete-file temp-fasl-filename)))))
+
 (defvar *spec-global*)
 (defvar *spec-global-2*)
 (declaim (fixnum *spec-global* *spec-global-2*))

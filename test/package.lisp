@@ -11,6 +11,7 @@
         :hu.dwim.common
         :hu.dwim.def
         :hu.dwim.stefil
+        :hu.dwim.util
         :hu.dwim.walker))
 
 (in-package :hu.dwim.walker.test)
