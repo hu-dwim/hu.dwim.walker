@@ -168,7 +168,12 @@
          (form `(progn
                   (defvar ,var-name)
                   (eval-when (:compile-toplevel)
-                    (is (typep (walk-form ',var-name) 'special-variable-reference-form)))
+                    (is (typep (walk-form ',var-name) '(and special-variable-reference-form (not free-variable-reference-form)))))
+                  (macrolet ((foo (&environment env)
+                               (is (typep (walk-form ',var-name :environment (make-walk-environment env))
+                                          '(and special-variable-reference-form (not free-variable-reference-form))))
+                               (values)))
+                      (foo))
                   (eval-when (:load-toplevel :execute)
                     (error "This was not meant to be loaded!"))))
          (temp-lisp-filename (filename-for-temporary-file "walker-ccl-bug" "lisp"))
@@ -183,7 +188,8 @@
       (unintern var-name)
       (delete-file temp-lisp-filename)
       (when temp-fasl-filename
-        (delete-file temp-fasl-filename)))))
+        (delete-file temp-fasl-filename))))
+  (values))
 
 (defvar *spec-global*)
 (defvar *spec-global-2*)
