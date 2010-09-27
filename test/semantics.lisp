@@ -168,7 +168,9 @@
       `(progn
          (defvar ,var-name)
          (defmacro ,macro-name () ',var-name)
-         (define-symbol-macro ,smacro-name (,macro-name))
+         (#+ecl eval-when #+ecl (:compile-toplevel)
+          #-ecl progn
+           (define-symbol-macro ,smacro-name (,macro-name)))
          -here-)
     (is (typep (walk-form smacro-name :environment (make-walk-environment env))
                '(and special-variable-reference-form (not free-variable-reference-form))))))

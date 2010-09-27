@@ -11,7 +11,9 @@
 ;;;
 
 (defun make-empty-lexical-environment ()
-  (c::cmp-env-new))
+  #.(cl:if (cl:< ext:+ecl-version-number+ 100701)
+           '(c::cmp-env-new)
+           '(c::cmp-env-root)))
 
 ;;;
 ;;; utilities
@@ -45,10 +47,19 @@
   (eql (second spec) :special))
 
 (defun ecl-ignored-var-p (spec)
-  (< (c::var-ref (fourth spec)) 0))
+  #.(cl:if (cl:< ext:+ecl-version-number+ 100701)
+           `(< (c::var-ref (fourth spec)) 0)
+           `(and (c::var-ignorable (fourth spec))
+                 (< (c::var-ignorable (fourth spec)) 0))))
 
 (defun nullify-t (value)
   (if (eq value t) nil value))
+
+(defun ecl-find-var-by-name (env name)
+  (dolist (item (c::cmp-env-variables env))
+    (when (and (eq (first item) name)
+               (ecl-variable-spec-p item))
+      (return item))))
 
 ;;;
 ;;; miscellaneous
@@ -56,10 +67,15 @@
 
 (def function proclaimed-special-variable?/global (name lexenv)
   (declare (ignore lexenv))
-  (sys:specialp name))
+  (or (sys:specialp name)
+      (c::check-global name)))
 
 (def function declared-variable-type/global (name)
-  (or (si::get-sysprop name 'c::CMP-TYPE) t))
+  (or #+#.(cl:if (cl:< ext:+ecl-version-number+ 100701) nil :ecl)
+      (awhen (ecl-find-var-by-name c::*cmp-env-root* name)
+        (nullify-t (c::var-type (fourth it))))
+      (si::get-sysprop name 'c::CMP-TYPE)
+      t))
 
 ;;;
 ;;; iteration
@@ -141,11 +157,13 @@
 
 (defun augment-lexenv-with-block (name lexenv)
   (let* ((env  (c::cmp-env-copy lexenv)))
-    (c::cmp-env-register-block (c::make-blk :name name))
+    (c::cmp-env-register-block (c::make-blk :name name) env)
     env))
 
 (defun augment-lexenv-with-tag (name lexenv)
   (let* ((env  (c::cmp-env-copy lexenv)))
-    (c::cmp-env-register-tag (c::make-tag :name name))
+    (c::cmp-env-register-tag #+#.(cl:if (cl:< ext:+ecl-version-number+ 100701) nil :ecl)
+                             name
+                             (c::make-tag :name name) env)
     env))
 
