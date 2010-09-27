@@ -11,7 +11,10 @@
 ;;;
 
 (defun make-empty-lexical-environment ()
-  (ccl::new-lexical-environment))
+  ;; Tries to pick up a defenv reference from the special
+  ;; variable, but don't count on it always working.
+  (ccl::new-lexical-environment
+   (ccl::definition-environment ccl::*nx-lexical-environment*)))
 
 ;;;
 ;;; utilities
@@ -34,17 +37,17 @@
   (let ((lst (ccl::lexenv.variables env)))
     (if (listp lst) lst)))
 
-(defun proclaimed-special-variable?/lexenv (name lexenv)
+(defun proclaimed-special-variable?/global (name lexenv)
   ;; During compilation the special proclamations are
   ;; collected in the definition environment.
-  (let* ((defenv (if (and lexenv (ccl-defenv-p lexenv))
-                     lexenv
-                     (ccl::definition-environment lexenv)))
-         (specials (if defenv (ccl::defenv.specials defenv))))
-    (ccl::assq name specials)))
-
-(defun proclaimed-special-variable?/global (name)
-  (ccl:proclaimed-special-p name))
+  ;; This means that UNDER NO CIRCUMSTANCES is this
+  ;; function to be changed to a lexenv-less form.
+  (or (ccl:proclaimed-special-p name)
+      (let* ((defenv (if (and lexenv (ccl-defenv-p lexenv))
+                         lexenv
+                         (ccl::definition-environment lexenv)))
+             (specials (if defenv (ccl::defenv.specials defenv))))
+        (ccl::assq name specials))))
 
 (defun ccl-find-var-decl (name type decls)
   (cdr (find-if (lambda (item)
@@ -106,8 +109,7 @@
                        (macro?    (ccl-symbol-macro-p var-spec))
                        (ignored?  (cdr (ccl-find-var-decl name 'ignore decls)))
                        (special?  (or (find name special-decls :key #'car)
-                                      ;; TODO why is it not needed here? (proclaimed-special-variable?/lexenv name defenv)
-                                      (proclaimed-special-variable?/global name)))
+                                      (proclaimed-special-variable?/global name defenv)))
                        (type      (pop-type-decl name)))
                   (when special?
                     (deletef special-decls name :key #'car))

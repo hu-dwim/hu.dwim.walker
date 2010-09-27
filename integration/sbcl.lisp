@@ -15,7 +15,8 @@
 ;;;;;;
 ;;; Miscellaneous
 
-(def function proclaimed-special-variable?/global (name)
+(def function proclaimed-special-variable?/global (name lexenv)
+  (declare (ignore lexenv))
   (eq (sb-int:info :variable :kind name) :special))
 
 (def function declared-variable-type/global (name)

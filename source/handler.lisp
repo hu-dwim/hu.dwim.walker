@@ -233,9 +233,9 @@
                                 :for name = (name-of binding)
                                 :for lexenv = (walk-environment/lexical-environment -environment-)
                                 :do (push name var-names)
-                                ;; NOTE: only the local declarations and global proclaminations affect the specialness of
-                                ;; the new binding, so we don't pass the lexenv to PROCLAIMED-SPECIAL-VARIABLE?.
-                                :do (if (and (not (proclaimed-special-variable? name))
+                                ;; NOTE: only the local declarations and global proclaminations
+                                ;; affect the specialness of the new binding
+                                :do (if (and (not (proclaimed-special-variable? name lexenv t))
                                              (not (find-form-by-name (coerce-to-form name) declarations
                                                                      :type 'special-variable-declaration-form)))
                                         (-augment- :variable (coerce-to-form name) binding)
@@ -269,7 +269,9 @@
                                                  (with-form-object (binding 'lexical-variable-binding-form let*-form :name name)
                                                    (setf (initial-value-of binding) (recurse initial-value binding))
                                                    (push name var-names)
-                                                   (if (and (not (special-variable-name? name lexenv))
+                                                   ;; NOTE: only the local declarations and global proclaminations
+                                                   ;; affect the specialness of the new binding
+                                                   (if (and (not (proclaimed-special-variable? name lexenv t))
                                                             (not (find-form-by-name (coerce-to-form name) declarations
                                                                                     :type 'special-variable-declaration-form)))
                                                        (-augment- :variable (coerce-to-form name) binding)

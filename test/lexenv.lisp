@@ -221,9 +221,8 @@
          (declaim (type fixnum ,varname))
          (defvar ,varname)
          -here-)
-    (with-expected-failures
-      (is (proclaimed-special-variable?/global varname))
-      (is (special-variable-name? varname env))
-      (is (equal (declared-variable-type/global varname) 'fixnum)))))
+    (is (proclaimed-special-variable?/global varname env))
+    (is (special-variable-name? varname env))
+    (is (equal (declared-variable-type/global varname) 'fixnum))))
 
 ;; TODO (defsuite* (test/lexenv/augment :in test/lexenv))

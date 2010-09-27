@@ -54,7 +54,8 @@
 ;;; miscellaneous
 ;;;
 
-(def function proclaimed-special-variable?/global (name)
+(def function proclaimed-special-variable?/global (name lexenv)
+  (declare (ignore lexenv))
   (sys:specialp name))
 
 (def function declared-variable-type/global (name)

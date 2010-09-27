@@ -84,7 +84,8 @@
 
 ;;; other
 
-(defun proclaimed-special-variable?/global (symbol)
+(defun proclaimed-special-variable?/global (symbol lexenv)
+  (declare (ignore lexenv))
   (multiple-value-bind (type env decl) (sys:variable-information symbol)
     (declare (ignore env decl))
     (eq :special type)))

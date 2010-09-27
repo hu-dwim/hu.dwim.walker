@@ -42,10 +42,10 @@
   (bind (#+sbcl(sb-ext:*evaluator-mode* :interpret))
     (common-lisp:eval form)))
 
-(def (function e) special-variable-name? (name &optional lexenv)
+(def (function e) special-variable-name? (name &optional lexenv only-globals?)
   "Determines if the name has been globally proclaimed special."
   (and (typep name 'variable-name)
-       (proclaimed-special-variable? name lexenv)))
+       (proclaimed-special-variable? name lexenv only-globals?)))
 
 (def (function e) proclaimed-special-variable?/lexical (name lexenv)
   (check-type name variable-name)
@@ -53,14 +53,14 @@
     (when (eq var name)
       (return (values special? t)))))
 
-(def (function e) proclaimed-special-variable? (name &optional lexenv)
+(def (function e) proclaimed-special-variable? (name &optional lexenv only-globals?)
   (check-type name variable-name)
-  (when lexenv
-    (bind (((:values special? found?) (proclaimed-special-variable?/lexical name lexenv)))
-      (when found?
-        (return-from proclaimed-special-variable? special?))))
   (or (boundp name)
-      (proclaimed-special-variable?/global name)
+      (proclaimed-special-variable?/global name lexenv)
+      (when (and (not only-globals?) lexenv)
+        (bind (((:values special? found?) (proclaimed-special-variable?/lexical name lexenv)))
+          (when found?
+            (return-from proclaimed-special-variable? special?))))
       ;; This is the only portable way to check if a symbol is declared special, without being boundp (i.e. using defvar). Maybe we should make it optional with a compile-time flag?
       #+nil
       (eval `((lambda ()
@@ -169,7 +169,7 @@
 (def (function e) walk-environment/augment (env type name &optional datum)
   (bind ((lexenv (walk-environment/lexical-environment env))
          (newlex (ecase type
-                   (:variable     (augment-lexenv-with-variable     name lexenv :special (proclaimed-special-variable?/global name)))
+                   (:variable     (augment-lexenv-with-variable     name lexenv :special (proclaimed-special-variable?/global name lexenv)))
                    (:macro        (augment-lexenv-with-macro        name datum lexenv))
                    (:function     (augment-lexenv-with-function     name lexenv))
                    (:symbol-macro (augment-lexenv-with-symbol-macro name datum lexenv))

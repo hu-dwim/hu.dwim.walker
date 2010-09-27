@@ -164,13 +164,14 @@
     (is (typep (nth 6 body) 'walked-lexical-variable-reference-form))))
 
 (def test test/semantics/specials/compile-time-globals ()
-  (with-captured-compile-environment (env var-name)
+  (with-captured-compile-environment (env var-name macro-name smacro-name)
       `(progn
          (defvar ,var-name)
+         (defmacro ,macro-name () ',var-name)
+         (define-symbol-macro ,smacro-name (,macro-name))
          -here-)
-    (with-expected-failures
-      (is (typep (walk-form var-name :environment (make-walk-environment env))
-                 '(and special-variable-reference-form (not free-variable-reference-form)))))))
+    (is (typep (walk-form smacro-name :environment (make-walk-environment env))
+               '(and special-variable-reference-form (not free-variable-reference-form))))))
 
 (defvar *spec-global*)
 (defvar *spec-global-2*)
