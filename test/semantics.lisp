@@ -163,33 +163,14 @@
     (is (typep (nth 5 body) 'walked-lexical-variable-reference-form))
     (is (typep (nth 6 body) 'walked-lexical-variable-reference-form))))
 
-(def test test/semantics/specials/compile-time-bug-on-ccl ()
-  (bind ((var-name (intern (string+ "SPEC-VAR-" (integer-to-string (random 10000)))))
-         (form `(progn
-                  (defvar ,var-name)
-                  (eval-when (:compile-toplevel)
-                    (is (typep (walk-form ',var-name) '(and special-variable-reference-form (not free-variable-reference-form)))))
-                  (macrolet ((foo (&environment env)
-                               (is (typep (walk-form ',var-name :environment (make-walk-environment env))
-                                          '(and special-variable-reference-form (not free-variable-reference-form))))
-                               (values)))
-                      (foo))
-                  (eval-when (:load-toplevel :execute)
-                    (error "This was not meant to be loaded!"))))
-         (temp-lisp-filename (filename-for-temporary-file "walker-ccl-bug" "lisp"))
-         (temp-fasl-filename nil))
-    (unwind-protect
-         (progn
-           (with-output-to-file (*standard-output* temp-lisp-filename)
-             (bind ((*print-readably* t))
-               (write '(in-package :hu.dwim.walker.test))
-               (write form)))
-           (setf temp-fasl-filename (compile-file temp-lisp-filename)))
-      (unintern var-name)
-      (delete-file temp-lisp-filename)
-      (when temp-fasl-filename
-        (delete-file temp-fasl-filename))))
-  (values))
+(def test test/semantics/specials/compile-time-globals ()
+  (with-captured-compile-environment (env var-name)
+      `(progn
+         (defvar ,var-name)
+         -here-)
+    (with-expected-failures
+      (is (typep (walk-form var-name :environment (make-walk-environment env))
+                 '(and special-variable-reference-form (not free-variable-reference-form)))))))
 
 (defvar *spec-global*)
 (defvar *spec-global-2*)

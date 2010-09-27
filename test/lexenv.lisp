@@ -10,6 +10,37 @@
 
 (def suite* (test/lexenv/query :in test/lexenv))
 
+(def macro with-captured-compile-environment ((env-var &rest symbols) form-generator &body code)
+  (let ((package-id (package-name *package*)))
+    (with-unique-names (temp-lisp-filename temp-fasl-filename compiler warn? error?)
+      `(let* ((*package* (find-package ',package-id))
+              ,@(mapcar (lambda (symbol)
+                          `(,symbol (intern (format nil "SPEC-SYM-~A-~A" ',symbol (random 10000))
+                                            ',package-id)))
+                        symbols)
+              (,temp-lisp-filename #+unix "/tmp/TMP-WALKER-CE-TEST.lisp"
+                                   #-unix "TMP-WALKER-CE-TEST.lisp")
+              (,temp-fasl-filename NIL)
+              ,warn? ,error?)
+         (unwind-protect
+              (flet ((,compiler (form)
+                       (with-output-to-file (*standard-output* ,temp-lisp-filename)
+                         (bind ((*print-readably* t))
+                           (write '(in-package ,package-id))
+                           (write form)
+                           (write '(eval-when (:load-toplevel :execute)
+                                     (error "This was not meant to be loaded!")))))
+                       (multiple-value-setq (,temp-fasl-filename ,warn? ,error?)
+                         (compile-file ,temp-lisp-filename))
+                       (is (not (or (null,temp-fasl-filename) ,warn? ,error?))
+                           "Temporary file compilation failed.")))
+                (with-captured-lexical-environment (,env-var ,form-generator :compiler ,compiler)
+                  ,@code))
+           ,@(mapcar (lambda (symbol) `(unintern ,symbol)) symbols)
+           (delete-file ,temp-lisp-filename)
+           (when ,temp-fasl-filename
+             (delete-file ,temp-fasl-filename)))))))
+
 (def test test/lexenv/query/variables ()
   (with-captured-lexical-environment
       (env (symbol-macrolet ((a 42)
@@ -183,5 +214,16 @@
              (declare (special x))
              -here-))
     (is (special-variable-name? 'x env))))
+
+(def test test/lexenv/query/compiled-special-variable ()
+  (with-captured-compile-environment (env varname)
+      `(progn
+         (declaim (type fixnum ,varname))
+         (defvar ,varname)
+         -here-)
+    (with-expected-failures
+      (is (proclaimed-special-variable?/global varname))
+      (is (special-variable-name? varname env))
+      (is (equal (declared-variable-type/global varname) 'fixnum)))))
 
 ;; TODO (defsuite* (test/lexenv/augment :in test/lexenv))
