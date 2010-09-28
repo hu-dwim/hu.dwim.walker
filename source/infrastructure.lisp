@@ -315,9 +315,9 @@
   (remove-if #'null
              (mapcar #'find-package
                      (append #+sbcl
-                             '(:sb-ext :sb-kernel :sb-c :sb-impl)
+                             '(#:sb-ext #:sb-kernel #:sb-c #:sb-impl)
                              #+ecl
-                             '(:si :ext :compiler)
+                             '(#:si #:ext #:compiler)
                              ))))
 
 (defvar *known-declaration-types* (append
