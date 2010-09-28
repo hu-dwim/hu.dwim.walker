@@ -112,7 +112,9 @@
   (when (member type *known-direct-type-declarations*)
     (return-from walk-declaration
       (walk-declaration 'type (list* 'type declaration) parent environment)))
-  (unless (member type *known-declaration-types* :test #'eq)
+  (unless (or (member type *known-declaration-types* :test #'eq)
+              (and (symbolp type)
+                   (member (symbol-package type) *known-system-packages* :test #'eq)))
     (simple-walker-style-warning "Ignoring unknown declaration ~S while walking forms. If it's a type declaration, then use the full form to avoid this warning: `(type ,type ,@variables), or you can also (pushnew ~S ~S) or (pushnew ~S ~S)."
                                  declaration type '*known-declaration-types*
                                  type '*known-direct-type-declarations*))

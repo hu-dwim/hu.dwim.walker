@@ -311,10 +311,16 @@
 
 ;;; declaration walking
 
+(defvar *known-system-packages*
+  (remove-if #'null
+             (mapcar #'find-package
+                     (append #+sbcl
+                             '(:sb-ext :sb-kernel :sb-c :sb-impl)
+                             #+ecl
+                             '(:si :ext :compiler)
+                             ))))
+
 (defvar *known-declaration-types* (append
-                                   #+sbcl
-                                   '(sb-ext:muffle-conditions
-                                     )
                                    #+ecl
                                    '(:read-only)
                                    ))
