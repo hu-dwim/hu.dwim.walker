@@ -34,10 +34,6 @@ that it creates a fresh binding."
      (labels
          ((fail ()
             (%illegal-lambda-list lambda-list))
-          (ensure-list (list)
-            (if (listp list)
-                list
-                (list list)))
           (process-&whole ()
             (assert (eq (first args) '&whole))
             (pop args)
