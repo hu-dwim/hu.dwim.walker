@@ -17,5 +17,6 @@
 (in-package :hu.dwim.walker.test)
 
 (defsuite* (test :in root-suite) ()
-  (handler-bind ((walker-warning #'muffle-warning))
-    (run-child-tests)))
+  (handler-bind
+      ((walker-warning #'muffle-warning))
+    (-run-child-tests-)))
