@@ -112,7 +112,7 @@
 (def (condition* e) return-from-unknown-block (walker-error)
   ((block-name))
   (:report (lambda (condition stream)
-             (format stream "Unable to return from block named ~S." (block-name-of condition)))))
+             (format stream "Unable to find block named ~S used in a RETURN-FROM." (block-name-of condition)))))
 
 (def walker return-from
   (bind (((block-name &optional (value '(values))) (rest -form-)))
