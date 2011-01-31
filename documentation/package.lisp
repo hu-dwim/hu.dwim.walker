@@ -14,5 +14,6 @@
         :hu.dwim.walker
         :hu.dwim.presentation
         :hu.dwim.syntax-sugar
-        :hu.dwim.util)
+        :hu.dwim.util
+        :hu.dwim.web-server)
   (:readtable-setup (setup-readtable/same-as-package :hu.dwim.presentation)))
