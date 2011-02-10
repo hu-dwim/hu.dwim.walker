@@ -396,7 +396,7 @@
 
 ;; Form class definer. Also defines methods for the above functions.
 
-(def (definer e :available-flags "e") form-class (name supers slots &rest args)
+(def (definer e :available-flags "eas") form-class (name supers slots &rest args)
   (let* ((new-supers (if (and (not (eq name 'walked-form))
                               (zerop (length supers)))
                          '(walked-form)
@@ -404,7 +404,10 @@
          (copy-forms nil)
          (main-refs nil)
          (back-refs nil)
-         (flags (if (getf -options- :export) '(ea) ()))
+         (definer-flags (let ((result (copy-list -options-)))
+                          (when (getf result :export)
+                            (setf (getf result :export-accessor-names) t))
+                          result))
          (new-slots
           (mapcar (lambda (flags)
                     (let ((slot (pop flags)))
@@ -428,7 +431,7 @@
                       (list* slot (remove-from-plist flags :ast-link :copy-with))))
                   (mapcar #'ensure-list slots)))
          (bodies
-          (list `(def (class* ,@flags) ,name ,new-supers ,new-slots ,@args))))
+          (list `(def (class* ,@definer-flags) ,name ,new-supers ,new-slots ,@args))))
     ;; Generate AST manipulation methods
     (when copy-forms
       (push `(defmethod copy-ast-slots progn ((new ,name) (old ,name))
