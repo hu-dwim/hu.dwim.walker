@@ -42,5 +42,6 @@
                              (:file "handler" :depends-on ("infrastructure" "function"))
                              (:file "infrastructure" :depends-on ("api" "lexenv"))
                              (:file "lexenv" :depends-on ("api"))
+                             (:file "macro" :depends-on ("function" "infrastructure" "progn"))
                              (:file "progn" :depends-on ("infrastructure"))
                              (:file "variables")))))

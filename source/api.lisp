@@ -43,6 +43,10 @@
 ;;;;;;
 ;;; customizing the walker
 
+(def layered-function define-macro (defmacro-form)
+  (:method (defmacro-form)
+    (cerror "Ignore and continue" "Encountered a toplevel macro definition. It is not recorded by default, see ~S for details." 'define-macro)))
+
 (def layered-function function-name? (name))
 (def layered-function macro-name? (name &optional env))
 (def layered-function symbol-macro-name? (name &optional env))
