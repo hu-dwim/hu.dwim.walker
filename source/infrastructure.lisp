@@ -525,6 +525,9 @@
         (format t "~S" (source-of -self-)))
       (call-next-method)))
 
+(def (form-class a) docstring-mixin ()
+  ((docstring nil)))
+
 (def layered-function ast-node-type-for (type)
   (:method (type)
     type))

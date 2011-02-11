@@ -108,8 +108,9 @@
 (def (form-class e) block-lambda-function-form (lambda-function-form block-form)
   ())
 
-(def (form-class e) function-definition-form (block-lambda-function-form)
-  ((docstring nil)))
+(def (form-class e) function-definition-form (block-lambda-function-form
+                                              docstring-mixin)
+  ())
 
 (def walker defun
   (bind (((name args &rest body) (rest -form-)))
