@@ -549,7 +549,6 @@
 
 (def function parse-macro-definition (name lambda-list body &optional lexenv)
   "Sort of like parse-macro from CLtL2."
-  (declare (ignore name))
   ;; TODO could use parse-lambda-list
   (let* ((environment-var nil)
          (lambda-list-without-environment
@@ -571,7 +570,7 @@
             lambda-list-without-whole (cddr lambda-list-without-environment)))
     (eval
      (with-unique-names (handler-args form-name)
-       `(lambda (,handler-args &optional ,handler-env)
+       `(named-lambda ,(symbolicate '#:macro-expander-for/ name) (,handler-args &optional ,handler-env)
           ,@(unless environment-var
               `((declare (ignore ,handler-env))))
           (destructuring-bind (,@(when whole-var `(&whole ,whole-var)) ,form-name ,@lambda-list-without-whole)

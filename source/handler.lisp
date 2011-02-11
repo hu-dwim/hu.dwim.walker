@@ -309,8 +309,8 @@
   ;; TODO is there any point in constructing a macrolet form if we macroexpand the body anyways?
   (with-form-object (macrolet 'macrolet-form -parent-
                               :bindings '())
-    (dolist* ((&whole defn name args &body body) (second -form-))
-      (bind ((handler (parse-macro-definition name args body (walk-environment/lexical-environment -environment-))))
+    (dolist* ((&whole defn name lambda-list &body body) (second -form-))
+      (bind ((handler (parse-macro-definition name lambda-list body (walk-environment/lexical-environment -environment-))))
         (-augment- :macro name handler)
         ;; there's not much point in keeping the bindings when we expand the macrolet body anyway, so don't.
         ;; it would just hinder the saving of the form into fasl's for no apparent benefit.
