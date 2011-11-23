@@ -464,6 +464,7 @@
 (def (form-class e) walked-form ()
   ((parent :copy-with nil) ; becomes unbound on copy
    (source *current-form*)
+   (result-of-macroexpansion? *inside-macroexpansion* :type boolean)
    (attributes nil :copy-with #'copy-list)))
 
 (def (form-class e) unwalked-form ()
