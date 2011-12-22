@@ -21,7 +21,7 @@
       "A code walker that parses a Common Lisp sexp into an AST, a tree of CLOS objects. This AST is a much more convenient representation to do various code analysis and transformations than sexps. Also features an unwalker that can turn the walked CLOS AST tree back into an sexp.")
     (chapter (:title "Known forks")
       (paragraph ()
-        "An obsolete one: " (parse-uri "http://github.com/angavrilov/cl-walker/commits/master/") ". Alexander's excellent changes are incorporated regularly into the official repo."))
+        "An obsolete one: " (hu.dwim.uri:parse-uri "http://github.com/angavrilov/cl-walker/commits/master/") ". Alexander's excellent changes are incorporated regularly into the official repo."))
     (chapter (:title "History")
       (paragraph ()
         "It was originally written by Marco Baringer in his Arnesi library. With his permission it was first factored out into a standalone cl-walker library and then renamed to hu.dwim.walker as part of a broad refactoring of all our (http://dwim.hu) libs.")
