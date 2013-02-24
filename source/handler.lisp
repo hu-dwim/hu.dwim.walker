@@ -469,6 +469,12 @@
 
 ;;;; TAGBODY/GO
 
+(def (form-class e) go-tag-form (name-definition-form)
+  ((jump-target :copy-with nil)))
+
+(def unwalker go-tag-form (name)
+  name)
+
 (def (form-class e) tagbody-form (implicit-progn-mixin)
   ())
 
@@ -496,12 +502,6 @@
 
 (def unwalker tagbody-form (body)
   `(tagbody ,@(recurse-on-body body)))
-
-(def (form-class e) go-tag-form (name-definition-form)
-  ((jump-target :copy-with nil)))
-
-(def unwalker go-tag-form (name)
-  name)
 
 (def (form-class e) go-form (named-walked-form)
   ((tag :ast-link :back)))
