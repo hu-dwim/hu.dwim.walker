@@ -84,10 +84,15 @@
                                        :declared-type (or decl-type
                                                           (declared-variable-type -form- lexenv))))
                     (t
-                     (handle-undefined-reference :variable -form-)
-                     (make-form-object 'free-variable-reference-form -parent- :name -form-
-                                       :declared-type (or decl-type
-                                                          (declared-variable-type -form- lexenv)))))))))))))
+		     (bind (((:values value handled?) (handle-undefined-reference :variable -form-
+										  :parent -parent-
+										  :decl-type
+										  :lexenv lexenv)))
+		       (if handled?
+			   value
+			   (make-form-object 'free-variable-reference-form -parent- :name -form-
+					     :declared-type (or decl-type
+								(declared-variable-type -form- lexenv)))))))))))))))
 
 ;;;; BLOCK/RETURN-FROM
 

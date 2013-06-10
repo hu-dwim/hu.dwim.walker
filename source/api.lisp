@@ -64,11 +64,11 @@
 (def (layer e) ignore-undefined-references ()
   ())
 
-(def layered-function handle-undefined-reference (type name)
-  (:method (type name)
+(def layered-function handle-undefined-reference (type name &key)
+  (:method (type name &key)
     (ecase type
       (:function (warn 'undefined-function-reference :name name))
       (:variable (warn 'undefined-variable-reference :name name))))
-  (:method :in ignore-undefined-references :around (type name)
+  (:method :in ignore-undefined-references :around (type name &key)
     ;; well, we ignore them in this layer...
     ))
