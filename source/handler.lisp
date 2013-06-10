@@ -86,7 +86,7 @@
                     (t
 		     (bind (((:values value handled?) (handle-undefined-reference :variable -form-
 										  :parent -parent-
-										  :decl-type
+										  :declaration-type decl-type
 										  :lexenv lexenv)))
 		       (if handled?
 			   value

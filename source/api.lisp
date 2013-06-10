@@ -64,7 +64,7 @@
 (def (layer e) ignore-undefined-references ()
   ())
 
-(def layered-function handle-undefined-reference (type name &key)
+(def layered-function handle-undefined-reference (type name &key &allow-other-keys)
   (:method (type name &key)
     (ecase type
       (:function (warn 'undefined-function-reference :name name))

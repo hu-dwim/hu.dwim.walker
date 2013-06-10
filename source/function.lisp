@@ -57,8 +57,7 @@
           (with-form-object (application 'lambda-application-form -parent-)
             (setf (operator-of application) (walk-form/lambda operator application -environment-)
                   (arguments-of application) (walk-arguments application)))))
-      (bind ((handled-flag nil)
-             (lexenv (walk-environment/lexical-environment -environment-))
+      (bind ((lexenv (walk-environment/lexical-environment -environment-))
              ((:values innermost-lexical-definition-type def-value) (-lookup- :function-like operator))
              (application-form
               (ecase innermost-lexical-definition-type
@@ -76,27 +75,21 @@
                        (if expanded?
                            (bind ((*inside-macroexpansion* t))
                              (return-from walk-form/application (recurse expansion)))
-                           (progn
-                             (if (not (function-name? operator))
-                                 (bind (((:values value handled?) (handle-undefined-reference :function operator
-                                                                                              :parent -parent-
-                                                                                              :form -form-
-                                                                                              :lexenv lexenv)))
-                                   (if handled?
-                                       (progn
-                                         (setf handled-flag t)
-                                         value)
-                                       (make-instance 'free-application-form)))
-                                 (make-instance 'free-application-form)))))
+                           (if (function-name? operator)
+                               (make-instance 'free-application-form)
+                               (bind (((:values value handled?) (handle-undefined-reference :function operator
+                                                                                            :parent -parent-
+                                                                                            :form -form-
+                                                                                            :lexenv lexenv)))
+                                 (if handled?
+                                     (return-from walk-form/application value)
+                                     (make-instance 'free-application-form))))))
                      (make-instance 'free-application-form))))))
-        (if handled-flag
-            application-form
-            (progn
-              (setf (operator-of application-form) operator
-                    (parent-of application-form) -parent-
-                    (source-of application-form) -form-
-                    (arguments-of application-form) (walk-arguments application-form))
-              application-form))))))
+        (setf (operator-of application-form) operator
+              (parent-of application-form) -parent-
+              (source-of application-form) -form-
+              (arguments-of application-form) (walk-arguments application-form))
+        application-form))))
 
 ;;;; Functions
 
