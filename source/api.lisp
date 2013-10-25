@@ -65,10 +65,10 @@
   ())
 
 (def layered-function handle-undefined-reference (type name &key &allow-other-keys)
-  (:method (type name &key)
+  (:method (type name &key &allow-other-keys)
     (ecase type
       (:function (warn 'undefined-function-reference :name name))
       (:variable (warn 'undefined-variable-reference :name name))))
-  (:method :in ignore-undefined-references :around (type name &key)
+  (:method :in ignore-undefined-references :around (type name &key &allow-other-keys)
     ;; well, we ignore them in this layer...
     ))
