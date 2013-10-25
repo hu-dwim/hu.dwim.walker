@@ -80,8 +80,7 @@
                                (bind (((:values value handled?) (handle-undefined-reference :function operator
                                                                                             :parent -parent-
                                                                                             :form -form-
-                                                                                            :environment -environment-
-                                                                                            :lexenv lexenv)))
+                                                                                            :environment -environment-)))
                                  (if handled?
                                      (return-from walk-form/application value)
                                      (make-instance 'free-application-form))))))

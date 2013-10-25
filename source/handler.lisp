@@ -87,8 +87,7 @@
                      (bind (((:values value handled?) (handle-undefined-reference :variable -form-
                                                                                   :parent -parent-
                                                                                   :declaration-type decl-type
-                                                                                  :environment -environment-
-                                                                                  :lexenv lexenv)))
+                                                                                  :environment -environment-)))
 		       (if handled?
 			   value
 			   (make-form-object 'free-variable-reference-form -parent- :name -form-
