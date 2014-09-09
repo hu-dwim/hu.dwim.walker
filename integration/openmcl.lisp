@@ -123,7 +123,8 @@
                                      include-specials?)
                                  (not (member name hide-list)))
                         (funcall visitor name :ignored? ignored? :special? special?
-                                 :type (or type (ccl::var-inittype var-spec) t))))))
+                                 ;; TODO check up on a replacement for (ccl::var-inittype var-spec), it got removed in ccl 1.10
+                                 :type (or type t))))))
               ;; Enumerate var-less special decls as vars
               (when include-specials?
                 (dolist (decl special-decls)
