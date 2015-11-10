@@ -9,7 +9,7 @@
   :class "hu.dwim.asdf:hu.dwim.test-system"
   :depends-on (:hu.dwim.stefil+hu.dwim.def
                :hu.dwim.stefil+swank
-               :hu.dwim.util.temporary-files
+               :hu.dwim.util/temporary-files
                :hu.dwim.walker)
   :components ((:module "test"
                 :components ((:file "ast" :depends-on ("package"))
