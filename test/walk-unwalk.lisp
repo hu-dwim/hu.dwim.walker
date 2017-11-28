@@ -4,7 +4,7 @@
 ;;;
 ;;; See LICENCE for details.
 
-(in-package :hu.dwim.walker.test)
+(in-package :hu.dwim.walker/test)
 
 (defsuite* (test/walk-unwalk :in test))
 

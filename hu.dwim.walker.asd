@@ -4,7 +4,7 @@
 ;;;
 ;;; See LICENCE for details.
 
-(defsystem :hu.dwim.walker
+(defsystem "hu.dwim.walker"
   :defsystem-depends-on (:hu.dwim.asdf)
   :class "hu.dwim.asdf:hu.dwim.system"
   :author ("Attila Lendvai <attila.lendvai@gmail.com>"
@@ -42,3 +42,18 @@
                              (:file "macro" :depends-on ("function" "infrastructure" "progn"))
                              (:file "progn" :depends-on ("infrastructure"))
                              (:file "variables")))))
+
+(defsystem "hu.dwim.walker/test"
+  :defsystem-depends-on (:hu.dwim.asdf)
+  :class "hu.dwim.asdf:hu.dwim.test-system"
+  :depends-on (:hu.dwim.stefil+hu.dwim.def
+               :hu.dwim.stefil+swank
+               :hu.dwim.util/temporary-files
+               :hu.dwim.walker)
+  :components ((:module "test"
+                :components ((:file "ast" :depends-on ("package"))
+                             (:file "lexenv" :depends-on ("package"))
+                             (:file "macros" :depends-on ("package" "walk-unwalk"))
+                             (:file "package")
+                             (:file "walk-unwalk" :depends-on ("package" "lexenv"))
+                             (:file "semantics" :depends-on ("package" "lexenv"))))))
