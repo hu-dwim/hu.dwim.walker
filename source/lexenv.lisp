@@ -47,6 +47,31 @@
                    (declare (ignore args))
                    (missing-lexical-environment-function))))))
 
+(defmacro %compile-quoted (form)
+  `(compile nil '(lambda () ,form)))
+
+;; TODO rename to RUN-IN-LEXICAL-ENVIRONMENT ?
+(defmacro with-captured-lexical-environment ((env-variable form &key (compiler '%compile-quoted)) &body forms)
+  "Executes FORMS with lexical environment captured at the point marked with the symbol -HERE-."
+  ;; Use private interned symbols to ensure that the body can be printed readably:
+  (let ((body '.with-captured-lexical-environment/body.)
+        (injector-macro '.with-captured-lexical-environment/injector-macro.))
+    `(let ((,body (lambda (,env-variable)
+                    ;; TODO: wrap the body in our own handlers that will prevent the errors/failed-asserts reaching COMPILE
+                    ,@forms)))
+       (declare (special ,body))        ; For the macrolet
+       (handler-bind
+           (#+sbcl(sb-ext:compiler-note #'muffle-warning)
+            (warning #'muffle-warning))
+         (,compiler
+          ,(subst `(macrolet ((,injector-macro (&environment env)
+                                (declare (special ,body))
+                                (funcall ,body env)
+                                (values)))
+                     (,injector-macro))
+                  '-here- form)))
+       (values))))
+
 (defun augment-lexenv (kind name lexenv &rest args)
   (ecase kind
     (:variable     (progn
