@@ -233,7 +233,8 @@
                                                         :specializer (or (second (ensure-list required)) t))
                                       (make-form-object 'required-function-argument-form target-node
                                                         :name required))))
-                        (walk-environment/augment! env :variable (name-of arg) arg)
+                        (when (symbolp (name-of arg)) ; are we dealing with unquotes or somesuch?
+                          (walk-environment/augment! env :variable (name-of arg) arg))
                         arg))
            (loop
              :for optional :in optionals
