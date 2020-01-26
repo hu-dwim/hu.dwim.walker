@@ -28,7 +28,9 @@
 (def function sbcl-unparse-type (type)
   (if (null type)
       +top-type+
-      (bind ((info (sb-kernel::type-class-info type)))
+      (bind ((info (#.(or (find-symbol "TYPE-CLASS-INFO" "SB-KERNEL") ; prior to SBCL 2.1
+                          (find-symbol "TYPE-CLASS"      "SB-KERNEL"))
+                      type)))
         (funcall (sb-kernel::type-class-unparse info) type))))
 
 ;;;;;;
