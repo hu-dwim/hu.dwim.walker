@@ -182,9 +182,9 @@
 (def test test/semantics/types/1 ()
   (with-captured-lexical-environment
       (env (let ((*spec-global* 0)
-                 (spec1 1)
+                 (spec1 1.0f0)
                  (spec2 2)
-                 (lex1 1)
+                 (lex1 1.0d0)
                  (lex2 2))
              (declare (special spec1 spec2)
                       (single-float spec1)
