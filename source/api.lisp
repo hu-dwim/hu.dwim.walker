@@ -12,11 +12,13 @@
 (def (layered-function e) walk-form (form &key parent environment)
   (:documentation "Entry point to initiate code walking of FORM using ENVIRONMENT. Returns a CLOS based AST that represents FORM.")
   (:method ((form cons) &key parent environment)
+    (declaim (notinline walk-form/compound))
     (walk-form/compound (car form) form parent environment)))
 
 (def (layered-function e) walk-form/compound (name form parent environment)
   (:documentation "Dispatches to a form-specific walker using the first symbol as operator name.")
   (:method ((name t) form parent environment)
+    (declaim (notinline walk-form/application))
     (bind (((operator &rest arguments) form))
       (when (member operator '(
                                ;; as copied from CLHS 3.1.2.1.2.1 Special Forms
