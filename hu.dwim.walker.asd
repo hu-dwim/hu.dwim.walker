@@ -14,7 +14,6 @@
                :anaphora
                :contextl
                :closer-mop
-               :hu.dwim.common-lisp
                :hu.dwim.def+contextl
                :hu.dwim.defclass-star+hu.dwim.def
                :hu.dwim.util

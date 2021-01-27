@@ -12,7 +12,7 @@
   (:use :alexandria
         :anaphora
         :contextl
-        :hu.dwim.common-lisp
+        :common-lisp
         :hu.dwim.def
         :hu.dwim.defclass-star
         :hu.dwim.util
