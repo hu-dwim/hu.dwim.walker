@@ -482,7 +482,7 @@
 
 (def (definer e :options "eod") form-attribute-accessor (key &key name type default (forms 'walked-form))
   (unless name
-    (setf name (funcall *accessor-name-transformer*
+    (setf name (funcall hu.dwim.defclass-star::*accessor-name-transformer*
                         key (if type (list :type type)))))
   `(progn
      ,@(if type
