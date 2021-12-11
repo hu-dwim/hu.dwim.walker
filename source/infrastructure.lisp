@@ -149,7 +149,12 @@
       (do-functions-in-lexenv (lexenv name macro? macro-fn)
         (if macro?
             (extend :macro name macro-fn)
-            (extend :unwalked-function name t))))
+            (extend :unwalked-function name t)))
+      ;; TODO ? what about: do-macros-in-lexenv, do-symbol-macros-in-lexenv
+      (do-tags-in-lexenv (lexenv name)
+        (extend :tag name t))
+      (do-blocks-in-lexenv (lexenv name)
+        (extend :block name t)))
     (nreversef (walk-environment/variables walkedenv))
     (nreversef (walk-environment/functions walkedenv))
     walkedenv))

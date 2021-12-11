@@ -104,6 +104,7 @@
     (is (eq (name-of variable-reference) 'a-var))
     (is (special-binding? variable-binding))
     (with-expected-failures
+      ;; FIXME special variables have no DEFINITION-OF
       (is (eql (value-of (initial-value-of (definition-of variable-reference))) 43)))
     walked))
 
