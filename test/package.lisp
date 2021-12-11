@@ -12,9 +12,9 @@
         :hu.dwim.def
         :hu.dwim.stefil
         :hu.dwim.util
-        :hu.dwim.walker)
-  (:import-from :hu.dwim.walker
-                #:with-captured-lexical-environment))
+   :hu.dwim.walker)
+  (:export #:run-in-lexical-environment
+           #:-here-))
 
 (in-package :hu.dwim.walker/test)
 

@@ -109,7 +109,7 @@
     walked))
 
 (def test test/semantics/specials/2 ()
-  (with-captured-lexical-environment
+  (run-in-lexical-environment
       (env (let ((spec1 1)
                  (spec3 0)
                  (lex1 2))
@@ -181,7 +181,7 @@
 (declaim (fixnum *spec-global* *spec-global-2*))
 
 (def test test/semantics/types/1 ()
-  (with-captured-lexical-environment
+  (run-in-lexical-environment
       (env (let ((*spec-global* 0)
                  (spec1 1.0f0)
                  (spec2 2)
@@ -365,3 +365,18 @@
                          (setq x 42)
                          (incf x))
                        (list x y))))))))
+
+(deftest test/semantics/blocks/bug/1 ()
+  (run-in-lexical-environment
+      (env (block blk
+             -here-))
+    (is (walk-environment/find (make-walk-environment env)
+                               :block 'blk :otherwise nil))))
+
+(deftest test/semantics/tags/bug/1 ()
+  (run-in-lexical-environment
+      (env (tagbody
+              -here-
+            tagg))
+    (is (walk-environment/find (make-walk-environment env)
+                               :tag 'tagg :otherwise nil))))

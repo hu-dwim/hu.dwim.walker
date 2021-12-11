@@ -195,6 +195,7 @@
   `(setf ,env (walk-environment/augment ,env ,type ,name ,datum ,@other-datum)))
 
 (def (function e) walk-environment/find (environment type name &key (otherwise :error otherwise?))
+  (check-type environment walk-environment)
   (labels ((not-found ()
              (return-from walk-environment/find
                (handle-otherwise (error "No value for ~S of type ~S in environment ~S was found."

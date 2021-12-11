@@ -6,10 +6,38 @@
 
 (in-package :hu.dwim.walker/test)
 
+(defmacro %compile-quoted (form)
+  `(compile nil '(lambda () ,form)))
+
+(def macro run-in-lexical-environment ((env-variable form &key (compiler '%compile-quoted)) &body forms)
+  "Executes FORMS with lexical environment captured at the point marked with the symbol -HERE-."
+  ;; Use private interned symbols to ensure that the body can be printed readably:
+  (with-unique-names (body injector-macro)
+    `(let ((,body (lambda (,env-variable)
+                    ;; TODO: wrap the body in our own handlers that will prevent the errors/failed-asserts reaching COMPILE
+                    ,@forms)))
+       (declare (special ,body))        ; For the macrolet
+       (handler-bind
+           (#+sbcl(sb-ext:compiler-note #'muffle-warning)
+            (warning #'muffle-warning))
+         (,compiler
+          ,(let* ((inject-form `(macrolet ((,injector-macro (&environment env)
+                                             (declare (special ,body))
+                                             (funcall ,body env)
+                                             (values)))
+                                  (,injector-macro)))
+                  (replaced (subst inject-form '-here- form)))
+             (assert (not (equal form replaced)) nil
+                     "~S: couldn't find ~S in form ~S"
+                     -this-definition/name- '-here form)
+             replaced)))
+       (values))))
+
 (def suite* (test/lexenv :in test))
 
 (def suite* (test/lexenv/query :in test/lexenv))
 
+;; TODO harmonize its name with RUN-IN-LEXICAL-ENVIRONMENT
 (def macro with-captured-compile-environment ((env-var &rest symbols) form-generator &body code)
   (let ((package-id (package-name *package*)))
     (with-unique-names (temp-lisp-filename temp-fasl-filename compiler warn? error?)
@@ -34,7 +62,7 @@
                          (compile-file ,temp-lisp-filename))
                        (is (not (or (null,temp-fasl-filename) ,warn? ,error?))
                            "Temporary file compilation failed.")))
-                (with-captured-lexical-environment (,env-var ,form-generator :compiler ,compiler)
+                (run-in-lexical-environment (,env-var ,form-generator :compiler ,compiler)
                   ,@code))
            ,@(mapcar (lambda (symbol) `(unintern ,symbol)) symbols)
            (delete-file ,temp-lisp-filename)
@@ -42,7 +70,7 @@
              (delete-file ,temp-fasl-filename)))))))
 
 (def test test/lexenv/query/variables ()
-  (with-captured-lexical-environment
+  (run-in-lexical-environment
       (env (symbol-macrolet ((a 42)
                              (b 43))
              (flet ((f1 () 1)
@@ -75,7 +103,7 @@
     (is (find-variable-in-lexenv 'z env :include-ignored? t))))
 
 (def test test/lexenv/query/functions ()
-  (with-captured-lexical-environment
+  (run-in-lexical-environment
       (env (symbol-macrolet ((a 42)
                              (b 43))
              (flet ((f1 () 1)
@@ -102,7 +130,7 @@
     (is (not (find-function-in-lexenv '-here- env)))))
 
 (def test test/lexenv/query/macros ()
-  (with-captured-lexical-environment
+  (run-in-lexical-environment
       (env (symbol-macrolet ((a 42)
                              (b 43))
              (flet ((f1 () 1)
@@ -128,7 +156,7 @@
     (is (not (find-macro-in-lexenv 'x env)))))
 
 (deftest test/lexenv/query/symbol-macros ()
-  (with-captured-lexical-environment
+  (run-in-lexical-environment
       (env (symbol-macrolet ((a 42)
                              (b 43))
              (flet ((f1 () 1)
@@ -156,7 +184,7 @@
 
 #-(or openmcl allegro)
 (deftest test/lexenv/query/blocks ()
-  (with-captured-lexical-environment
+  (run-in-lexical-environment
       (env (block b1
              (flet ((f1 () 1)
                     (f2 () 2))
@@ -183,7 +211,7 @@
 
 #-(or openmcl allegro)
 (deftest test/lexenv/query/tags ()
-  (with-captured-lexical-environment
+  (run-in-lexical-environment
       (env (block b1
              (tagbody
               t1
@@ -209,7 +237,7 @@
     (is (not (find-tag-in-lexenv 'x env)))))
 
 (def test test/lexenv/query/special-variable ()
-  (with-captured-lexical-environment
+  (run-in-lexical-environment
       (env (let ((x 42))
              (declare (special x))
              -here-))

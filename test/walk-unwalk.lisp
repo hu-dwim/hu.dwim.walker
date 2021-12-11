@@ -311,14 +311,14 @@
      (locally 'bar))))
 
 (deftest test/walk-unwalk/context-macrolets/1 ()
-  (with-captured-lexical-environment
+  (run-in-lexical-environment
       (env (symbol-macrolet ((foo 'xxx))
              (symbol-macrolet ((foo 'bar))
                -here-)))
     (check-walk-unwalk 'foo ''bar env)))
 
 (deftest test/walk-unwalk/context-macrolets/2 ()
-  (with-captured-lexical-environment
+  (run-in-lexical-environment
       (env (let ((foo 'xxx))
              (declare (ignorable foo))
              (symbol-macrolet ((foo 'bar))
@@ -326,7 +326,7 @@
     (check-walk-unwalk 'foo ''bar env)))
 
 (deftest test/walk-unwalk/context-macrolets/3 ()
-  (with-captured-lexical-environment
+  (run-in-lexical-environment
       (env (symbol-macrolet ((foo 'xxx))
              (let ((foo 'bar))
                (declare (ignorable foo))
@@ -334,21 +334,21 @@
     (check-walk-unwalk 'foo 'foo env)))
 
 (deftest test/walk-unwalk/context-macrolets/4 ()
-  (with-captured-lexical-environment
+  (run-in-lexical-environment
       (env (macrolet ((foo () 'xxx))
              (macrolet ((foo () 'bar))
                -here-)))
     (check-walk-unwalk '(foo) 'bar env)))
 
 (deftest test/walk-unwalk/context-macrolets/5 ()
-  (with-captured-lexical-environment
+  (run-in-lexical-environment
       (env (flet ((foo () 'xxx))
              (macrolet ((foo () 'bar))
                -here-)))
     (check-walk-unwalk '(foo) 'bar env)))
 
 (deftest test/walk-unwalk/context-macrolets/6 ()
-  (with-captured-lexical-environment
+  (run-in-lexical-environment
       (env (macrolet ((foo () 'xxx))
              (flet ((foo () 'bar))
                -here-)))

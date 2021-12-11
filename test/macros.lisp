@@ -45,32 +45,3 @@
                        (locally
                            (null (slot-value obj 'a))
                          (/ (slot-value obj 'a) 2)))))
-
-(deftest test/semantics/blocks/bug/1 ()
-  (let ((*break-on-signals* t)) ; for errors inside macroexpand
-    (eval
-     '(macrolet ((test-walk (code &environment env)
-                  (is (find-block-in-lexenv 'blk env))
-                  (let ((walker-env (make-walk-environment env)))
-                    (is (walk-environment/find walker-env :block 'blk
-                                                          :otherwise :error))
-                    (finishes
-                      (walk-form code :environment walker-env)))))
-       (block blk
-         (test-walk
-          (return-from blk)))))))
-
-(deftest test/semantics/tags/bug/1 ()
-  (let ((*break-on-signals* t)) ; for errors inside macroexpand
-    (eval
-     '(macrolet ((test-walk (code &environment env)
-                  (is (find-tag-in-lexenv 'tagg env))
-                  (let ((walker-env (make-walk-environment env)))
-                    (is (walk-environment/find walker-env :tag 'tagg
-                                                          :otherwise :error))
-                    (finishes
-                      (walk-form code :environment walker-env)))))
-       (tagbody
-          (test-walk
-           (go tagg))
-        tagg)))))
