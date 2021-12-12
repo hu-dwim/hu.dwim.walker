@@ -6,6 +6,19 @@
 
 (in-package :hu.dwim.walker)
 
+(def macro make-form-object (type parent &rest initargs)
+  (with-unique-names (custom-type)
+    (appendf initargs `(:parent ,parent))
+    `(bind ((,custom-type (ast-node-type-for ,type)))
+       ;; do it this way, so that we'll have an optimized (make-instance 'literal ...) path
+       (if ,custom-type
+           (make-instance ,custom-type ,@initargs)
+           (make-instance ,type ,@initargs)))))
+
+(def layered-function ast-node-type-for (type)
+  (:method (type)
+    type))
+
 (def (structure ea :export-constructor nil)
     (walk-environment (:constructor %make-walk-environment)
                       (:conc-name #:walk-environment/))
@@ -534,19 +547,6 @@
 
 (def (form-class a) docstring-mixin ()
   ((docstring nil)))
-
-(def layered-function ast-node-type-for (type)
-  (:method (type)
-    type))
-
-(def macro make-form-object (type parent &rest initargs)
-  (with-unique-names (custom-type)
-    (appendf initargs `(:parent ,parent))
-    `(bind ((,custom-type (ast-node-type-for ,type)))
-       ;; do it this way, so that we'll have an optimized (make-instance 'literal ...) path
-       (if ,custom-type
-           (make-instance ,custom-type ,@initargs)
-           (make-instance ,type ,@initargs)))))
 
 (def (macro e) with-form-object ((variable type parent &rest initargs)
                                  &body body)
