@@ -370,13 +370,41 @@
   (run-in-lexical-environment
       (env (block blk
              -here-))
-    (is (walk-environment/find (make-walk-environment env)
-                               :block 'blk :otherwise nil))))
+    (is (typep (walk-environment/find (make-walk-environment env)
+                                      :block 'blk :otherwise nil)
+               'block-form))))
+
+(deftest test/semantics/blocks/bug/1/full ()
+  (let* ((*break-on-signals* t)
+         (walked (eval
+                  '(macrolet ((test-walk (code &environment env)
+                               (finishes
+                                 (walk-form code :environment (make-walk-environment env)))))
+                    (block blk
+                      (test-walk (return-from blk 20)))))))
+    (is (typep walked 'walked-form))
+    (finishes (unwalk-form walked))))
 
 (deftest test/semantics/tags/bug/1 ()
   (run-in-lexical-environment
       (env (tagbody
-              -here-
+            -here-
             tagg))
-    (is (walk-environment/find (make-walk-environment env)
-                               :tag 'tagg :otherwise nil))))
+    (is (typep (walk-environment/find (make-walk-environment env)
+                                      :tag 'tagg :otherwise nil)
+               'tagbody-form))))
+
+(deftest test/semantics/tags/bug/1/full ()
+  (let* ((*break-on-signals* t)
+         (walked (eval
+                  '(macrolet ((test-walk (code &environment env)
+                               (finishes
+                                 (walk-form code :environment (make-walk-environment env)))))
+                    (let (ret)
+                      (tagbody
+                         ;; tagbody unconditionally returns with NIL
+                         (setf ret (test-walk (go tagg)))
+                       tagg)
+                      ret)))))
+    (is (typep walked 'walked-form))
+    (finishes (unwalk-form walked))))

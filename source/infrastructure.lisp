@@ -163,11 +163,12 @@
         (if macro?
             (extend :macro name macro-fn)
             (extend :unwalked-function name t)))
-      ;; TODO ? what about: do-macros-in-lexenv, do-symbol-macros-in-lexenv
+      ;; TODO ? add comment about the missing ones: do-macros-in-lexenv do-symbol-macros-in-lexenv
+      ;; TODO register these ase :unwalked-tag and :unwalked-block? why? why not? comment!
       (do-tags-in-lexenv (lexenv name)
-        (extend :tag name t))
+        (extend :tag name (make-form-object 'tagbody-form nil)))
       (do-blocks-in-lexenv (lexenv name)
-        (extend :block name t)))
+        (extend :block name (make-form-object 'block-form nil :name name))))
     (nreversef (walk-environment/variables walkedenv))
     (nreversef (walk-environment/functions walkedenv))
     walkedenv))
