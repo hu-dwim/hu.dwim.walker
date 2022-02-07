@@ -25,6 +25,14 @@
                        (princ "1111")
                        (- 3 2 1))))
 
+(deftest test/macros/macrolet/nested ()
+  (check-walk-unwalk '(macrolet ((reverser (lst)
+                                  `(reverse ,lst)))
+                       (macrolet ((+ (&body body)
+                                    (reverser body)))
+                         (+ 1 2 3 -)))
+                     '(locally (locally (- 3 2 1)))))
+
 (deftest test/macros/symbol-macrolet ()
   (check-walk-unwalk '(let ((obj 42))
                        (symbol-macrolet ((a (slot-value obj 'a))
