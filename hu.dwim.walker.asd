@@ -7,7 +7,7 @@
 (defsystem "hu.dwim.walker"
   :defsystem-depends-on (:hu.dwim.asdf)
   :class "hu.dwim.asdf:hu.dwim.system"
-  :author ("Attila Lendvai <attila.lendvai@gmail.com>"
+  :author ("Attila Lendvai <attila@lendvai.name>"
            "Levente Mészáros <levente.meszaros@gmail.com>")
   :description "Common Lisp form walker and unwalker (to and from CLOS instances)."
   :depends-on (:alexandria
