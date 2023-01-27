@@ -31,7 +31,9 @@
       (bind ((info (#.(or (find-symbol "TYPE-CLASS-INFO" "SB-KERNEL") ; prior to SBCL 2.1
                           (find-symbol "TYPE-CLASS"      "SB-KERNEL"))
                       type)))
-        (funcall (sb-kernel::type-class-unparse info) type))))
+        (funcall (sb-kernel::type-class-unparse info)
+                 #+#.(hu.dwim.util:sbcl-version>= 2 3) 0 ; flags -- a new arg
+                 type))))
 
 ;;;;;;
 ;;; Iteration
