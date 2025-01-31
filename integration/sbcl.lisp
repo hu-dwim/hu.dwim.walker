@@ -96,7 +96,7 @@
 (defun augment-lexenv-with-variable (name lexenv &key special ignored)
   (let ((var
           #+#.(hu.dwim.util:sbcl-version>= 2 5 1)
-          some args were turned into a primary arg from a keyword args in 2.5.1
+          ;; some args were turned into a primary arg from a keyword args in 2.5.1
           (if special
               (sb-c::make-global-var :special name)
               (sb-c::make-lambda-var name))
